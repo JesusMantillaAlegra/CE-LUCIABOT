@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard · Lucía — Alegra</title>
+<style>body{visibility:hidden}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --teal:      #00BFA5;
+  --teal-dk:   #008C7A;
+  --teal-lt:   #E0F7F4;
+  --dark:      #1A2B4A;
+  --dark-mid:  #2C3E6B;
+  --slate:     #4A5568;
+  --slate-lt:  #718096;
+  --bg:        #F0F4F8;
+  --bg-card:   #FFFFFF;
+  --border:    #E2E8F0;
+  --green:     #22C55E;
+  --green-lt:  #DCFCE7;
+  --red:       #EF4444;
+  --red-lt:    #FEE2E2;
+  --amber:     #F5A623;
+  --amber-lt:  #FEF3C7;
+  --blue:      #3B82F6;
+  --blue-lt:   #DBEAFE;
+  --purple:    #8B5CF6;
+  --purple-lt: #EDE9FE;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-head: 'Lexend', 'Inter', sans-serif;
+  --radius:    12px;
+  --shadow:    0 2px 8px rgba(26,43,74,0.07);
+  --shadow-lg: 0 6px 24px rgba(26,43,74,0.13);
+}
+
+body { font-family: var(--font-body); background: #F7F9FB; color: var(--dark); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+/* Header */
+.header { background: #fff; border-bottom: 1px solid #EDF1F5; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; }
+.logo-wrap { display: flex; align-items: center; gap: 14px; }
+.logo-divider { width: 1px; height: 22px; background: #E2E8F0; }
+.header-module { font-family: var(--font-head); font-size: 14px; font-weight: 700; color: var(--dark); }
+.header-badge { display: inline-flex; align-items: center; gap: 6px; background: #F0FDF7; color: #15803D; font-size: 11px; font-weight: 700; padding: 4px 11px 4px 9px; border-radius: 20px; }
+.header-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 0 3px #DCFCE7; }
+.header-time { font-size: 12px; color: var(--slate-lt); font-weight: 500; }
+.header-user { font-size: 12.5px; color: var(--dark); font-weight: 600; padding-left: 14px; border-left: 1px solid #E2E8F0; }
+.btn-header { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; border: 1px solid #E2E8F0; background: #fff; color: var(--slate); font-family: var(--font-body); font-size: 12.5px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s; }
+.btn-header svg { width: 14px; height: 14px; stroke-width: 2; }
+.btn-header:hover { background: #F5F7FA; }
+.btn-header:not(.btn-header-ghost) { background: var(--teal); border-color: var(--teal); color: #fff; }
+.btn-header:not(.btn-header-ghost):hover { background: var(--teal-dk); }
+.btn-header-ghost { color: var(--slate-lt); }
+
+/* App body: sidebar + main */
+.app-body { display: flex; align-items: flex-start; max-width: 1600px; margin: 0 auto; }
+.sidebar { width: 232px; flex-shrink: 0; background: #fff; border-right: 1px solid #EDF1F5; padding: 22px 14px; position: sticky; top: 60px; height: calc(100vh - 60px); box-sizing: border-box; }
+.sidebar-top { display: flex; align-items: center; justify-content: space-between; padding: 0 10px; margin-bottom: 10px; }
+.sidebar-label { font-size: 10.5px; font-weight: 700; color: var(--slate-lt); letter-spacing: 1px; }
+.sidebar-collapse { width: 22px; height: 22px; border-radius: 6px; border: 1px solid #E2E8F0; background: #fff; color: var(--slate-lt); font-size: 11px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.sidebar-collapse:hover { background: #F5F7FA; color: var(--dark); }
+.sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; text-decoration: none; color: var(--slate); font-size: 13px; font-weight: 600; transition: background .15s, color .15s; cursor: pointer; }
+.nav-item svg { width: 18px; height: 18px; stroke-width: 2; flex-shrink: 0; }
+.nav-item span { display: flex; flex-direction: column; gap: 1px; line-height: 1.25; }
+.nav-item small { font-size: 10.5px; font-weight: 500; color: var(--slate-lt); }
+.nav-item:hover { background: #F5F7FA; }
+.nav-item.active { background: var(--teal-lt); color: var(--teal-dk); }
+.nav-item.active small { color: var(--teal-dk); opacity: .75; }
+.nav-item.disabled { color: #B6C0CC; cursor: not-allowed; }
+.nav-item.disabled small { color: #C9D1DA; }
+.nav-item.disabled:hover { background: none; }
+
+/* Main layout */
+.main { max-width: 1368px; margin: 0; padding: 32px 32px 60px; flex: 1; min-width: 0; }
+
+/* Section headings */
+.section-label { display: inline-block; font-size: 11.5px; font-weight: 700; color: var(--teal-dk); background: var(--teal-lt); padding: 4px 13px; border-radius: 20px; letter-spacing: 0.2px; margin-bottom: 14px; }
+.section-title { font-family: var(--font-head); font-size: 21px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+.section-sub { font-size: 12.5px; color: var(--slate-lt); margin-bottom: 22px; }
+.section-divider { border: none; border-top: 1px solid #EDF1F5; margin: 40px 0; }
+
+/* KPI strip */
+.kpi-strip { display: flex; gap: 16px; flex-wrap: nowrap; margin-bottom: 28px; overflow-x: auto; }
+.kpi-card { background: #FFFFFF; border: 1px solid #EDF1F5; border-radius: 14px; padding: 18px 18px 16px; box-shadow: 0 1px 2px rgba(26,43,74,0.04); display: flex; flex-direction: column; gap: 2px; transition: box-shadow .15s, border-color .15s; position: relative; overflow: hidden; flex: 1 1 0; min-width: 0; }
+.kpi-card:hover { box-shadow: 0 4px 14px rgba(26,43,74,0.08); border-color: #E2E8F0; }
+.kpi-icon-lucide { width: 18px; height: 18px; margin-bottom: 6px; color: var(--slate-lt); }
+.kpi-icon-lucide svg { width: 18px; height: 18px; stroke-width: 2; }
+.kpi-card.kc-dark, .kpi-card.kc-teal, .kpi-card.kc-blue, .kpi-card.kc-green, .kpi-card.kc-red, .kpi-card.kc-amber { background: #FFFFFF; border-color: #EDF1F5; }
+.kpi-label { font-size: 10.5px; font-weight: 700; color: var(--slate-lt); text-transform: uppercase; letter-spacing: 0.6px; line-height: 1.3; }
+.kpi-value { font-family: var(--font-head); font-size: 30px; font-weight: 800; line-height: 1.1; margin-top: 5px; letter-spacing: -0.6px; }
+.kpi-value.v-dark   { color: #1A2B4A; }
+.kpi-value.v-teal   { color: #00897B; }
+.kpi-value.v-blue   { color: #2563EB; }
+.kpi-value.v-green  { color: #059669; }
+.kpi-value.v-red    { color: #DC2626; }
+.kpi-value.v-amber  { color: #D97706; }
+.kpi-delta { display: inline-flex; align-items: center; gap: 3px; padding: 0; border-radius: 0; font-size: 12px; font-weight: 500; margin-top: 8px; width: fit-content; background: none !important; color: var(--slate-lt); }
+.kpi-delta.up   { color: #16A34A; font-weight: 600; }
+.kpi-delta.down { color: #DC2626; font-weight: 600; }
+.kpi-delta.neu  { color: var(--slate-lt); }
+
+/* Grids */
+.chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.chart-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+@media (max-width: 960px) { .chart-grid-3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 760px) { .chart-grid-2, .chart-grid-3 { grid-template-columns: 1fr; } }
+
+/* Chart card */
+.chart-card { background: #FFFFFF; border: 1px solid #EDF1F5; border-radius: 14px; padding: 22px; box-shadow: 0 1px 2px rgba(26,43,74,0.04); }
+.chart-card-title { font-family: var(--font-head); font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+.chart-card-sub { font-size: 11px; color: var(--slate-lt); margin-bottom: 14px; }
+.chart-wrap { position: relative; height: 220px; }
+
+/* Temas de soporte (barras horizontales) */
+.st-hero { display: flex; align-items: baseline; gap: 8px; margin-bottom: 14px; }
+.st-hero-num { font-family: var(--font-head); font-size: 32px; font-weight: 800; color: var(--dark); line-height: 1; }
+.st-hero-lbl { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--slate-lt); }
+.st-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.st-row:last-of-type { border-bottom: none; }
+.st-tema { display: flex; align-items: center; gap: 8px; min-width: 220px; flex-shrink: 0; }
+.st-tema span { font-size: 12px; font-weight: 600; color: var(--dark); }
+.st-bar { flex: 1; background: var(--bg); border-radius: 5px; height: 10px; overflow: hidden; }
+.st-bar > div { height: 100%; border-radius: 5px; transition: width .4s; }
+.st-num { font-family: var(--font-head); font-size: 15px; font-weight: 800; color: var(--dark); min-width: 30px; text-align: right; flex-shrink: 0; }
+.st-pct { font-size: 11px; font-weight: 600; color: var(--slate-lt); min-width: 34px; text-align: right; flex-shrink: 0; }
+@media (max-width: 560px) { .st-tema { min-width: 130px; } }
+
+/* Tabs de motivos por vertical */
+.tab-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.tab-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: white; font-size: 11.5px; font-weight: 600; cursor: pointer; color: var(--slate); transition: all .15s; }
+.tab-btn:hover { border-color: var(--teal); color: var(--teal-dk); }
+.tab-btn.active { background: var(--dark); color: white; border-color: var(--dark); }
+
+/* Main detail table */
+.table-card { background: #FFFFFF; border: 1px solid #EDF1F5; border-radius: 14px; box-shadow: 0 1px 2px rgba(26,43,74,0.04); overflow: hidden; margin-bottom: 20px; }
+.table-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.table-header h3 { font-family: var(--font-head); font-size: 15px; font-weight: 700; color: var(--dark); }
+.table-header-sub { font-size: 11px; color: var(--slate-lt); margin-top: 2px; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th { background: var(--bg); color: var(--slate); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr:hover { background: #F7FAFC; }
+tbody tr:last-child { border-bottom: none; }
+tbody td { padding: 9px 14px; color: var(--slate); }
+
+/* Badges */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-green  { background: #DCFCE7; color: #166534; }
+.badge-red    { background: #FEE2E2; color: #991B1B; }
+.badge-amber  { background: #FEF3C7; color: #92400E; }
+.badge-gray   { background: #F1F5F9; color: #4A5568; }
+
+/* Info note */
+.info-note { font-size: 11px; color: var(--slate-lt); font-style: italic; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); line-height: 1.6; }
+
+/* Fallback */
+.fallback { text-align: center; padding: 60px 24px; color: var(--slate); }
+.fallback h2 { color: var(--dark); margin-bottom: 8px; font-family: var(--font-head); }
+
+/* Footer */
+.footer { text-align: center; padding: 24px; font-size: 11px; color: var(--slate-lt); border-top: 1px solid var(--border); margin-top: 12px; }
+
+.view { display: none; }
+.view.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo-wrap">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32" height="22"><text x="0" y="24" font-family="Lexend, sans-serif" font-size="24" font-weight="700" fill="#1A2B4A">alegra</text></svg>
+    <div class="logo-divider"></div>
+    <span class="header-module" id="headerModule">Lucía · Correo</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="header-time" id="lastUpdated">Cargando…</span>
+    <span class="header-badge">En vivo</span>
+    <span class="header-user" id="userInfo"></span>
+    <button class="btn-header" id="btnActualizar"><i data-lucide="refresh-cw"></i>Actualizar</button>
+    <a class="btn-header btn-header-ghost" href="/api/auth/logout" style="text-decoration:none">Salir</a>
+  </div>
+</header>
+
+<div class="app-body">
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-label">VISTAS</div>
+      <button class="sidebar-collapse" id="sidebarCollapse">«</button>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item active" data-view="correo"><i data-lucide="mail"></i><span>Lucía Correo<small>Tickets · HubSpot</small></span></a>
+      <a class="nav-item" data-view="chat"><i data-lucide="message-circle"></i><span>Lucía Chat<small>Conversaciones · HubSpot</small></span></a>
+      <a class="nav-item disabled"><i data-lucide="phone"></i><span>Lucía Llamadas<small>Próximamente · ElevenLabs</small></span></a>
+    </nav>
+  </aside>
+
+<main class="main" id="lucia-main">
+
+  <!-- ══════════ VISTA: CORREO ══════════ -->
+  <div class="view active" id="view-correo">
+    <div class="section-label">Resumen de demanda</div>
+    <div class="section-title">¿Cuántos correos gestionó Lucía y cómo le fue?</div>
+    <div class="section-sub" id="correoSubtitle">Fuente: HubSpot — Reports Dashboard 6180490 · vista 20862583 (tickets)</div>
+
+    <div class="kpi-strip" id="correoKpiStrip"></div>
+
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <div class="chart-card-title">Escaladas vs. Gestionadas por semana</div>
+        <div class="chart-card-sub">Tendencia de tickets de Lucía correo</div>
+        <div class="chart-wrap"><canvas id="chartCorreoTendencia"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Gestión de Lucía por stage</div>
+        <div class="chart-card-sub">Top stages donde terminan los tickets de correo</div>
+        <div id="correoStageWrap"></div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-title">CSAT — Lucía Correo</div>
+      <div class="chart-card-sub">Respuestas de encuesta de satisfacción por semana</div>
+      <div id="correoCsatWrap"></div>
+      <p class="info-note">Muestra pequeña — pocas respuestas de encuesta por semana. No usar como métrica única de calidad hasta tener más volumen.</p>
+    </div>
+  </div>
+
+  <!-- ══════════ VISTA: CHAT ══════════ -->
+  <div class="view" id="view-chat">
+    <div class="section-label">Resumen de demanda</div>
+    <div class="section-title">¿Cuántos chats gestionó Lucía y cómo le fue?</div>
+    <div class="section-sub" id="chatSubtitle">Fuente: HubSpot — Reports Dashboard 6180490 · vista 20257473 (conversaciones)</div>
+
+    <div class="kpi-strip" id="chatKpiStrip"></div>
+
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <div class="chart-card-title">Embudo de gestión</div>
+        <div class="chart-card-sub">Demanda → Ingresados al bot → Escalados / Gestionados</div>
+        <div id="chatEmbudoWrap"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Ingresados a Lucía por versión (país)</div>
+        <div class="chart-card-sub">Distribución de conversaciones por versión de Alegra</div>
+        <div class="chart-wrap"><canvas id="chartChatVersion"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-title">Motivos de solicitud por vertical</div>
+      <div class="chart-card-sub">Top motivos de conversación — cambia de vertical con las pestañas</div>
+      <div class="tab-row" id="motivosTabs"></div>
+      <div id="motivosWrap"></div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<div class="fallback" id="fallback" style="display:none;">
+  <h2>No se pudo cargar los datos</h2>
+  <p>Verifica que <code>lucia_dashboard_data.js</code> (o <code>lucia_dashboard_data.json</code>) esté en la misma carpeta que este archivo.</p>
+</div>
+
+<div class="footer">Alegra — Lucía Correo + Chat · HubSpot Reports Dashboard 6180490 · Servicio al cliente</div>
+
+<script src="./lucia_dashboard_data.js"></script>
+<script>
+(function checkAuth() {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') {
+    document.body.style.visibility = 'visible';
+    return;
+  }
+  fetch('/api/auth/me', { credentials: 'include' })
+    .then(res => res.ok ? res.json() : Promise.reject())
+    .then(user => {
+      if (!user || !user.email) throw new Error();
+      const el = document.getElementById('userInfo');
+      if (el) el.textContent = user.name || user.email;
+      document.body.style.visibility = 'visible';
+    })
+    .catch(() => { document.body.style.visibility = 'visible'; }); // fallback: no bloquear en preview local
+})();
+
+document.getElementById('sidebarCollapse')?.addEventListener('click', () => {
+  const sb = document.querySelector('.sidebar');
+  sb.classList.toggle('collapsed');
+});
+document.getElementById('btnActualizar')?.addEventListener('click', () => location.reload());
+
+// Navegación entre vistas
+const titles = { correo: 'Lucía · Correo', chat: 'Lucía · Chat' };
+document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item[data-view]').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    const view = item.dataset.view;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + view).classList.add('active');
+    document.getElementById('headerModule').textContent = titles[view];
+  });
+});
+
+// Si Chart.js/ChartDataLabels no cargaron (CDN bloqueado, sin internet, ad-blocker),
+// no dejar que esto tumbe el resto del dashboard — los KPIs y tablas no dependen de Chart.js.
+try {
+  if (typeof Chart !== 'undefined') {
+    if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
+    Chart.defaults.animation = false;
+    Chart.defaults.font.family = "'Inter', sans-serif";
+  } else {
+    console.warn('Chart.js no cargó (revisa conexión / bloqueador de anuncios). Los gráficos de línea/barra no se mostrarán, el resto del dashboard sí.');
+  }
+} catch (e) { console.error('Error inicializando Chart.js:', e); }
+
+const COLORS = { teal:'#00BFA5', tealDk:'#008C7A', dark:'#1A2B4A', slate:'#4A5568', green:'#22C55E', red:'#EF4444', amber:'#F5A623', blue:'#3B82F6', purple:'#8B5CF6', orange:'#F97316' };
+const fmt = n => typeof n === 'number' ? n.toLocaleString('es-CO') : (n ?? '—');
+const fmtPct = n => typeof n === 'number' ? n.toFixed(2) + '%' : '—';
+
+function runRender(data) {
+  try {
+    render(data);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  } catch (e) {
+    console.error('Error en render():', e);
+    document.getElementById('lucia-main').style.display = 'none';
+    document.getElementById('fallback').innerHTML = `<h2>Error al renderizar</h2><p><code>${e.message}</code></p>`;
+    document.getElementById('fallback').style.display = 'block';
+  }
+}
+
+// Carga de datos: se abre normalmente con doble clic (file://), y Chrome bloquea
+// fetch() de archivos locales por CORS (falla en silencio, sin mensaje claro).
+// Por eso el dato principal se carga como <script src="./lucia_dashboard_data.js">
+// (window.LUCIA_DATA), que sí funciona desde file://. Si ese archivo no está
+// (p.ej. si en el futuro esto se sirve desde un servidor real), se intenta con
+// fetch() del JSON como respaldo.
+if (typeof window.LUCIA_DATA !== 'undefined') {
+  runRender(window.LUCIA_DATA);
+} else {
+  fetch('./lucia_dashboard_data.json')
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(runRender)
+    .catch(e => {
+      console.error('Error al cargar datos (ni lucia_dashboard_data.js ni el JSON via fetch funcionaron):', e);
+      document.getElementById('lucia-main').style.display = 'none';
+      document.getElementById('fallback').style.display = 'block';
+    });
+}
+
+function render(data) {
+  document.getElementById('lastUpdated').textContent = data.meta?.generado ? 'Actualizado: ' + data.meta.generado : '';
+  // Cada sección se renderiza en su propio try/catch: si una falla (p.ej. un CDN
+  // bloqueado por la red y Chart.js no cargó), la otra sección igual se ve.
+  try { renderCorreo(data.correo); } catch (e) { console.error('Error en renderCorreo:', e); }
+  try { renderChat(data.chat); } catch (e) { console.error('Error en renderChat:', e); }
+}
+
+// Crea un Chart.js de forma segura: si Chart no cargó (CDN bloqueado) o el chart
+// falla, deja un aviso en vez de tumbar el resto del dashboard.
+function safeChart(canvasId, config) {
+  const el = document.getElementById(canvasId);
+  if (!el) return;
+  if (typeof Chart === 'undefined') {
+    el.parentElement.innerHTML = '<p style="font-size:11px;color:var(--slate-lt);padding:12px 0">No se pudo cargar la librería de gráficos (revisa tu conexión o bloqueador de anuncios). Los KPIs y tablas de arriba sí son válidos.</p>';
+    return;
+  }
+  try { return new Chart(el, config); }
+  catch (e) {
+    console.error('Error creando chart ' + canvasId + ':', e);
+    el.parentElement.innerHTML = '<p style="font-size:11px;color:var(--slate-lt);padding:12px 0">No se pudo dibujar este gráfico.</p>';
+  }
+}
+
+// ══════════ CORREO ══════════
+function renderCorreo(c) {
+  if (!c) return;
+  const k = c.kpis || {};
+  const strip = document.getElementById('correoKpiStrip');
+  const cards = [
+    { label: 'Demanda', value: fmt(k.demanda), icon: 'inbox', cls: 'kc-dark', vcls: 'v-dark', delta: 'tickets recibidos', dcls: 'neu' },
+    { label: 'Gestionados', value: fmt(k.gestionados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', delta: 'tickets cerrados por Lucía', dcls: 'neu' },
+    { label: 'Escalados', value: fmt(k.escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', delta: 'tickets pasados a humano', dcls: 'neu' },
+    { label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', delta: 'gestionados / demanda', dcls: 'neu' },
+  ];
+  strip.innerHTML = cards.map(k => `<div class="kpi-card ${k.cls}"><div class="kpi-icon-lucide" data-lucide="${k.icon}"></div><div class="kpi-label">${k.label}</div><div class="kpi-value ${k.vcls}">${k.value}</div><div class="kpi-delta ${k.dcls}">${k.delta}</div></div>`).join('');
+
+  // Tendencia semanal (barras escaladas vs gestionadas)
+  const weeks = c.tendencia_semanal || [];
+  safeChart('chartCorreoTendencia', {
+    data: {
+      labels: weeks.map(w => w.semana),
+      datasets: [
+        { type: 'bar', label: 'Escaladas', data: weeks.map(w => w.escaladas), backgroundColor: COLORS.red, borderRadius: 4 },
+        { type: 'bar', label: 'Gestionadas', data: weeks.map(w => w.gestionadas), backgroundColor: COLORS.teal, borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 11 }, color: COLORS.slate } }, datalabels: { display: false } },
+      scales: { x: { grid: { display: false }, ticks: { color: COLORS.slate, font: { size: 10 } } }, y: { beginAtZero: true, grid: { color: '#EDF2F7' } } }
+    }
+  });
+
+  // Stage breakdown (top 8 como barras horizontales)
+  const stages = [...(c.por_stage || [])].sort((a,b) => b.count - a.count).slice(0, 8);
+  const maxStage = stages[0]?.count || 1;
+  document.getElementById('correoStageWrap').innerHTML = stages.map(s => `
+    <div class="st-row">
+      <div class="st-tema"><span>${s.stage}</span></div>
+      <div class="st-bar"><div style="width:${(s.count/maxStage*100).toFixed(0)}%;background:${COLORS.teal}"></div></div>
+      <span class="st-num">${fmt(s.count)}</span>
+    </div>`).join('');
+
+  // CSAT
+  const csatWeeks = c.csat?.serie_semanal || [];
+  document.getElementById('correoCsatWrap').innerHTML = `
+    <div class="st-hero"><span class="st-hero-num">${fmt(csatWeeks.reduce((a,w)=>a+(w.respuestas||0),0))}</span><span class="st-hero-lbl">respuestas totales en el periodo</span></div>
+    ${csatWeeks.map(w => `
+    <div class="st-row">
+      <div class="st-tema"><span>${w.semana}</span></div>
+      <div class="st-bar"><div style="width:${w.respuestas ? Math.min(w.respuestas*10,100) : 0}%;background:${COLORS.amber}"></div></div>
+      <span class="st-num">${w.respuestas ?? '—'}</span>
+    </div>`).join('')}`;
+}
+
+// ══════════ CHAT ══════════
+function renderChat(c) {
+  if (!c) return;
+  const k = c.kpis || {};
+  const strip = document.getElementById('chatKpiStrip');
+  const cards = [
+    { label: 'Demanda', value: fmt(k.demanda), icon: 'message-square', cls: 'kc-dark', vcls: 'v-dark', delta: 'conversaciones totales', dcls: 'neu' },
+    { label: 'Ingresados al bot', value: fmt(k.ingresados_bot), icon: 'log-in', cls: 'kc-blue', vcls: 'v-blue', delta: `${k.demanda ? (k.ingresados_bot/k.demanda*100).toFixed(1) : '—'}% de la demanda`, dcls: 'neu' },
+    { label: 'Escalados', value: fmt(k.escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', delta: 'pasaron a humano', dcls: 'neu' },
+    { label: 'Gestionados', value: fmt(k.gestionados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', delta: 'resueltos por Lucía', dcls: 'neu' },
+    { label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', delta: 'gestionados / ingresados', dcls: 'neu' },
+    { label: 'CSAT bot', value: fmtPct(k.csat_bot), icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', delta: 'satisfacción gestión Lucía', dcls: 'neu' },
+  ];
+  strip.innerHTML = cards.map(k => `<div class="kpi-card ${k.cls}"><div class="kpi-icon-lucide" data-lucide="${k.icon}"></div><div class="kpi-label">${k.label}</div><div class="kpi-value ${k.vcls}">${k.value}</div><div class="kpi-delta ${k.dcls}">${k.delta}</div></div>`).join('');
+
+  // Embudo
+  const noIngresaron = (k.demanda||0) - (k.ingresados_bot||0);
+  const noGestionados = (k.ingresados_bot||0) - (k.gestionados||0) - (k.escalados||0);
+  const steps = [
+    { label: 'Demanda', value: k.demanda, color: COLORS.dark },
+    { label: '↳ Ingresados al bot', value: k.ingresados_bot, color: COLORS.blue },
+    { label: '↳ No ingresaron al flujo', value: noIngresaron, color: '#8B5CF6' },
+    { label: '↳ Gestionados', value: k.gestionados, color: COLORS.teal },
+    { label: '↳ Escalados', value: k.escalados, color: COLORS.red },
+  ];
+  const maxVal = k.demanda || 1;
+  document.getElementById('chatEmbudoWrap').innerHTML = steps.map(s => {
+    const barW = ((s.value / maxVal) * 100).toFixed(1);
+    const indent = s.label.startsWith('↳') ? 'padding-left:20px' : '';
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;${indent}">
+      <span style="width:170px;font-size:12px;font-weight:${s.label.startsWith('↳')?500:700};color:var(--slate);flex-shrink:0">${s.label}</span>
+      <div style="flex:1;background:#EDF2F7;border-radius:4px;height:22px;position:relative;overflow:hidden">
+        <div style="width:${barW}%;height:100%;background:${s.color};border-radius:4px"></div>
+      </div>
+      <span style="font-family:var(--font-head);font-size:14px;font-weight:800;color:${s.color};min-width:50px;text-align:right">${fmt(s.value)}</span>
+    </div>`;
+  }).join('');
+
+  // Ingresados por versión (bar chart)
+  const versiones = c.ingresados_por_version || [];
+  safeChart('chartChatVersion', {
+    type: 'bar',
+    data: {
+      labels: versiones.map(v => v.version),
+      datasets: [{ data: versiones.map(v => v.count), backgroundColor: COLORS.teal, borderRadius: 4,
+        datalabels: { display: true, color: COLORS.dark, font: { weight: '700', size: 11 }, anchor: 'end', align: 'top', formatter: v => fmt(v) } }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false }, ticks: { color: COLORS.slate, font: { size: 10 } } }, y: { beginAtZero: true, grid: { color: '#EDF2F7' } } }
+    }
+  });
+
+  // Motivos de solicitud por vertical (tabs)
+  const motivos = c.motivos_solicitud || {};
+  const verticales = Object.keys(motivos);
+  const tabsEl = document.getElementById('motivosTabs');
+  tabsEl.innerHTML = verticales.map((v, i) => `<button class="tab-btn ${i===0?'active':''}" data-vertical="${v}">${v.replace('_',' ')}</button>`).join('');
+  function renderMotivosTable(vertical) {
+    const items = motivos[vertical] || [];
+    const max = items[0]?.count || 1;
+    document.getElementById('motivosWrap').innerHTML = items.map(m => `
+      <div class="st-row">
+        <div class="st-tema"><span>${m.motivo}</span></div>
+        <div class="st-bar"><div style="width:${(m.count/max*100).toFixed(0)}%;background:${COLORS.purple}"></div></div>
+        <span class="st-num">${fmt(m.count)}</span>
+      </div>`).join('');
+  }
+  tabsEl.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabsEl.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderMotivosTable(btn.dataset.vertical);
+    });
+  });
+  if (verticales.length) renderMotivosTable(verticales[0]);
+
+  document.getElementById('chatSubtitle').textContent = `Fuente: HubSpot — ${fmt(k.demanda)} conversaciones · tiempo promedio de solución: ${c.tiempo_promedio_solucion_min ?? '—'} min`;
+}
+</script>
+</body>
+</html>
