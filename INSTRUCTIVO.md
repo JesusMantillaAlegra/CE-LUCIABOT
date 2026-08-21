@@ -73,6 +73,13 @@ HubSpot no expone una API pública que replique un dashboard/widget de Reports 1
 
 Para el CSAT, HubSpot sí tiene Feedback Surveys con su propio objeto (`FEEDBACK_SUBMISSION`), consultable vía CRM API.
 
+**⚠️ Filtro obligatorio — excluir tráfico de bounce de Amazon SES:**
+Antes de calcular CUALQUIER métrica de correo (demanda, gestionados, escalados, % gestión, reopen, tiempo de cierre), excluir todo ticket donde `hs_all_associated_contact_emails` sea **exactamente igual (EQ)** a `mailer-daemon@amazonses.com`. Usar coincidencia exacta — **no** "contiene" ni "contiene token" (`CONTAINS_TOKEN`), porque ese tipo de comparación fragmenta el email por los puntos y genera conteos inflados (falsos positivos).
+
+Contexto: `mailer-daemon@amazonses.com` es el remitente automático de notificaciones de rebote (bounce) de Amazon SES, el servicio de correo que usa el sistema interno de facturación electrónica de Alegra para notificaciones. No es un cliente real ni un caso de soporte — es tráfico automático generado cuando un correo que Alegra envía no logra entregarse. Se descubrió que ese tráfico estaba entrando como tickets normales al pipeline de soporte, inflando artificialmente el volumen (llegó a generar miles de tickets, con picos fuertes de un día para otro), el reopen rate y el tiempo de cierre. Si se deja adentro, las cifras no reflejan carga real de soporte sino ruido de infraestructura de correo.
+
+Este mismo filtro se aplicó ya en el dashboard hermano de CE-Retention (`ce-retention-soporte-ops`) — aquí se documenta para que la automatización de Lucía Correo (sección 5) lo aplique también desde el primer script de fetch.
+
 **Recomendación práctica:** antes de escribir el script de automatización, pedirle a quien construyó estos reportes (Estefanía) el filtro exacto de cada widget (clic en "Filtros (N)" de cada tarjeta en HubSpot) para copiar exactamente esos criterios a la Search API. Así el número automatizado coincide con el que ve el equipo en HubSpot.
 
 ## 3. Mapeo de métricas — Lucía Chat
@@ -133,6 +140,36 @@ La idea (según lo conversado) es que un job corra automáticamente cada semana 
 4. **Verificación**: cada corrida debería loguear cuántos tickets/conversaciones trajo y compararlo contra un rango razonable (para detectar si la API cambió o el filtro dejó de aplicar bien) antes de agregar el snapshot — y verificar que no exista ya un snapshot con la misma `semana_inicio` (para no duplicar si el job corre dos veces).
 
 Cuando se retome ElevenLabs, este mismo instructivo se extiende con la sección de Lucía Llamadas: mapeo de `bi_bot_calls` (Metabase, ya trae datos de ElevenLabs) cruzado con la API de ElevenLabs Conversational AI para conversaciones que aún no llegan a Metabase.
+
+## 7. Mapeo de métricas — Lucía Llamadas
+
+Fuentes (dos, cruzadas):
+- **HubSpot CRM, objeto `CALL`** — fuente de negocio: si la llamada se resolvió o se escaló, y por qué. Se filtra por la propiedad custom `bot_calificador` (valores exactos hoy: `lucia-ivr` = COL, `lucia-ivr-dom` = DOM, `lucia ivr fuerahorario` = fuera de horario), acotado por `hs_createdate` a la semana.
+- **ElevenLabs Conversational AI API** (`GET /v1/convai/conversations`) — fuente técnica: duración, si el bot completó su flujo sin error, número de turnos. Se consulta por `agent_id` (ver `elevenlabs_config.json`) acotado por `call_start_after_unix`/`call_start_before_unix`.
+
+| Métrica en el dash | Fuente / campo | Cómo se calcula | Campo en el JSON |
+|---|---|---|---|
+| Demanda | HubSpot `CALL`, conteo | Total de llamadas en la semana, para los 3 `bot_calificador` | `llamadas.kpis.demanda` |
+| Gestionadas | HubSpot `estado_llamada` | Bucket `soporte correcto` (normalizado a minúsculas — ver nota de calidad de datos abajo) | `llamadas.kpis.gestionadas` |
+| Escaladas | HubSpot `estado_llamada` | Suma de todas las variantes `escalamiento por...` / `transferencia por...` | `llamadas.kpis.escaladas` |
+| No contestadas | HubSpot `estado_llamada` | `no respuesta` + `se cuelga la llamada` + `usuario colgó` | `llamadas.kpis.no_contestadas` |
+| % Gestión | Calculado | `gestionadas / demanda` | `llamadas.kpis.pct_gestion` |
+| Duración promedio | HubSpot `hs_call_duration` (ms → seg) | Promedio ponderado por volumen entre los 3 bots | `llamadas.kpis.duracion_prom_seg` |
+| Por versión (COL/DOM/Fuera de horario) | HubSpot, agrupado por `bot_calificador` | Mismos KPIs de arriba, desglosados | `llamadas.por_version[]` |
+| Motivo de escalamiento | HubSpot `estado_llamada` (solo las variantes de escalamiento/transferencia) | Conteo agrupado por motivo de fondo (petición del usuario, desconocimiento, falta de acceso, error de cobro) | `llamadas.motivo_escalamiento[]` |
+| % Completadas sin error técnico | ElevenLabs `call_successful` | % de conversaciones que el propio ElevenLabs marca `success` — **NO equivale a "gestionadas"**, ver nota abajo | `llamadas.elevenlabs.totales.pct_completadas_sin_error_tecnico` |
+| Duración (cruce ElevenLabs) | ElevenLabs `call_duration_secs` | Solo como control de calidad contra la duración de HubSpot — deben coincidir casi exacto | `llamadas.elevenlabs.totales.duracion_prom_seg` |
+
+**⚠️ No confundir "% Completadas sin error técnico" (ElevenLabs) con "% Gestión" (HubSpot).** El primero mide si el bot terminó su flujo de conversación sin fallar técnicamente — una llamada que termina transferida a un humano cuenta igual como "exitosa" para ElevenLabs. El segundo mide si la llamada se resolvió SIN necesitar un humano, que es la pregunta de negocio real. En la semana de prueba (10-16 ago 2026) esto se vio clarísimo: ElevenLabs marcó ~98% de éxito técnico, mientras que HubSpot mostró que solo ~18.6% se gestionó sin escalar. Ambas cifras son correctas, solo responden preguntas distintas — nunca mostrarlas una junto a la otra sin esta aclaración.
+
+**Calidad de datos a vigilar en `estado_llamada` (HubSpot):**
+- El texto no tiene mayúsculas/minúsculas ni tildes consistentes (`"Soporte correcto"` vs `"soporte correcto"`) — siempre normalizar a minúsculas antes de agrupar.
+- Existe una variante mal escrita `"seporte correcto"` (typo) que hay que mapear igual al bucket de gestionadas.
+- Aparecen ocasionalmente valores numéricos sueltos (`"4"`, `"5"`) en `estado_llamada` — parecen calificaciones que quedaron mal guardadas en ese campo por error de captura. Van a un bucket `sin_clasificar`, no se descartan silenciosamente.
+
+**Cobertura incompleta a día de hoy:** `elevenlabs_config.json` solo tiene los `agent_id` de COL y DOM — el bot "Fuera de horario" todavía no tiene su `agent_id` de ElevenLabs confirmado/agregado, así que el cruce técnico de esa versión queda pendiente (el lado de HubSpot sí lo cubre completo).
+
+**Pendiente:** el `index.html` del dashboard todavía no tiene una pestaña/sección que renderice `llamadas` — por ahora el dato ya vive en el histórico, pero falta la parte visual (KPIs, tabla por versión, motivos de escalamiento).
 
 ## 6. Anexo — por qué no se agregaron más widgets de los 2 paneles originales
 

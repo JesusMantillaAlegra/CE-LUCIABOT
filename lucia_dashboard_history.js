@@ -2,7 +2,8 @@ window.LUCIA_HISTORY = {
   "meta": {
     "fuente_correo": "HubSpot Reports Dashboard 6180490 · vista 20862583",
     "fuente_chat": "HubSpot Reports Dashboard 6180490 · vista 20257473",
-    "nota": "El primer snapshot (id boot-2026-07-01) es un acumulado inicial que cubre varias semanas juntas (todo lo capturado antes de empezar a versionar el histórico). A partir de ahí, cada snapshot nuevo debe cubrir exactamente una semana. Ver INSTRUCTIVO.md sección 4."
+    "fuente_llamadas": "HubSpot CRM objeto CALL (filtrado por bot_calificador) + ElevenLabs Conversational AI API",
+    "nota": "El primer snapshot de Correo/Chat (id boot-2026-07-01) es un acumulado inicial que cubre varias semanas juntas. El de Llamadas (id llamadas-boot-2026-08-10) arrancó después, por eso cubre solo la semana del 10-16 ago 2026 — es su propio punto de partida, no está desalineado por error. A partir de ahora cada snapshot nuevo debe cubrir exactamente una semana e idealmente traer correo, chat Y llamadas juntos. Ver INSTRUCTIVO.md secciones 4 y 7."
   },
   "snapshots": [
     {
@@ -311,6 +312,108 @@ window.LUCIA_HISTORY = {
             {
               "motivo": "Configuración inicial",
               "count": 15
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "llamadas-boot-2026-08-10",
+      "semana_inicio": "2026-08-10",
+      "semana_fin": "2026-08-16",
+      "generado": "2026-08-21",
+      "bootstrap": true,
+      "etiqueta": "10 – 16 ago 2026 (primera semana de Llamadas)",
+      "correo": null,
+      "chat": null,
+      "llamadas": {
+        "kpis": {
+          "demanda": 1351,
+          "gestionadas": 251,
+          "escaladas": 1030,
+          "no_contestadas": 68,
+          "sin_clasificar": 2,
+          "pct_gestion": 18.58,
+          "duracion_prom_seg": 205.3
+        },
+        "por_version": [
+          {
+            "version": "COL",
+            "bot_calificador": "lucia-ivr",
+            "demanda": 1064,
+            "gestionadas": 200,
+            "escaladas": 825,
+            "no_contestadas": 37,
+            "sin_clasificar": 2,
+            "pct_gestion": 18.8,
+            "duracion_prom_seg": 199.9
+          },
+          {
+            "version": "DOM",
+            "bot_calificador": "lucia-ivr-dom",
+            "demanda": 165,
+            "gestionadas": 14,
+            "escaladas": 130,
+            "no_contestadas": 21,
+            "sin_clasificar": 0,
+            "pct_gestion": 8.5,
+            "duracion_prom_seg": 165.0
+          },
+          {
+            "version": "Fuera de horario",
+            "bot_calificador": "lucia ivr fuerahorario",
+            "demanda": 122,
+            "gestionadas": 37,
+            "escaladas": 75,
+            "no_contestadas": 10,
+            "sin_clasificar": 0,
+            "pct_gestion": 30.3,
+            "duracion_prom_seg": 306.8
+          }
+        ],
+        "motivo_escalamiento": [
+          {
+            "motivo": "Petición del usuario",
+            "count": 520
+          },
+          {
+            "motivo": "Desconocimiento",
+            "count": 499
+          },
+          {
+            "motivo": "Falta de acceso",
+            "count": 8
+          },
+          {
+            "motivo": "Error de cobro",
+            "count": 3
+          }
+        ],
+        "elevenlabs": {
+          "fuente": "ElevenLabs Conversational AI API (/v1/convai/conversations)",
+          "nota": "pct_completadas_sin_error_tecnico mide si la llamada terminó su flujo técnico sin error (incluye llamadas que terminaron en escalamiento a humano) — NO es lo mismo que 'gestionadas' arriba, que mide si se resolvió SIN necesitar un humano (dato de negocio, de HubSpot). No mostrar las dos cifras una al lado de la otra como si fueran comparables.",
+          "cobertura_incompleta": "No incluye el bot 'Fuera de horario' — su agent_id de ElevenLabs todavía no está agregado a elevenlabs_config.json.",
+          "totales": {
+            "llamadas": 1240,
+            "duracion_prom_seg": 193.8,
+            "pct_completadas_sin_error_tecnico": 98
+          },
+          "por_version": [
+            {
+              "version": "COL",
+              "agent_id": "agent_8901kwz1p1zkfec9pw3867ekabfb",
+              "llamadas": 1073,
+              "duracion_prom_seg": 198.5,
+              "mensajes_prom": 29.7,
+              "pct_completadas_sin_error_tecnico": 97.7
+            },
+            {
+              "version": "DOM",
+              "agent_id": "agent_5001kyq7xfgvezr8c512tkabns84",
+              "llamadas": 167,
+              "duracion_prom_seg": 163.1,
+              "mensajes_prom": 28.3,
+              "pct_completadas_sin_error_tecnico": 100
             }
           ]
         }

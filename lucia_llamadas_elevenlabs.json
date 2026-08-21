@@ -1,0 +1,38 @@
+{
+  "fuente": "ElevenLabs Conversational AI API (/v1/convai/conversations)",
+  "generado": "2026-08-21",
+  "semana_inicio": "2026-08-10",
+  "semana_fin": "2026-08-16",
+  "incluye_costo_y_motivo_tecnico": false,
+  "totales": {
+    "llamadas": 1240,
+    "duracion_prom_seg": 193.8,
+    "pct_exitosas": 98
+  },
+  "por_version": [
+    {
+      "agent_id": "agent_8901kwz1p1zkfec9pw3867ekabfb",
+      "nombre": "Lucia IVR COL",
+      "version": "COL",
+      "llamadas": 1073,
+      "duracion_prom_seg": 198.5,
+      "mensajes_prom": 29.7,
+      "pct_exitosas": 97.7,
+      "costo_total_usd": null,
+      "costo_prom_usd": null,
+      "motivo_cierre_tecnico": null
+    },
+    {
+      "agent_id": "agent_5001kyq7xfgvezr8c512tkabns84",
+      "nombre": "Lucia IVR DOM",
+      "version": "DOM",
+      "llamadas": 167,
+      "duracion_prom_seg": 163.1,
+      "mensajes_prom": 28.3,
+      "pct_exitosas": 100,
+      "costo_total_usd": null,
+      "costo_prom_usd": null,
+      "motivo_cierre_tecnico": null
+    }
+  ]
+}

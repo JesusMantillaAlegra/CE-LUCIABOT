@@ -1,0 +1,5 @@
+# Nunca subir claves ni secretos a este repo
+.env
+.env.*
+*.key
+xi_api_key.txt

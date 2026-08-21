@@ -1,0 +1,16 @@
+{
+  "elevenlabs": {
+    "api_base_url": "https://api.elevenlabs.io/v1/convai",
+    "agents": [
+      { "id": "agent_8901kwz1p1zkfec9pw3867ekabfb", "nombre": "Lucia IVR COL", "version": "COL" },
+      { "id": "agent_5001kyq7xfgvezr8c512tkabns84", "nombre": "Lucia IVR DOM", "version": "DOM" }
+    ],
+    "page_size": 100,
+    "include_cost_detail": false,
+    "cost_detail_delay_ms": 250
+  },
+  "output": {
+    "snapshot_fragment_path": "./lucia_llamadas_elevenlabs.json"
+  },
+  "nota": "include_cost_detail:true hace UNA llamada extra por conversacion (GET /conversations/{id}) para sumar el costo real (metadata.cost_fiat) y el motivo tecnico de cierre (metadata.termination_reason) — mas lento y mas consumo de rate limit. En false, el script solo usa el endpoint de lista (mas rapido) y deja esos dos campos en null. agent_id y version se editan aqui si se agrega/cambia algun bot de Lucia IVR — el script nunca trae la lista de agentes por su cuenta, siempre usa exactamente los que esten en este archivo."
+}
