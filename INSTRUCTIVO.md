@@ -169,7 +169,7 @@ Fuentes (dos, cruzadas):
 
 **Cobertura incompleta a día de hoy:** `elevenlabs_config.json` solo tiene los `agent_id` de COL y DOM — el bot "Fuera de horario" todavía no tiene su `agent_id` de ElevenLabs confirmado/agregado, así que el cruce técnico de esa versión queda pendiente (el lado de HubSpot sí lo cubre completo).
 
-**Pendiente:** el `index.html` del dashboard todavía no tiene una pestaña/sección que renderice `llamadas` — por ahora el dato ya vive en el histórico, pero falta la parte visual (KPIs, tabla por versión, motivos de escalamiento).
+**Nota sobre el `index.html` actual:** por fuera de esta conversación, `index.html` fue rediseñado con una barra lateral de navegación (en vez de pestañas) y un chequeo de autenticación (`/api/auth/me`) para el despliegue en Vercel — la lógica de agregación (`aggregateCorreo`/`aggregateChat`/`setupRangeBar`) se mantuvo igual. Se agregó `aggregateLlamadas()` y `renderLlamadas()` siguiendo ese mismo patrón, y se corrigió un bug donde el snapshot de Llamadas (por ser más reciente en fecha) hacía que "Última semana" de Correo y Chat mostrara ceros — ahora cada sección usa el último snapshot que sí trae sus datos, no simplemente el último del histórico completo.
 
 ## 6. Anexo — por qué no se agregaron más widgets de los 2 paneles originales
 

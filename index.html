@@ -215,7 +215,7 @@ tbody td { padding: 9px 14px; color: var(--slate); }
     <nav class="sidebar-nav">
       <a class="nav-item active" data-view="correo"><i data-lucide="mail"></i><span>Lucía Correo<small>Tickets · HubSpot</small></span></a>
       <a class="nav-item" data-view="chat"><i data-lucide="message-circle"></i><span>Lucía Chat<small>Conversaciones · HubSpot</small></span></a>
-      <a class="nav-item disabled"><i data-lucide="phone"></i><span>Lucía Llamadas<small>Próximamente · ElevenLabs</small></span></a>
+      <a class="nav-item" data-view="llamadas"><i data-lucide="phone"></i><span>Lucía Llamadas<small>HubSpot + ElevenLabs</small></span></a>
     </nav>
   </aside>
 
@@ -281,6 +281,36 @@ tbody td { padding: 9px 14px; color: var(--slate); }
     </div>
   </div>
 
+  <!-- ══════════ VISTA: LLAMADAS ══════════ -->
+  <div class="view" id="view-llamadas">
+    <div class="section-label">Resumen de demanda</div>
+    <div class="section-title">¿Cuántas llamadas gestionó Lucía y cómo le fue?</div>
+    <div class="section-sub" id="llamadasSubtitle">Fuente: HubSpot CRM (objeto CALL) + ElevenLabs Conversational AI API</div>
+
+    <div id="llamadasRangeBar"></div>
+    <div class="kpi-strip" id="llamadasKpiStrip"></div>
+
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <div class="chart-card-title">Llamadas por versión</div>
+        <div class="chart-card-sub">Volumen y % de gestión — COL / DOM / Fuera de horario</div>
+        <div id="llamadasVersionWrap"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Motivo de escalamiento</div>
+        <div class="chart-card-sub">Por qué las llamadas terminan pasando a un humano</div>
+        <div id="llamadasMotivoWrap"></div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-title">Cruce técnico — ElevenLabs</div>
+      <div class="chart-card-sub">Duración y % de llamadas completadas sin error técnico</div>
+      <div id="llamadasElevenlabsWrap"></div>
+      <p class="info-note" id="llamadasElevenlabsNota"></p>
+    </div>
+  </div>
+
 </main>
 </div>
 
@@ -316,7 +346,7 @@ document.getElementById('sidebarCollapse')?.addEventListener('click', () => {
 document.getElementById('btnActualizar')?.addEventListener('click', () => location.reload());
 
 // Navegación entre vistas
-const titles = { correo: 'Lucía · Correo', chat: 'Lucía · Chat' };
+const titles = { correo: 'Lucía · Correo', chat: 'Lucía · Chat', llamadas: 'Lucía · Llamadas' };
 document.querySelectorAll('.nav-item[data-view]').forEach(item => {
   item.addEventListener('click', () => {
     document.querySelectorAll('.nav-item[data-view]').forEach(i => i.classList.remove('active'));
@@ -355,13 +385,17 @@ function runRender(historyData) {
     if (!HISTORY.length) throw new Error('El histórico no tiene snapshots.');
     const last = HISTORY[HISTORY.length - 1];
     document.getElementById('lastUpdated').textContent = 'Datos hasta: ' + (last.semana_fin || last.semana_inicio) + (last.generado ? ' · actualizado ' + last.generado : '');
-    setupRangeBar('correo', (primary, compare) => {
-      try { renderCorreo(aggregateCorreo(primary), compare ? aggregateCorreo(compare).kpis : null); }
+    setupRangeBar('correo', 'correo', (primary, compare) => {
+      try { renderCorreo(aggregateCorreo(primary), compare ? aggregateCorreo(compare)?.kpis : null); }
       catch (e) { console.error('Error en renderCorreo:', e); }
     });
-    setupRangeBar('chat', (primary, compare) => {
-      try { renderChat(aggregateChat(primary), compare ? aggregateChat(compare).kpis : null); }
+    setupRangeBar('chat', 'chat', (primary, compare) => {
+      try { renderChat(aggregateChat(primary), compare ? aggregateChat(compare)?.kpis : null); }
       catch (e) { console.error('Error en renderChat:', e); }
+    });
+    setupRangeBar('llamadas', 'llamadas', (primary, compare) => {
+      try { renderLlamadas(aggregateLlamadas(primary), compare ? aggregateLlamadas(compare)?.kpis : null); }
+      catch (e) { console.error('Error en renderLlamadas:', e); }
     });
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) {
@@ -441,7 +475,19 @@ function populateRangeSelect(sel, selectedIndex) {
   sel.value = String(selectedIndex);
 }
 
-function setupRangeBar(prefix, applyFn) {
+// dataKey: nombre de la sección dentro de cada snapshot ('correo' | 'chat' | 'llamadas').
+// El valor "por defecto" (Última semana / segundo periodo de comparación) debe ser el
+// último snapshot que SÍ trae esa sección — no simplemente el último snapshot del
+// histórico completo, porque no todas las secciones empiezan a capturarse la misma
+// semana (p.ej. Llamadas arrancó después que Correo/Chat).
+function lastIndexWithData(dataKey) {
+  for (let i = HISTORY.length - 1; i >= 0; i--) {
+    if (HISTORY[i][dataKey]) return i;
+  }
+  return HISTORY.length - 1; // fallback: no hay ningún snapshot con esta sección todavía
+}
+
+function setupRangeBar(prefix, dataKey, applyFn) {
   const container = document.getElementById(prefix + 'RangeBar');
   if (!container) return;
   container.className = 'range-bar';
@@ -453,8 +499,12 @@ function setupRangeBar(prefix, applyFn) {
   const cToSel = document.getElementById(prefix + 'CTo');
   const compareToggle = document.getElementById(prefix + 'CompareToggle');
   const compareFields = document.getElementById(prefix + 'CompareFields');
-  const lastIdx = HISTORY.length - 1;
-  const prevIdx = Math.max(0, lastIdx - 1);
+  const lastIdx = lastIndexWithData(dataKey);
+  const overallLastIdx = HISTORY.length - 1;
+  const prevIdx = (() => {
+    for (let i = lastIdx - 1; i >= 0; i--) { if (HISTORY[i][dataKey]) return i; }
+    return Math.max(0, lastIdx - 1);
+  })();
 
   populateRangeSelect(fromSel, lastIdx);
   populateRangeSelect(toSel, lastIdx);
@@ -479,7 +529,7 @@ function setupRangeBar(prefix, applyFn) {
   });
   container.querySelectorAll('.range-preset').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (btn.dataset.preset === 'all') { fromSel.value = '0'; toSel.value = String(lastIdx); }
+      if (btn.dataset.preset === 'all') { fromSel.value = '0'; toSel.value = String(overallLastIdx); }
       else { fromSel.value = String(lastIdx); toSel.value = String(lastIdx); }
       trigger();
     });
@@ -577,6 +627,65 @@ function aggregateChat(snaps) {
     tiempo_promedio_solucion_min: tiempoWeight ? +(tiempoWeighted / tiempoWeight).toFixed(1) : null,
     motivos_solicitud
   };
+}
+
+function aggregateLlamadas(snaps) {
+  if (!snaps || !snaps.length) return null;
+  let any = false;
+  const kpis = { demanda: 0, gestionadas: 0, escaladas: 0, no_contestadas: 0, sin_clasificar: 0 };
+  const versionMap = new Map();
+  const motivoMap = new Map();
+  let durWeighted = 0, durWeight = 0;
+  let elLlamadas = 0, elDurWeighted = 0, elPctWeighted = 0, elCoberturaIncompleta = null, elNota = null;
+  snaps.forEach(s => {
+    const l = s.llamadas; if (!l) return;
+    any = true;
+    const k = l.kpis || {};
+    kpis.demanda += k.demanda || 0;
+    kpis.gestionadas += k.gestionadas || 0;
+    kpis.escaladas += k.escaladas || 0;
+    kpis.no_contestadas += k.no_contestadas || 0;
+    kpis.sin_clasificar += k.sin_clasificar || 0;
+    const w = k.demanda || 0;
+    if (typeof k.duracion_prom_seg === 'number') { durWeighted += k.duracion_prom_seg * w; durWeight += w; }
+
+    (l.por_version || []).forEach(v => {
+      if (!versionMap.has(v.version)) versionMap.set(v.version, { version: v.version, demanda: 0, gestionadas: 0, escaladas: 0, no_contestadas: 0, sin_clasificar: 0 });
+      const acc = versionMap.get(v.version);
+      acc.demanda += v.demanda || 0;
+      acc.gestionadas += v.gestionadas || 0;
+      acc.escaladas += v.escaladas || 0;
+      acc.no_contestadas += v.no_contestadas || 0;
+      acc.sin_clasificar += v.sin_clasificar || 0;
+    });
+
+    (l.motivo_escalamiento || []).forEach(m => motivoMap.set(m.motivo, (motivoMap.get(m.motivo) || 0) + m.count));
+
+    const el = l.elevenlabs;
+    if (el) {
+      const elW = el.totales?.llamadas || 0;
+      elLlamadas += elW;
+      if (typeof el.totales?.duracion_prom_seg === 'number') elDurWeighted += el.totales.duracion_prom_seg * elW;
+      if (typeof el.totales?.pct_completadas_sin_error_tecnico === 'number') elPctWeighted += el.totales.pct_completadas_sin_error_tecnico * elW;
+      if (el.cobertura_incompleta) elCoberturaIncompleta = el.cobertura_incompleta;
+      if (el.nota) elNota = el.nota;
+    }
+  });
+  if (!any) return null;
+  kpis.pct_gestion = kpis.demanda ? (kpis.gestionadas / kpis.demanda * 100) : 0;
+  kpis.duracion_prom_seg = durWeight ? (durWeighted / durWeight) : null;
+
+  const por_version = Array.from(versionMap.values()).map(v => ({ ...v, pct_gestion: v.demanda ? (v.gestionadas / v.demanda * 100) : 0 }));
+  const motivo_escalamiento = Array.from(motivoMap.entries()).map(([motivo, count]) => ({ motivo, count })).sort((a, b) => b.count - a.count);
+  const elevenlabs = elLlamadas ? {
+    llamadas: elLlamadas,
+    duracion_prom_seg: elDurWeighted / elLlamadas,
+    pct_completadas_sin_error_tecnico: elPctWeighted / elLlamadas,
+    cobertura_incompleta: elCoberturaIncompleta,
+    nota: elNota
+  } : null;
+
+  return { kpis, por_version, motivo_escalamiento, elevenlabs };
 }
 
 // Compara un valor actual contra el mismo campo del periodo de comparación.
@@ -758,6 +867,83 @@ function renderChat(c, cmp) {
   if (verticales.length) renderMotivosTable(verticales[0]);
 
   document.getElementById('chatSubtitle').textContent = `Fuente: HubSpot — ${fmt(k.demanda)} conversaciones · tiempo promedio de solución: ${c.tiempo_promedio_solucion_min ?? '—'} min`;
+}
+
+// ══════════ LLAMADAS ══════════
+// cmp (opcional): kpis del periodo de comparación seleccionado en el range-bar.
+// Nota importante: "% completadas sin error técnico" (ElevenLabs) NO equivale a
+// "% Gestión" (HubSpot) — la primera mide si el bot terminó su flujo sin fallar
+// técnicamente (una transferencia a humano cuenta como "exitosa" ahí también); la
+// segunda mide si la llamada se resolvió SIN necesitar un humano. Por eso van en
+// tarjetas separadas, nunca una al lado de la otra como si fueran comparables.
+function renderLlamadas(c, cmp) {
+  const strip = document.getElementById('llamadasKpiStrip');
+  if (!c) {
+    strip.innerHTML = '<p class="info-note">No hay datos de Llamadas para el periodo seleccionado.</p>';
+    document.getElementById('llamadasVersionWrap').innerHTML = '';
+    document.getElementById('llamadasMotivoWrap').innerHTML = '';
+    document.getElementById('llamadasElevenlabsWrap').innerHTML = '';
+    document.getElementById('llamadasElevenlabsNota').textContent = '';
+    document.getElementById('llamadasSubtitle').textContent = 'Fuente: HubSpot CRM (objeto CALL) + ElevenLabs Conversational AI API';
+    return;
+  }
+  const k = c.kpis || {};
+  const durMin = v => (typeof v === 'number' ? (v / 60).toFixed(1) + ' min' : '—');
+  const cardDefs = [
+    { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'phone-call', cls: 'kc-dark', vcls: 'v-dark', staticText: 'llamadas totales', higher: null },
+    { key: 'gestionadas', label: 'Gestionadas', value: fmt(k.gestionadas), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: 'resueltas por Lucía', higher: true },
+    { key: 'escaladas', label: 'Escaladas', value: fmt(k.escaladas), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: 'pasaron a humano', higher: false },
+    { key: 'no_contestadas', label: 'No contestadas', value: fmt(k.no_contestadas), icon: 'phone-missed', cls: 'kc-amber', vcls: 'v-amber', staticText: 'no respuesta / colgó', higher: false },
+    { key: 'pct_gestion', label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', staticText: 'gestionadas / demanda', higher: true },
+    { key: 'duracion_prom_seg', label: 'Duración prom.', value: durMin(k.duracion_prom_seg), icon: 'clock', cls: 'kc-blue', vcls: 'v-blue', staticText: 'por llamada', higher: null },
+  ];
+  strip.innerHTML = cardDefs.map(cd => {
+    let text = cd.staticText, cls = 'neu';
+    if (cmp) {
+      const d = deltaInfo(k[cd.key], cmp[cd.key], cd.higher);
+      text = d ? d.text : 'sin dato comparable en ese periodo';
+      cls = d ? d.cls : 'neu';
+    }
+    return `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta ${cls}">${text}</div></div>`;
+  }).join('');
+
+  // Por versión (COL / DOM / Fuera de horario)
+  const versiones = [...(c.por_version || [])].sort((a, b) => b.demanda - a.demanda);
+  const maxV = versiones[0]?.demanda || 1;
+  document.getElementById('llamadasVersionWrap').innerHTML = versiones.map(v => `
+    <div class="st-row">
+      <div class="st-tema"><span>${v.version}</span></div>
+      <div class="st-bar"><div style="width:${(v.demanda / maxV * 100).toFixed(0)}%;background:${COLORS.teal}"></div></div>
+      <span class="st-num">${fmt(v.demanda)}</span>
+      <span class="st-pct">${fmtPct(v.pct_gestion)} gest.</span>
+    </div>`).join('');
+
+  // Motivo de escalamiento
+  const motivos = c.motivo_escalamiento || [];
+  const maxM = motivos[0]?.count || 1;
+  document.getElementById('llamadasMotivoWrap').innerHTML = motivos.length
+    ? motivos.map(m => `
+    <div class="st-row">
+      <div class="st-tema"><span>${m.motivo}</span></div>
+      <div class="st-bar"><div style="width:${(m.count / maxM * 100).toFixed(0)}%;background:${COLORS.purple}"></div></div>
+      <span class="st-num">${fmt(m.count)}</span>
+    </div>`).join('')
+    : '<p class="info-note">Sin llamadas escaladas en este periodo.</p>';
+
+  // Cruce técnico ElevenLabs
+  const el = c.elevenlabs;
+  if (el) {
+    document.getElementById('llamadasElevenlabsWrap').innerHTML = `
+      <div class="st-hero"><span class="st-hero-num">${fmtPct(el.pct_completadas_sin_error_tecnico)}</span><span class="st-hero-lbl">completadas sin error técnico</span></div>
+      <div class="st-row"><div class="st-tema"><span>Llamadas cruzadas (ElevenLabs)</span></div><span class="st-num" style="margin-left:auto">${fmt(el.llamadas)}</span></div>
+      <div class="st-row"><div class="st-tema"><span>Duración promedio (ElevenLabs)</span></div><span class="st-num" style="margin-left:auto">${durMin(el.duracion_prom_seg)}</span></div>`;
+    document.getElementById('llamadasElevenlabsNota').textContent = [el.nota, el.cobertura_incompleta].filter(Boolean).join(' ');
+  } else {
+    document.getElementById('llamadasElevenlabsWrap').innerHTML = '<p class="info-note">Sin cruce de ElevenLabs para este periodo.</p>';
+    document.getElementById('llamadasElevenlabsNota').textContent = '';
+  }
+
+  document.getElementById('llamadasSubtitle').textContent = `Fuente: HubSpot CALL + ElevenLabs — ${fmt(k.demanda)} llamadas · duración promedio: ${durMin(k.duracion_prom_seg)}`;
 }
 </script>
 </body>
