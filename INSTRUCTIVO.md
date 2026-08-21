@@ -46,10 +46,19 @@ El primer snapshot (`boot-2026-07-01`) es un **acumulado inicial**: cubre casi 7
 
 Cada vez que hay datos nuevos de HubSpot, la acción correcta es **agregar un objeto nuevo al array `snapshots`**, no reemplazar el archivo. Así el dashboard va acumulando historia real: en septiembre se podrá ver el comportamiento de agosto completo, comparar una semana contra otra, o contra el mismo periodo del mes anterior.
 
-En el dashboard mismo, arriba de las tarjetas de KPI de cada sección (Correo / Chat) hay un selector de periodo:
-- **Desde / Hasta**: eligen un rango de snapshots consecutivos, que se suman/combinan entre sí (los conteos se suman, los porcentajes se recalculan sobre los totales del rango, el CSAT y el tiempo de solución se promedian ponderados por volumen).
-- **Todo el histórico** / **Última semana**: atajos rápidos.
-- **Comparar con otro periodo**: activa un segundo selector Desde/Hasta; cuando está activo, cada tarjeta de KPI muestra el cambio % contra ese segundo periodo (↑ verde si el cambio es favorable para esa métrica, ↓ rojo si no — por ejemplo, más escalados es ↓ rojo aunque el número haya subido, porque más escalados es malo).
+En el dashboard mismo, arriba de las tarjetas de KPI de cada sección (Correo / Chat / Llamadas) hay una barra de filtros (rediseñada el 21-ago-2026 a pedido de Lauren, para que se vea limpia tipo selector de fechas de aerolínea/reservas — ver sección 1.3):
+- **Fecha (Desde → Hasta)**: dos campos de fecha con calendario nativo del navegador. Se incluye todo snapshot cuya semana se solape con el rango elegido; los conteos se suman, los porcentajes se recalculan sobre los totales del rango, y el CSAT/tiempo de solución se promedian ponderados por volumen. Hay que presionar **Aplicar** para que el filtro se ejecute.
+- **Versión**: selector de país/versión (COL, DOM, Fuera de horario, etc. — ver sección 1.3 para qué tan real es este filtro en cada sección).
+
+Se **eliminó** el selector "Todo el histórico" / "Última semana", los botones de mes y la función de "Comparar con otro periodo" (delta % contra un segundo rango) — a pedido explícito de Lauren, para simplificar la barra. Si en el futuro se quiere volver a tener comparación entre periodos, hay que reconstruirla desde cero (el código viejo de `deltaInfo`/`range-compare` se borró, no quedó comentado).
+
+### 1.3 Filtro por versión — qué tan real es en cada sección
+
+Lauren pidió (reunión 21-ago-2026) poder filtrar el dashboard por versión/país, igual que el filtro "Ente contable" del dashboard de Métricas del negocio (PODs). La respuesta honesta es distinta por sección, porque no todas tienen los datos desglosados por versión:
+
+- **Llamadas — filtro real y completo.** Los datos de origen (`llamadas.por_version[]` de HubSpot y `llamadas.elevenlabs.por_version[]`) ya vienen desglosados por COL/DOM/Fuera de horario, así que el filtro recalcula de verdad demanda, gestionadas, escaladas, no contestadas, % gestión, duración y el cruce de ElevenLabs para la versión elegida. Único hueco: el **motivo de escalamiento** se captura agregado (las 3 versiones juntas) — si hay un filtro de versión activo, esa tarjeta se oculta con una nota en vez de mostrar un dato mezclado y engañoso. Para arreglarlo de raíz habría que pedir que `estado_llamada`/motivo se capture ya separado por `bot_calificador` en HubSpot.
+- **Chat — filtro parcial.** Solo el widget "Ingresados a Lucía por versión" tiene desglose por país (COL, MEX, DOM, CRI, PER, VEN, OTHER); el resto de KPIs del panel de Chat en HubSpot (demanda, escalados, gestionados, % gestión, CSAT bot) **no vienen separados por versión** — son un solo número agregado. El selector de versión en Chat filtra ese gráfico y muestra una nota aclarando la limitación; las tarjetas KPI de arriba siempre muestran el total, sin importar la versión elegida. Para que el filtro fuera completo, habría que pedirle a HubSpot (o a Estefanía, quien administra los paneles) que desglose esos widgets por país/versión igual que ya está desglosado "Ingresados por versión".
+- **Correo — sin filtro todavía.** El desglose que existe (`correo.por_stage[]`) es por *stage del pipeline* (Closed COL_Sup, Nómina_Sup, Payments Sup, POS_Sup, etc.), que mezcla país y tipo de consulta — no es un campo limpio de "versión/país" que se pueda usar para filtrar. El selector de versión en esta sección queda deshabilitado con la etiqueta "No disponible" y una nota explicando por qué. Para habilitarlo de verdad haría falta que el reporte de origen en HubSpot traiga una propiedad de país/versión limpia a nivel de ticket (no solo mezclada en el nombre del stage).
 
 ## 2. Mapeo de métricas — Lucía Correo
 
@@ -169,7 +178,18 @@ Fuentes (dos, cruzadas):
 
 **Cobertura incompleta a día de hoy:** `elevenlabs_config.json` solo tiene los `agent_id` de COL y DOM — el bot "Fuera de horario" todavía no tiene su `agent_id` de ElevenLabs confirmado/agregado, así que el cruce técnico de esa versión queda pendiente (el lado de HubSpot sí lo cubre completo).
 
-**Nota sobre el `index.html` actual:** por fuera de esta conversación, `index.html` fue rediseñado con una barra lateral de navegación (en vez de pestañas) y un chequeo de autenticación (`/api/auth/me`) para el despliegue en Vercel — la lógica de agregación (`aggregateCorreo`/`aggregateChat`/`setupRangeBar`) se mantuvo igual. Se agregó `aggregateLlamadas()` y `renderLlamadas()` siguiendo ese mismo patrón, y se corrigió un bug donde el snapshot de Llamadas (por ser más reciente en fecha) hacía que "Última semana" de Correo y Chat mostrara ceros — ahora cada sección usa el último snapshot que sí trae sus datos, no simplemente el último del histórico completo.
+**Nota sobre el `index.html` actual:** por fuera de esta conversación, `index.html` fue rediseñado con una barra lateral de navegación (en vez de pestañas) y un chequeo de autenticación (`/api/auth/me`) para el despliegue en Vercel — la lógica de agregación (`aggregateCorreo`/`aggregateChat`) se mantuvo igual. Se agregó `aggregateLlamadas()` y `renderLlamadas()` siguiendo ese mismo patrón, y se corrigió un bug donde el snapshot de Llamadas (por ser más reciente en fecha) hacía que "Última semana" de Correo y Chat mostrara ceros — ahora cada sección usa el último snapshot que sí trae sus datos, no simplemente el último del histórico completo.
+
+**21-ago-2026 — rediseño del filtro + filtros por versión + ajustes de la reunión Jesus/Lauren:**
+- Se reemplazó `setupRangeBar()` (selects de semana + botones de preset + botones de mes + comparación) por `setupFilterBar()`: dos `<input type="date">` nativos + un selector de versión + botón "Aplicar" — ver sección 1.2/1.3 arriba.
+- En **Llamadas**, la tarjeta "% Gestión" se renombró a **"% Gestión Lucía"** y se movió justo al lado de "Gestionadas" (orden actual: Demanda → Gestionadas → % Gestión Lucía → Escaladas → No contestadas → Duración prom.), siguiendo la decisión de Lauren en la reunión del 21-ago-2026: que se lea el recorrido completo (entra → lo gestiona Lucía y en qué % → lo que escala) antes de aclarar de dónde salen las 68 "no contestadas". *Esto mismo se decidió en la reunión solo para la sección de Llamadas — no se aplicó a Correo, que sigue con "% Gestión" en su posición original.*
+- Se corrigió un bug de `safeChart()`: al re-aplicar el filtro (o cambiar de versión) sin recargar la página, el canvas de Chart.js no se destruía antes de crear el chart nuevo, y tiraba `Canvas is already in use`. Ahora `safeChart` llama `Chart.getChart(el)?.destroy()` antes de crear el chart — esto también arregla el mismo problema que ya existía silenciosamente antes en el selector viejo (cualquier cambio de dropdown lo disparaba, no solo el nuevo botón Aplicar).
+
+**Pendiente de la reunión Jesus/Lauren (21-ago-2026) que NO se hizo en esta pasada** (no era parte de lo pedido esta vez, pero queda anotado para no perderlo):
+- Cambiar los colores del dashboard (Lauren los calificó de "muy guía" / genéricos).
+- Confirmar con Cris la lógica de las 68 llamadas "no contestadas": ¿deberían contarse como gestionadas, como escaladas, o quedarse en su propio bucket como está hoy?
+- Solicitar acceso a Metabase para el equipo (bloqueado por el equipo de datos, decisión fuera del alcance de este dashboard).
+- Centralizar/inventariar los 4 tableros que Jesús ha construido (Lauren pidió los links para revisarlos juntos).
 
 ## 6. Anexo — por qué no se agregaron más widgets de los 2 paneles originales
 

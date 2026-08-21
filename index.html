@@ -163,19 +163,19 @@ tbody td { padding: 9px 14px; color: var(--slate); }
 /* Info note */
 .info-note { font-size: 11px; color: var(--slate-lt); font-style: italic; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); line-height: 1.6; }
 
-/* Range bar (selector de periodo + comparación) */
-.range-bar { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; background: #FFFFFF; border: 1px solid #EDF1F5; border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(26,43,74,0.04); }
-.range-field { display: flex; flex-direction: column; gap: 4px; }
-.range-field label { font-size: 10px; font-weight: 700; color: var(--slate-lt); text-transform: uppercase; letter-spacing: 0.5px; }
-.range-field select { font-family: var(--font-body); font-size: 12.5px; font-weight: 600; color: var(--dark); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; background: #fff; max-width: 240px; cursor: pointer; }
-.range-preset { align-self: center; padding: 7px 13px; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: var(--slate); font-family: var(--font-body); font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s; }
-.range-preset:hover { background: #F5F7FA; border-color: var(--teal); color: var(--teal-dk); }
-.range-months { display: flex; gap: 6px; flex-wrap: wrap; align-self: center; }
-.range-month-btn { background: var(--teal-lt); border-color: transparent; color: var(--teal-dk); }
-.range-month-btn:hover { background: var(--teal); color: #fff; }
-.compare-toggle { align-self: center; display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--slate); cursor: pointer; padding-bottom: 1px; }
-.compare-toggle input { width: 15px; height: 15px; accent-color: var(--teal); cursor: pointer; }
-.range-compare { display: flex; align-items: flex-end; gap: 14px; padding-left: 14px; border-left: 2px solid var(--teal-lt); }
+/* Filter bar (versión + rango de fechas) */
+.filter-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: #FFFFFF; border: 1px solid #EDF1F5; border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(26,43,74,0.04); }
+.filter-label { font-size: 10.5px; font-weight: 700; color: var(--slate-lt); text-transform: uppercase; letter-spacing: 0.6px; margin-right: 2px; }
+.filter-group { display: flex; align-items: center; gap: 8px; }
+.filter-select { font-family: var(--font-body); font-size: 12.5px; font-weight: 600; color: var(--dark); border: 1px solid var(--border); border-radius: 20px; padding: 7px 14px; background: #fff; cursor: pointer; }
+.filter-select:disabled { color: var(--slate-lt); cursor: not-allowed; background: #F7F9FB; }
+.filter-date-group { display: flex; align-items: center; gap: 8px; }
+.filter-date-group input[type=date] { font-family: var(--font-body); font-size: 12.5px; font-weight: 600; color: var(--dark); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; background: #fff; }
+.filter-arrow { color: var(--slate-lt); font-size: 13px; }
+.filter-divider { width: 1px; height: 22px; background: var(--border); }
+.btn-apply { margin-left: auto; padding: 8px 20px; border-radius: 8px; border: none; background: var(--teal); color: #fff; font-family: var(--font-body); font-size: 12.5px; font-weight: 700; cursor: pointer; transition: background .15s; }
+.btn-apply:hover { background: var(--teal-dk); }
+.filter-note { flex-basis: 100%; font-size: 11px; color: var(--slate-lt); font-style: italic; }
 
 /* Fallback */
 .fallback { text-align: center; padding: 60px 24px; color: var(--slate); }
@@ -259,6 +259,7 @@ tbody td { padding: 9px 14px; color: var(--slate); }
 
     <div id="chatRangeBar"></div>
     <div class="kpi-strip" id="chatKpiStrip"></div>
+    <p class="info-note" id="chatVersionNote" style="display:none;margin-bottom:20px"></p>
 
     <div class="chart-grid-2">
       <div class="chart-card">
@@ -300,6 +301,7 @@ tbody td { padding: 9px 14px; color: var(--slate); }
         <div class="chart-card-title">Motivo de escalamiento</div>
         <div class="chart-card-sub">Por qué las llamadas terminan pasando a un humano</div>
         <div id="llamadasMotivoWrap"></div>
+        <p class="info-note" id="llamadasMotivoNote" style="display:none"></p>
       </div>
     </div>
 
@@ -385,16 +387,16 @@ function runRender(historyData) {
     if (!HISTORY.length) throw new Error('El histórico no tiene snapshots.');
     const last = HISTORY[HISTORY.length - 1];
     document.getElementById('lastUpdated').textContent = 'Datos hasta: ' + (last.semana_fin || last.semana_inicio) + (last.generado ? ' · actualizado ' + last.generado : '');
-    setupRangeBar('correo', 'correo', (primary, compare) => {
-      try { renderCorreo(aggregateCorreo(primary), compare ? aggregateCorreo(compare)?.kpis : null); }
+    setupFilterBar('correo', 'correo', null, (primary) => {
+      try { renderCorreo(aggregateCorreo(primary)); }
       catch (e) { console.error('Error en renderCorreo:', e); }
     });
-    setupRangeBar('chat', 'chat', (primary, compare) => {
-      try { renderChat(aggregateChat(primary), compare ? aggregateChat(compare)?.kpis : null); }
+    setupFilterBar('chat', 'chat', collectVersions('chat', 'ingresados_por_version'), (primary, version) => {
+      try { renderChat(aggregateChat(primary, version)); }
       catch (e) { console.error('Error en renderChat:', e); }
     });
-    setupRangeBar('llamadas', 'llamadas', (primary, compare) => {
-      try { renderLlamadas(aggregateLlamadas(primary), compare ? aggregateLlamadas(compare)?.kpis : null); }
+    setupFilterBar('llamadas', 'llamadas', collectVersions('llamadas', 'por_version'), (primary, version) => {
+      try { renderLlamadas(aggregateLlamadas(primary, version)); }
       catch (e) { console.error('Error en renderLlamadas:', e); }
     });
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -413,13 +415,6 @@ function runRender(historyData) {
 // (p.ej. si en el futuro esto se sirve desde un servidor real), se intenta con
 // fetch() del JSON como respaldo.
 //
-// MESES_ES se declara aquí (antes de invocar runRender) porque runRender() dispara
-// setupRangeBar() -> computeMonthButtons() -> monthLabel() de forma síncrona, y una
-// const declarada más abajo en el archivo (aunque sea antes en la función que la usa)
-// no está disponible todavía por temporal dead zone — a diferencia de las `function`
-// declaradas con la palabra `function`, que sí quedan disponibles desde el inicio.
-const MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-
 if (typeof window.LUCIA_HISTORY !== 'undefined') {
   runRender(window.LUCIA_HISTORY);
 } else {
@@ -433,53 +428,16 @@ if (typeof window.LUCIA_HISTORY !== 'undefined') {
     });
 }
 
-// ══════════ SELECTOR DE PERIODO + COMPARACIÓN ══════════
+// ══════════ FILTROS: VERSIÓN + RANGO DE FECHAS ══════════
 // Cada snapshot representa una semana (o, el primero, un acumulado inicial — ver
-// meta.nota en el histórico). "Desde"/"Hasta" seleccionan un rango de snapshots
-// consecutivos que se agregan entre sí; el bloque opcional "Comparar con" hace lo
-// mismo con un segundo rango, y las tarjetas KPI muestran la diferencia entre ambos.
-function buildRangeBarHTML(prefix) {
-  return `
-    <div class="range-field"><label>Desde</label><select id="${prefix}From"></select></div>
-    <div class="range-field"><label>Hasta</label><select id="${prefix}To"></select></div>
-    <button type="button" class="range-preset" data-preset="all">Todo el histórico</button>
-    <button type="button" class="range-preset" data-preset="last">Última semana</button>
-    <div class="range-months" id="${prefix}MonthBtns"></div>
-    <label class="compare-toggle"><input type="checkbox" id="${prefix}CompareToggle"> Comparar con otro periodo</label>
-    <div class="range-compare" id="${prefix}CompareFields" style="display:none">
-      <div class="range-field"><label>Desde</label><select id="${prefix}CFrom"></select></div>
-      <div class="range-field"><label>Hasta</label><select id="${prefix}CTo"></select></div>
-    </div>`;
-}
-
-function monthKey(dateStr) { return dateStr.slice(0, 7); }
-function monthLabel(key) { const [y, m] = key.split('-'); return MESES_ES[parseInt(m, 10) - 1] + ' ' + y; }
-
-// Un snapshot puede cruzar más de un mes (el acumulado inicial cruza jul-ago). Se
-// asocia a un mes si al menos una parte de su rango cae en ese mes, así un botón de
-// mes siempre incluye toda la data disponible que le corresponde, sin dejar huecos.
-function computeMonthButtons() {
-  const months = new Map(); // monthKey -> { fromIdx, toIdx }
-  HISTORY.forEach((s, i) => {
-    const keys = new Set([monthKey(s.semana_inicio), monthKey(s.semana_fin)]);
-    keys.forEach(key => {
-      if (!months.has(key)) months.set(key, { fromIdx: i, toIdx: i });
-      else { const m = months.get(key); m.fromIdx = Math.min(m.fromIdx, i); m.toIdx = Math.max(m.toIdx, i); }
-    });
-  });
-  return Array.from(months.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([key, v]) => ({ key, label: monthLabel(key), ...v }));
-}
-
-function populateRangeSelect(sel, selectedIndex) {
-  sel.innerHTML = HISTORY.map((s, i) => `<option value="${i}">${s.etiqueta || (s.semana_inicio + ' – ' + s.semana_fin)}</option>`).join('');
-  sel.value = String(selectedIndex);
-}
+// meta.nota en el histórico). El filtro de fecha es un rango con calendario nativo
+// (Desde/Hasta); se incluye todo snapshot cuya semana se solape con el rango elegido.
+// No hay comparación entre periodos: se removió a pedido — una sola vista, limpia.
 
 // dataKey: nombre de la sección dentro de cada snapshot ('correo' | 'chat' | 'llamadas').
-// El valor "por defecto" (Última semana / segundo periodo de comparación) debe ser el
-// último snapshot que SÍ trae esa sección — no simplemente el último snapshot del
-// histórico completo, porque no todas las secciones empiezan a capturarse la misma
-// semana (p.ej. Llamadas arrancó después que Correo/Chat).
+// El valor "por defecto" debe ser el último snapshot que SÍ trae esa sección — no
+// simplemente el último snapshot del histórico completo, porque no todas las secciones
+// empiezan a capturarse la misma semana (p.ej. Llamadas arrancó después que Correo/Chat).
 function lastIndexWithData(dataKey) {
   for (let i = HISTORY.length - 1; i >= 0; i--) {
     if (HISTORY[i][dataKey]) return i;
@@ -487,68 +445,70 @@ function lastIndexWithData(dataKey) {
   return HISTORY.length - 1; // fallback: no hay ningún snapshot con esta sección todavía
 }
 
-function setupRangeBar(prefix, dataKey, applyFn) {
+// Recolecta las etiquetas de versión disponibles en el histórico para una sección,
+// leyendo el campo "version" de la lista indicada (p.ej. 'por_version' en Llamadas,
+// 'ingresados_por_version' en Chat). Se recalcula sobre HISTORY en vez de hardcodearse
+// para no quedar desactualizado si aparece una versión nueva (p.ej. un país nuevo).
+function collectVersions(dataKey, listKey) {
+  const set = new Set();
+  HISTORY.forEach(s => {
+    const d = s[dataKey];
+    if (d && Array.isArray(d[listKey])) d[listKey].forEach(v => { if (v.version) set.add(v.version); });
+  });
+  return Array.from(set);
+}
+
+// versions: array de versiones disponibles para el filtro, o null si la sección
+// todavía no tiene datos segmentados por versión (hoy: Correo). En ese caso el
+// selector queda deshabilitado en vez de simular un filtro que no hace nada.
+function setupFilterBar(prefix, dataKey, versions, applyFn) {
   const container = document.getElementById(prefix + 'RangeBar');
   if (!container) return;
-  container.className = 'range-bar';
-  container.innerHTML = buildRangeBarHTML(prefix);
+  container.className = 'filter-bar';
 
-  const fromSel = document.getElementById(prefix + 'From');
-  const toSel = document.getElementById(prefix + 'To');
-  const cFromSel = document.getElementById(prefix + 'CFrom');
-  const cToSel = document.getElementById(prefix + 'CTo');
-  const compareToggle = document.getElementById(prefix + 'CompareToggle');
-  const compareFields = document.getElementById(prefix + 'CompareFields');
+  const withData = HISTORY.filter(s => s[dataKey]);
+  const minDate = withData.length ? withData.reduce((a, s) => s.semana_inicio < a ? s.semana_inicio : a, withData[0].semana_inicio) : '';
+  const maxDate = withData.length ? withData.reduce((a, s) => s.semana_fin > a ? s.semana_fin : a, withData[0].semana_fin) : '';
   const lastIdx = lastIndexWithData(dataKey);
-  const overallLastIdx = HISTORY.length - 1;
-  const prevIdx = (() => {
-    for (let i = lastIdx - 1; i >= 0; i--) { if (HISTORY[i][dataKey]) return i; }
-    return Math.max(0, lastIdx - 1);
-  })();
+  const defaultFrom = HISTORY[lastIdx] ? HISTORY[lastIdx].semana_inicio : minDate;
+  const defaultTo = HISTORY[lastIdx] ? HISTORY[lastIdx].semana_fin : maxDate;
 
-  populateRangeSelect(fromSel, lastIdx);
-  populateRangeSelect(toSel, lastIdx);
-  populateRangeSelect(cFromSel, prevIdx);
-  populateRangeSelect(cToSel, prevIdx);
+  const hasVersions = Array.isArray(versions) && versions.length > 0;
+  const versionOptions = hasVersions
+    ? `<option value="all">Todas las versiones</option>` + versions.map(v => `<option value="${v}">${v}</option>`).join('')
+    : `<option value="all">No disponible</option>`;
 
-  function snapsBetween(sel1, sel2) {
-    const a = +sel1.value, b = +sel2.value;
-    return HISTORY.slice(Math.min(a, b), Math.max(a, b) + 1);
-  }
+  container.innerHTML = `
+    <span class="filter-label">Filtros</span>
+    <div class="filter-group">
+      <select id="${prefix}VersionFilter" class="filter-select" ${hasVersions ? '' : 'disabled'}>${versionOptions}</select>
+    </div>
+    <div class="filter-divider"></div>
+    <span class="filter-label">Fecha</span>
+    <div class="filter-date-group">
+      <input type="date" id="${prefix}From" min="${minDate}" max="${maxDate}" value="${defaultFrom}">
+      <span class="filter-arrow">→</span>
+      <input type="date" id="${prefix}To" min="${minDate}" max="${maxDate}" value="${defaultTo}">
+    </div>
+    <button type="button" class="btn-apply" id="${prefix}Apply">Aplicar</button>
+    ${hasVersions ? '' : `<p class="filter-note">Filtro por versión no disponible todavía para esta sección — los datos de origen no vienen segmentados por país/versión. Ver INSTRUCTIVO.md.</p>`}`;
+
+  const fromInp = document.getElementById(prefix + 'From');
+  const toInp = document.getElementById(prefix + 'To');
+  const versionSel = document.getElementById(prefix + 'VersionFilter');
+  const applyBtn = document.getElementById(prefix + 'Apply');
+
   function trigger() {
-    const primary = snapsBetween(fromSel, toSel);
-    const compare = compareToggle.checked ? snapsBetween(cFromSel, cToSel) : null;
-    applyFn(primary, compare);
+    const desde = fromInp.value || minDate;
+    const hasta = toInp.value || maxDate;
+    const primary = HISTORY.filter(s => s[dataKey] && s.semana_fin >= desde && s.semana_inicio <= hasta);
+    const version = hasVersions && versionSel.value !== 'all' ? versionSel.value : null;
+    applyFn(primary, version);
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 
-  [fromSel, toSel, cFromSel, cToSel].forEach(sel => sel.addEventListener('change', trigger));
-  compareToggle.addEventListener('change', () => {
-    compareFields.style.display = compareToggle.checked ? 'flex' : 'none';
-    trigger();
-  });
-  container.querySelectorAll('.range-preset').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (btn.dataset.preset === 'all') { fromSel.value = '0'; toSel.value = String(overallLastIdx); }
-      else { fromSel.value = String(lastIdx); toSel.value = String(lastIdx); }
-      trigger();
-    });
-  });
-
-  const monthBtnsEl = document.getElementById(prefix + 'MonthBtns');
-  computeMonthButtons().forEach(m => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'range-preset range-month-btn';
-    btn.textContent = m.label;
-    btn.addEventListener('click', () => {
-      fromSel.value = String(m.fromIdx);
-      toSel.value = String(m.toIdx);
-      trigger();
-    });
-    monthBtnsEl.appendChild(btn);
-  });
-
+  applyBtn.addEventListener('click', trigger);
+  versionSel.addEventListener('change', trigger);
   trigger();
 }
 
@@ -592,7 +552,11 @@ function aggregateCorreo(snaps) {
   };
 }
 
-function aggregateChat(snaps) {
+// version (opcional): filtra SOLO el desglose "ingresados_por_version" (el gráfico de
+// barras). Los KPIs del strip (demanda, gestionados, CSAT, etc.) no se pueden separar
+// por versión con los datos actuales de HubSpot Chat — se necesitaría que el reporte
+// de origen traiga esas métricas ya desglosadas por país. Ver INSTRUCTIVO.md.
+function aggregateChat(snaps, version) {
   if (!snaps || !snaps.length) return null;
   const kpis = { demanda: 0, ingresados_bot: 0, escalados: 0, gestionados: 0 };
   const versionMap = new Map();
@@ -621,15 +585,27 @@ function aggregateChat(snaps) {
   motivosMap.forEach((m, vert) => {
     motivos_solicitud[vert] = Array.from(m.entries()).map(([motivo, count]) => ({ motivo, count })).sort((a, b) => b.count - a.count).slice(0, 8);
   });
+  let ingresados_por_version = Array.from(versionMap.entries()).map(([v, count]) => ({ version: v, count }));
+  let versionNote = null;
+  if (version) {
+    ingresados_por_version = ingresados_por_version.filter(v => v.version === version);
+    versionNote = 'Filtro de versión aplicado solo al gráfico "Ingresados por versión" — las tarjetas KPI de arriba y el embudo de gestión siguen mostrando el total sin filtrar, porque esos datos de HubSpot no vienen desglosados por país/versión todavía.';
+  }
   return {
     kpis,
-    ingresados_por_version: Array.from(versionMap.entries()).map(([version, count]) => ({ version, count })),
+    ingresados_por_version,
+    versionNote,
     tiempo_promedio_solucion_min: tiempoWeight ? +(tiempoWeighted / tiempoWeight).toFixed(1) : null,
     motivos_solicitud
   };
 }
 
-function aggregateLlamadas(snaps) {
+// version (opcional): filtra demanda/gestionadas/escaladas/no_contestadas/duración y el
+// cruce de ElevenLabs a solo esa versión (los datos ya vienen desglosados por versión,
+// así que el filtro sí es real aquí, a diferencia de Correo/Chat). El único hueco: el
+// motivo de escalamiento se captura agregado (todas las versiones juntas) — si hay un
+// filtro de versión activo, no se muestra para no mezclar versiones distintas.
+function aggregateLlamadas(snaps, version) {
   if (!snaps || !snaps.length) return null;
   let any = false;
   const kpis = { demanda: 0, gestionadas: 0, escaladas: 0, no_contestadas: 0, sin_clasificar: 0 };
@@ -637,19 +613,22 @@ function aggregateLlamadas(snaps) {
   const motivoMap = new Map();
   let durWeighted = 0, durWeight = 0;
   let elLlamadas = 0, elDurWeighted = 0, elPctWeighted = 0, elCoberturaIncompleta = null, elNota = null;
+  let motivoDisponible = true;
+
   snaps.forEach(s => {
     const l = s.llamadas; if (!l) return;
     any = true;
-    const k = l.kpis || {};
-    kpis.demanda += k.demanda || 0;
-    kpis.gestionadas += k.gestionadas || 0;
-    kpis.escaladas += k.escaladas || 0;
-    kpis.no_contestadas += k.no_contestadas || 0;
-    kpis.sin_clasificar += k.sin_clasificar || 0;
-    const w = k.demanda || 0;
-    if (typeof k.duracion_prom_seg === 'number') { durWeighted += k.duracion_prom_seg * w; durWeight += w; }
 
-    (l.por_version || []).forEach(v => {
+    const versionesSemana = version ? (l.por_version || []).filter(v => v.version === version) : (l.por_version || []);
+    versionesSemana.forEach(v => {
+      kpis.demanda += v.demanda || 0;
+      kpis.gestionadas += v.gestionadas || 0;
+      kpis.escaladas += v.escaladas || 0;
+      kpis.no_contestadas += v.no_contestadas || 0;
+      kpis.sin_clasificar += v.sin_clasificar || 0;
+      const w = v.demanda || 0;
+      if (typeof v.duracion_prom_seg === 'number') { durWeighted += v.duracion_prom_seg * w; durWeight += w; }
+
       if (!versionMap.has(v.version)) versionMap.set(v.version, { version: v.version, demanda: 0, gestionadas: 0, escaladas: 0, no_contestadas: 0, sin_clasificar: 0 });
       const acc = versionMap.get(v.version);
       acc.demanda += v.demanda || 0;
@@ -659,16 +638,25 @@ function aggregateLlamadas(snaps) {
       acc.sin_clasificar += v.sin_clasificar || 0;
     });
 
-    (l.motivo_escalamiento || []).forEach(m => motivoMap.set(m.motivo, (motivoMap.get(m.motivo) || 0) + m.count));
+    if (version) {
+      motivoDisponible = false;
+    } else {
+      (l.motivo_escalamiento || []).forEach(m => motivoMap.set(m.motivo, (motivoMap.get(m.motivo) || 0) + m.count));
+    }
 
     const el = l.elevenlabs;
     if (el) {
-      const elW = el.totales?.llamadas || 0;
-      elLlamadas += elW;
-      if (typeof el.totales?.duracion_prom_seg === 'number') elDurWeighted += el.totales.duracion_prom_seg * elW;
-      if (typeof el.totales?.pct_completadas_sin_error_tecnico === 'number') elPctWeighted += el.totales.pct_completadas_sin_error_tecnico * elW;
-      if (el.cobertura_incompleta) elCoberturaIncompleta = el.cobertura_incompleta;
-      if (el.nota) elNota = el.nota;
+      const elVersiones = version ? (el.por_version || []).filter(v => v.version === version) : (el.por_version || []);
+      elVersiones.forEach(v => {
+        const w = v.llamadas || 0;
+        elLlamadas += w;
+        if (typeof v.duracion_prom_seg === 'number') elDurWeighted += v.duracion_prom_seg * w;
+        if (typeof v.pct_completadas_sin_error_tecnico === 'number') elPctWeighted += v.pct_completadas_sin_error_tecnico * w;
+      });
+      if (!version) {
+        if (el.cobertura_incompleta) elCoberturaIncompleta = el.cobertura_incompleta;
+        if (el.nota) elNota = el.nota;
+      }
     }
   });
   if (!any) return null;
@@ -681,24 +669,11 @@ function aggregateLlamadas(snaps) {
     llamadas: elLlamadas,
     duracion_prom_seg: elDurWeighted / elLlamadas,
     pct_completadas_sin_error_tecnico: elPctWeighted / elLlamadas,
-    cobertura_incompleta: elCoberturaIncompleta,
-    nota: elNota
+    cobertura_incompleta: version ? null : elCoberturaIncompleta,
+    nota: version ? null : elNota
   } : null;
 
-  return { kpis, por_version, motivo_escalamiento, elevenlabs };
-}
-
-// Compara un valor actual contra el mismo campo del periodo de comparación.
-// higherIsBetter: true (más es mejor), false (menos es mejor), null (neutro/informativo).
-function deltaInfo(current, previous, higherIsBetter) {
-  if (typeof current !== 'number' || typeof previous !== 'number' || !previous) return null;
-  const diffPct = ((current - previous) / Math.abs(previous)) * 100;
-  const flat = Math.abs(diffPct) < 0.05;
-  const up = diffPct > 0;
-  let cls = 'neu';
-  if (!flat && higherIsBetter !== null) cls = (higherIsBetter ? up : !up) ? 'up' : 'down';
-  const arrow = flat ? '→' : (up ? '↑' : '↓');
-  return { text: `${arrow} ${Math.abs(diffPct).toFixed(1)}% vs periodo comparado`, cls };
+  return { kpis, por_version, motivo_escalamiento, motivoDisponible, elevenlabs };
 }
 
 // Crea un Chart.js de forma segura: si Chart no cargó (CDN bloqueado) o el chart
@@ -710,7 +685,11 @@ function safeChart(canvasId, config) {
     el.parentElement.innerHTML = '<p style="font-size:11px;color:var(--slate-lt);padding:12px 0">No se pudo cargar la librería de gráficos (revisa tu conexión o bloqueador de anuncios). Los KPIs y tablas de arriba sí son válidos.</p>';
     return;
   }
-  try { return new Chart(el, config); }
+  try {
+    const existing = Chart.getChart(el);
+    if (existing) existing.destroy();
+    return new Chart(el, config);
+  }
   catch (e) {
     console.error('Error creando chart ' + canvasId + ':', e);
     el.parentElement.innerHTML = '<p style="font-size:11px;color:var(--slate-lt);padding:12px 0">No se pudo dibujar este gráfico.</p>';
@@ -718,31 +697,24 @@ function safeChart(canvasId, config) {
 }
 
 // ══════════ CORREO ══════════
-// cmp (opcional): kpis del periodo de comparación seleccionado en el range-bar.
-// Si viene, las tarjetas muestran el cambio % vs ese periodo en vez del texto fijo.
-function renderCorreo(c, cmp) {
+function renderCorreo(c) {
   const strip = document.getElementById('correoKpiStrip');
   if (!c) { strip.innerHTML = '<p class="info-note">No hay datos para el periodo seleccionado.</p>'; return; }
   const k = c.kpis || {};
   const cardDefs = [
-    { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'inbox', cls: 'kc-dark', vcls: 'v-dark', staticText: 'tickets recibidos', higher: null },
-    { key: 'gestionados', label: 'Gestionados', value: fmt(k.gestionados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: 'tickets cerrados por Lucía', higher: true },
-    { key: 'escalados', label: 'Escalados', value: fmt(k.escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: 'tickets pasados a humano', higher: false },
-    { key: 'pct_gestion', label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', staticText: 'gestionados / demanda', higher: true },
+    { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'inbox', cls: 'kc-dark', vcls: 'v-dark', staticText: 'tickets recibidos' },
+    { key: 'gestionados', label: 'Gestionados', value: fmt(k.gestionados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: 'tickets cerrados por Lucía' },
+    { key: 'escalados', label: 'Escalados', value: fmt(k.escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: 'tickets pasados a humano' },
+    { key: 'pct_gestion', label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', staticText: 'gestionados / demanda' },
   ];
-  strip.innerHTML = cardDefs.map(cd => {
-    let text = cd.staticText, cls = 'neu';
-    if (cmp) {
-      const d = deltaInfo(k[cd.key], cmp[cd.key], cd.higher);
-      text = d ? d.text : 'sin dato comparable en ese periodo';
-      cls = d ? d.cls : 'neu';
-    }
-    return `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta ${cls}">${text}</div></div>`;
-  }).join('');
+  strip.innerHTML = cardDefs.map(cd =>
+    `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
+  ).join('');
 
   // Tendencia semanal (barras escaladas vs gestionadas)
   const weeks = c.tendencia_semanal || [];
   safeChart('chartCorreoTendencia', {
+    type: 'bar',
     data: {
       labels: weeks.map(w => w.semana),
       datasets: [
@@ -780,28 +752,30 @@ function renderCorreo(c, cmp) {
 }
 
 // ══════════ CHAT ══════════
-// cmp (opcional): kpis del periodo de comparación seleccionado en el range-bar.
-function renderChat(c, cmp) {
+function renderChat(c) {
   const strip = document.getElementById('chatKpiStrip');
-  if (!c) { strip.innerHTML = '<p class="info-note">No hay datos para el periodo seleccionado.</p>'; return; }
+  if (!c) {
+    strip.innerHTML = '<p class="info-note">No hay datos para el periodo seleccionado.</p>';
+    const noteEl = document.getElementById('chatVersionNote');
+    if (noteEl) noteEl.style.display = 'none';
+    return;
+  }
   const k = c.kpis || {};
   const cardDefs = [
-    { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'message-square', cls: 'kc-dark', vcls: 'v-dark', staticText: 'conversaciones totales', higher: null },
-    { key: 'ingresados_bot', label: 'Ingresados al bot', value: fmt(k.ingresados_bot), icon: 'log-in', cls: 'kc-blue', vcls: 'v-blue', staticText: `${k.demanda ? (k.ingresados_bot/k.demanda*100).toFixed(1) : '—'}% de la demanda`, higher: null },
-    { key: 'escalados', label: 'Escalados', value: fmt(k.escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: 'pasaron a humano', higher: false },
-    { key: 'gestionados', label: 'Gestionados', value: fmt(k.gestionados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: 'resueltos por Lucía', higher: true },
-    { key: 'pct_gestion', label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', staticText: 'gestionados / ingresados', higher: true },
-    { key: 'csat_bot', label: 'CSAT bot', value: fmtPct(k.csat_bot), icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', staticText: 'satisfacción gestión Lucía', higher: true },
+    { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'message-square', cls: 'kc-dark', vcls: 'v-dark', staticText: 'conversaciones totales' },
+    { key: 'ingresados_bot', label: 'Ingresados al bot', value: fmt(k.ingresados_bot), icon: 'log-in', cls: 'kc-blue', vcls: 'v-blue', staticText: `${k.demanda ? (k.ingresados_bot/k.demanda*100).toFixed(1) : '—'}% de la demanda` },
+    { key: 'escalados', label: 'Escalados', value: fmt(k.escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: 'pasaron a humano' },
+    { key: 'gestionados', label: 'Gestionados', value: fmt(k.gestionados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: 'resueltos por Lucía' },
+    { key: 'pct_gestion', label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', staticText: 'gestionados / ingresados' },
+    { key: 'csat_bot', label: 'CSAT bot', value: fmtPct(k.csat_bot), icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', staticText: 'satisfacción gestión Lucía' },
   ];
-  strip.innerHTML = cardDefs.map(cd => {
-    let text = cd.staticText, cls = 'neu';
-    if (cmp) {
-      const d = deltaInfo(k[cd.key], cmp[cd.key], cd.higher);
-      text = d ? d.text : 'sin dato comparable en ese periodo';
-      cls = d ? d.cls : 'neu';
-    }
-    return `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta ${cls}">${text}</div></div>`;
-  }).join('');
+  strip.innerHTML = cardDefs.map(cd =>
+    `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
+  ).join('');
+
+  const versionNoteEl = document.getElementById('chatVersionNote');
+  if (c.versionNote) { versionNoteEl.textContent = c.versionNote; versionNoteEl.style.display = 'block'; }
+  else { versionNoteEl.style.display = 'none'; }
 
   // Embudo
   const noIngresaron = (k.demanda||0) - (k.ingresados_bot||0);
@@ -870,18 +844,21 @@ function renderChat(c, cmp) {
 }
 
 // ══════════ LLAMADAS ══════════
-// cmp (opcional): kpis del periodo de comparación seleccionado en el range-bar.
 // Nota importante: "% completadas sin error técnico" (ElevenLabs) NO equivale a
-// "% Gestión" (HubSpot) — la primera mide si el bot terminó su flujo sin fallar
+// "% Gestión Lucía" (HubSpot) — la primera mide si el bot terminó su flujo sin fallar
 // técnicamente (una transferencia a humano cuenta como "exitosa" ahí también); la
 // segunda mide si la llamada se resolvió SIN necesitar un humano. Por eso van en
 // tarjetas separadas, nunca una al lado de la otra como si fueran comparables.
-function renderLlamadas(c, cmp) {
+// Orden y nombre de tarjetas ajustado según reunión Jesus/Lauren del 21-ago-2026:
+// "% Gestión" -> "% Gestión Lucía", movida al lado de "Gestionadas" para que se lea
+// el recorrido completo: entra -> lo gestiona Lucía (y qué % de eso) -> lo que escala.
+function renderLlamadas(c) {
   const strip = document.getElementById('llamadasKpiStrip');
   if (!c) {
     strip.innerHTML = '<p class="info-note">No hay datos de Llamadas para el periodo seleccionado.</p>';
     document.getElementById('llamadasVersionWrap').innerHTML = '';
     document.getElementById('llamadasMotivoWrap').innerHTML = '';
+    document.getElementById('llamadasMotivoNote').style.display = 'none';
     document.getElementById('llamadasElevenlabsWrap').innerHTML = '';
     document.getElementById('llamadasElevenlabsNota').textContent = '';
     document.getElementById('llamadasSubtitle').textContent = 'Fuente: HubSpot CRM (objeto CALL) + ElevenLabs Conversational AI API';
@@ -890,22 +867,16 @@ function renderLlamadas(c, cmp) {
   const k = c.kpis || {};
   const durMin = v => (typeof v === 'number' ? (v / 60).toFixed(1) + ' min' : '—');
   const cardDefs = [
-    { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'phone-call', cls: 'kc-dark', vcls: 'v-dark', staticText: 'llamadas totales', higher: null },
-    { key: 'gestionadas', label: 'Gestionadas', value: fmt(k.gestionadas), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: 'resueltas por Lucía', higher: true },
-    { key: 'escaladas', label: 'Escaladas', value: fmt(k.escaladas), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: 'pasaron a humano', higher: false },
-    { key: 'no_contestadas', label: 'No contestadas', value: fmt(k.no_contestadas), icon: 'phone-missed', cls: 'kc-amber', vcls: 'v-amber', staticText: 'no respuesta / colgó', higher: false },
-    { key: 'pct_gestion', label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', staticText: 'gestionadas / demanda', higher: true },
-    { key: 'duracion_prom_seg', label: 'Duración prom.', value: durMin(k.duracion_prom_seg), icon: 'clock', cls: 'kc-blue', vcls: 'v-blue', staticText: 'por llamada', higher: null },
+    { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'phone-call', cls: 'kc-dark', vcls: 'v-dark', staticText: 'llamadas totales' },
+    { key: 'gestionadas', label: 'Gestionadas', value: fmt(k.gestionadas), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: 'resueltas por Lucía' },
+    { key: 'pct_gestion', label: '% Gestión Lucía', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', staticText: 'gestionadas / demanda' },
+    { key: 'escaladas', label: 'Escaladas', value: fmt(k.escaladas), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: 'pasaron a humano' },
+    { key: 'no_contestadas', label: 'No contestadas', value: fmt(k.no_contestadas), icon: 'phone-missed', cls: 'kc-amber', vcls: 'v-amber', staticText: 'no respuesta / colgó' },
+    { key: 'duracion_prom_seg', label: 'Duración prom.', value: durMin(k.duracion_prom_seg), icon: 'clock', cls: 'kc-blue', vcls: 'v-blue', staticText: 'por llamada' },
   ];
-  strip.innerHTML = cardDefs.map(cd => {
-    let text = cd.staticText, cls = 'neu';
-    if (cmp) {
-      const d = deltaInfo(k[cd.key], cmp[cd.key], cd.higher);
-      text = d ? d.text : 'sin dato comparable en ese periodo';
-      cls = d ? d.cls : 'neu';
-    }
-    return `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta ${cls}">${text}</div></div>`;
-  }).join('');
+  strip.innerHTML = cardDefs.map(cd =>
+    `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
+  ).join('');
 
   // Por versión (COL / DOM / Fuera de horario)
   const versiones = [...(c.por_version || [])].sort((a, b) => b.demanda - a.demanda);
@@ -918,25 +889,31 @@ function renderLlamadas(c, cmp) {
       <span class="st-pct">${fmtPct(v.pct_gestion)} gest.</span>
     </div>`).join('');
 
-  // Motivo de escalamiento
-  const motivos = c.motivo_escalamiento || [];
-  const maxM = motivos[0]?.count || 1;
-  document.getElementById('llamadasMotivoWrap').innerHTML = motivos.length
-    ? motivos.map(m => `
-    <div class="st-row">
-      <div class="st-tema"><span>${m.motivo}</span></div>
-      <div class="st-bar"><div style="width:${(m.count / maxM * 100).toFixed(0)}%;background:${COLORS.purple}"></div></div>
-      <span class="st-num">${fmt(m.count)}</span>
-    </div>`).join('')
-    : '<p class="info-note">Sin llamadas escaladas en este periodo.</p>';
+  // Motivo de escalamiento — no disponible desglosado por versión (ver aggregateLlamadas)
+  const motivoNoteEl = document.getElementById('llamadasMotivoNote');
+  if (c.motivoDisponible === false) {
+    document.getElementById('llamadasMotivoWrap').innerHTML = '';
+    motivoNoteEl.textContent = 'No disponible con un filtro de versión activo: el motivo de escalamiento se captura agregado (todas las versiones juntas) en los datos actuales de HubSpot — quita el filtro de versión para verlo, o mejora la captura para desglosarlo. Ver INSTRUCTIVO.md.';
+    motivoNoteEl.style.display = 'block';
+  } else {
+    motivoNoteEl.style.display = 'none';
+    const motivos = c.motivo_escalamiento || [];
+    const maxM = motivos[0]?.count || 1;
+    document.getElementById('llamadasMotivoWrap').innerHTML = motivos.length
+      ? motivos.map(m => `
+      <div class="st-row">
+        <div class="st-tema"><span>${m.motivo}</span></div>
+        <div class="st-bar"><div style="width:${(m.count / maxM * 100).toFixed(0)}%;background:${COLORS.purple}"></div></div>
+        <span class="st-num">${fmt(m.count)}</span>
+      </div>`).join('')
+      : '<p class="info-note">Sin llamadas escaladas en este periodo.</p>';
+  }
 
   // Cruce técnico ElevenLabs
   const el = c.elevenlabs;
   if (el) {
     document.getElementById('llamadasElevenlabsWrap').innerHTML = `
-      <div class="st-hero"><span class="st-hero-num">${fmtPct(el.pct_completadas_sin_error_tecnico)}</span><span class="st-hero-lbl">completadas sin error técnico</span></div>
-      <div class="st-row"><div class="st-tema"><span>Llamadas cruzadas (ElevenLabs)</span></div><span class="st-num" style="margin-left:auto">${fmt(el.llamadas)}</span></div>
-      <div class="st-row"><div class="st-tema"><span>Duración promedio (ElevenLabs)</span></div><span class="st-num" style="margin-left:auto">${durMin(el.duracion_prom_seg)}</span></div>`;
+      <div class="st-hero"><span class="st-hero-num">${fmtPct(el.pct_completadas_sin_error_tecnico)}</span><span class="st-hero-lbl">completadas sin error técnico</span></div>`;
     document.getElementById('llamadasElevenlabsNota').textContent = [el.nota, el.cobertura_incompleta].filter(Boolean).join(' ');
   } else {
     document.getElementById('llamadasElevenlabsWrap').innerHTML = '<p class="info-note">Sin cruce de ElevenLabs para este periodo.</p>';
