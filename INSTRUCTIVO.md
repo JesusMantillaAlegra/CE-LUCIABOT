@@ -4,17 +4,52 @@ Este documento explica de dónde sale cada métrica del dashboard `index.html`, 
 
 ## 1. Cómo funciona el dashboard
 
-`index.html` no trae datos "quemados": cuando abre, lee los datos y con eso pinta los KPIs, gráficos y tablas. El HTML nunca se toca — solo se regeneran los archivos de datos.
+`index.html` no trae datos "quemados": cuando abre, lee un **histórico** de snapshots semanales y con eso arma los KPIs, gráficos y tablas del periodo que el usuario tenga seleccionado. El HTML nunca se toca — solo se agrega al archivo de datos.
 
 ```
-index.html                    → la interfaz (no cambia salvo que se rediseñe)
-lucia_dashboard_data.js       → los datos que realmente carga el navegador (window.LUCIA_DATA = {...})
-lucia_dashboard_data.json     → los mismos datos en JSON plano (para el pipeline/API, no lo lee el navegador directo)
+index.html                       → la interfaz (no cambia salvo que se rediseñe)
+lucia_dashboard_history.js       → el histórico completo que realmente carga el navegador (window.LUCIA_HISTORY = {...})
+lucia_dashboard_history.json     → el mismo histórico en JSON plano (para el pipeline/API, no lo lee el navegador directo)
 ```
 
-**¿Por qué dos archivos de datos?** Este dashboard se abre con doble clic desde el explorador de Windows (`file:///C:/Users/...`), y Chrome bloquea por seguridad que una página local (`file://`) haga `fetch()` de otro archivo local — falla en silencio, sin ningún error visible, y la página se queda cargando para siempre. Por eso `index.html` carga `lucia_dashboard_data.js` con una etiqueta `<script src="...">` (eso sí funciona desde `file://`), y ese archivo simplemente asigna el mismo contenido a `window.LUCIA_DATA`. `lucia_dashboard_data.json` se mantiene como el formato "limpio" para que el script de automatización lo genere fácil; al final del proceso ese JSON se envuelve en `window.LUCIA_DATA = <json>;` para producir el `.js`.
+Los archivos viejos `lucia_dashboard_data.js` / `lucia_dashboard_data.json` (una sola "foto" que se sobreescribía cada vez) quedaron **obsoletos** — ya no los lee `index.html`. Se pueden borrar de la carpeta; si siguen ahí no hacen nada.
 
-Si en algún momento este dashboard se sirve desde un servidor real (como el de Valentina, con `/api/auth/...`) en vez de abrirse con doble clic, el HTML igual funciona: si no encuentra `lucia_dashboard_data.js` intenta `fetch('./lucia_dashboard_data.json')` como respaldo.
+**¿Por qué dos archivos de datos?** Este dashboard se abre con doble clic desde el explorador de Windows (`file:///C:/Users/...`), y Chrome bloquea por seguridad que una página local (`file://`) haga `fetch()` de otro archivo local — falla en silencio, sin ningún error visible, y la página se queda cargando para siempre. Por eso `index.html` carga `lucia_dashboard_history.js` con una etiqueta `<script src="...">` (eso sí funciona desde `file://`), y ese archivo simplemente asigna el mismo contenido a `window.LUCIA_HISTORY`. `lucia_dashboard_history.json` se mantiene como el formato "limpio" para que el script de automatización lo genere fácil; al final del proceso ese JSON se envuelve en `window.LUCIA_HISTORY = <json>;` para producir el `.js`.
+
+Si en algún momento este dashboard se sirve desde un servidor real (como el de Valentina, con `/api/auth/...`) en vez de abrirse con doble clic, el HTML igual funciona: si no encuentra `lucia_dashboard_history.js` intenta `fetch('./lucia_dashboard_history.json')` como respaldo.
+
+### 1.1 Estructura del histórico
+
+`lucia_dashboard_history.json` es un objeto con un array `snapshots`, uno por semana:
+
+```json
+{
+  "meta": { "fuente_correo": "...", "fuente_chat": "...", "nota": "..." },
+  "snapshots": [
+    {
+      "id": "boot-2026-07-01",
+      "semana_inicio": "2026-07-01",
+      "semana_fin": "2026-08-19",
+      "generado": "2026-08-19",
+      "bootstrap": true,
+      "etiqueta": "01 jul – 19 ago 2026 (acumulado inicial)",
+      "correo": { "kpis": {...}, "por_stage": [...], "tendencia_semanal": [...], "csat": {...} },
+      "chat": { "kpis": {...}, "ingresados_por_version": [...], "motivos_solicitud": {...}, "tiempo_promedio_solucion_min": ... }
+    }
+  ]
+}
+```
+
+El primer snapshot (`boot-2026-07-01`) es un **acumulado inicial**: cubre casi 7 semanas juntas porque así se leyó la primera vez, antes de que existiera este mecanismo de histórico. Está marcado con `"bootstrap": true` para que quede claro que no es una semana limpia. **Cada snapshot nuevo que se agregue de aquí en adelante sí debe cubrir exactamente una semana** (`semana_inicio` un lunes, `semana_fin` el domingo siguiente, por ejemplo), para que las comparaciones semana a semana y mes a mes sean correctas.
+
+### 1.2 El dashboard nunca se sobreescribe — se le agrega
+
+Cada vez que hay datos nuevos de HubSpot, la acción correcta es **agregar un objeto nuevo al array `snapshots`**, no reemplazar el archivo. Así el dashboard va acumulando historia real: en septiembre se podrá ver el comportamiento de agosto completo, comparar una semana contra otra, o contra el mismo periodo del mes anterior.
+
+En el dashboard mismo, arriba de las tarjetas de KPI de cada sección (Correo / Chat) hay un selector de periodo:
+- **Desde / Hasta**: eligen un rango de snapshots consecutivos, que se suman/combinan entre sí (los conteos se suman, los porcentajes se recalculan sobre los totales del rango, el CSAT y el tiempo de solución se promedian ponderados por volumen).
+- **Todo el histórico** / **Última semana**: atajos rápidos.
+- **Comparar con otro periodo**: activa un segundo selector Desde/Hasta; cuando está activo, cada tarjeta de KPI muestra el cambio % contra ese segundo periodo (↑ verde si el cambio es favorable para esa métrica, ↓ rojo si no — por ejemplo, más escalados es ↓ rojo aunque el número haya subido, porque más escalados es malo).
 
 ## 2. Mapeo de métricas — Lucía Correo
 
@@ -63,24 +98,39 @@ La fuente CONVERSATION en HubSpot corresponde al objeto de conversaciones del Co
 1. Abrir los dos paneles de HubSpot:
    - Correo: https://app.hubspot.com/reports-dashboard/6180490/view/20862583
    - Chat: https://app.hubspot.com/reports-dashboard/6180490/view/20257473
-2. Copiar los valores de cada widget según la tabla de arriba.
-3. Editar `lucia_dashboard_data.json` con los valores nuevos (mantener la misma estructura de campos).
-4. Copiar ese mismo contenido dentro de `lucia_dashboard_data.js`, reemplazando lo que está después de `window.LUCIA_DATA = ` (o pedirle a Claude/al script que lo regenere a partir del JSON — es una envoltura trivial).
-5. Guardar y abrir `index.html` con doble clic — el dashboard recarga automáticamente los datos nuevos.
+2. **Ajustar el filtro de fecha a la semana que se va a capturar** (por ejemplo "posterior a" el lunes y "anterior a" el domingo siguiente) — no dejar el filtro que traiga desde julio, porque eso duplicaría lo que ya está en el histórico.
+3. Copiar los valores de cada widget según las tablas de las secciones 2 y 3.
+4. Editar `lucia_dashboard_history.json`: **agregar un objeto nuevo al final del array `snapshots`** (no reemplazar los que ya están), con esta forma:
+   ```json
+   {
+     "id": "wk-2026-08-24",
+     "semana_inicio": "2026-08-24",
+     "semana_fin": "2026-08-30",
+     "generado": "2026-08-31",
+     "bootstrap": false,
+     "etiqueta": "24 – 30 ago 2026",
+     "correo": { "kpis": {...}, "por_stage": [...], "tendencia_semanal": [...], "csat": {...} },
+     "chat": { "kpis": {...}, "ingresados_por_version": [...], "motivos_solicitud": {...}, "tiempo_promedio_solucion_min": ... }
+   }
+   ```
+   El contenido de `correo` y `chat` tiene exactamente la misma forma que ya tenían en el snapshot anterior (ver sección 1.1) — solo cambian los números.
+5. Copiar ese mismo contenido (histórico completo, con el snapshot nuevo agregado) dentro de `lucia_dashboard_history.js`, reemplazando lo que está después de `window.LUCIA_HISTORY = ` (o pedirle a Claude/al script que lo regenere a partir del JSON — es una envoltura trivial).
+6. Guardar y abrir `index.html` con doble clic — el selector de periodo va a mostrar la semana nueva como opción, y "Última semana" la selecciona automáticamente.
 
-## 5. Automatización diaria (6:00 a.m. COT) — próximo paso
+## 5. Automatización semanal — próximo paso
 
-La idea (según lo conversado) es que un job corra todas las mañanas a las 6:00 a.m. hora Colombia y regenere `lucia_dashboard_data.json` solo. Pasos sugeridos para construir ese job:
+La idea (según lo conversado) es que un job corra automáticamente cada semana y **agregue** un snapshot nuevo a `lucia_dashboard_history.json` (nunca que lo sobreescriba). Pasos sugeridos para construir ese job:
 
 1. **Script de fetch** (Node o Python) que:
-   - Llama a HubSpot Search API / Conversations API con los filtros exactos de cada widget (ver secciones 2 y 3).
+   - Llama a HubSpot Search API / Conversations API con los filtros exactos de cada widget (ver secciones 2 y 3), acotado a la semana que cierra.
    - Calcula los mismos agregados (conteos, %, promedios).
-   - Escribe `lucia_dashboard_data.json` con la misma estructura que ya tiene hoy.
+   - Lee `lucia_dashboard_history.json`, hace `push()` de un snapshot nuevo con la forma de la sección 1.1, y lo vuelve a escribir completo (histórico + snapshot nuevo).
+   - Regenera `lucia_dashboard_history.js` a partir del JSON actualizado.
 2. **Autenticación**: crear un HubSpot Private App con scopes de lectura de tickets, conversaciones y feedback submissions; guardar el token como variable de entorno, nunca hardcodeado.
-3. **Programación**: correrlo con un cron a las 06:00 COT (11:00 UTC). Puede ser:
+3. **Programación**: correrlo semanalmente (por ejemplo, lunes 06:00 COT / 11:00 UTC, para capturar la semana que acaba de cerrar). Puede ser:
    - Un cron real en un servidor/máquina de Alegra (más confiable, no depende de que alguien tenga una sesión abierta), o
    - Una tarea programada de Claude que llame a los conectores de HubSpot ya disponibles en este entorno y escriba el JSON en esta misma carpeta.
-4. **Verificación**: cada corrida debería loguear cuántos tickets/conversaciones trajo y compararlo contra un rango razonable (para detectar si la API cambió o el filtro dejó de aplicar bien) antes de sobrescribir el JSON.
+4. **Verificación**: cada corrida debería loguear cuántos tickets/conversaciones trajo y compararlo contra un rango razonable (para detectar si la API cambió o el filtro dejó de aplicar bien) antes de agregar el snapshot — y verificar que no exista ya un snapshot con la misma `semana_inicio` (para no duplicar si el job corre dos veces).
 
 Cuando se retome ElevenLabs, este mismo instructivo se extiende con la sección de Lucía Llamadas: mapeo de `bi_bot_calls` (Metabase, ya trae datos de ElevenLabs) cruzado con la API de ElevenLabs Conversational AI para conversaciones que aún no llegan a Metabase.
 

@@ -163,6 +163,20 @@ tbody td { padding: 9px 14px; color: var(--slate); }
 /* Info note */
 .info-note { font-size: 11px; color: var(--slate-lt); font-style: italic; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); line-height: 1.6; }
 
+/* Range bar (selector de periodo + comparación) */
+.range-bar { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; background: #FFFFFF; border: 1px solid #EDF1F5; border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(26,43,74,0.04); }
+.range-field { display: flex; flex-direction: column; gap: 4px; }
+.range-field label { font-size: 10px; font-weight: 700; color: var(--slate-lt); text-transform: uppercase; letter-spacing: 0.5px; }
+.range-field select { font-family: var(--font-body); font-size: 12.5px; font-weight: 600; color: var(--dark); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; background: #fff; max-width: 240px; cursor: pointer; }
+.range-preset { align-self: center; padding: 7px 13px; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: var(--slate); font-family: var(--font-body); font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s; }
+.range-preset:hover { background: #F5F7FA; border-color: var(--teal); color: var(--teal-dk); }
+.range-months { display: flex; gap: 6px; flex-wrap: wrap; align-self: center; }
+.range-month-btn { background: var(--teal-lt); border-color: transparent; color: var(--teal-dk); }
+.range-month-btn:hover { background: var(--teal); color: #fff; }
+.compare-toggle { align-self: center; display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--slate); cursor: pointer; padding-bottom: 1px; }
+.compare-toggle input { width: 15px; height: 15px; accent-color: var(--teal); cursor: pointer; }
+.range-compare { display: flex; align-items: flex-end; gap: 14px; padding-left: 14px; border-left: 2px solid var(--teal-lt); }
+
 /* Fallback */
 .fallback { text-align: center; padding: 60px 24px; color: var(--slate); }
 .fallback h2 { color: var(--dark); margin-bottom: 8px; font-family: var(--font-head); }
@@ -213,6 +227,7 @@ tbody td { padding: 9px 14px; color: var(--slate); }
     <div class="section-title">¿Cuántos correos gestionó Lucía y cómo le fue?</div>
     <div class="section-sub" id="correoSubtitle">Fuente: HubSpot — Reports Dashboard 6180490 · vista 20862583 (tickets)</div>
 
+    <div id="correoRangeBar"></div>
     <div class="kpi-strip" id="correoKpiStrip"></div>
 
     <div class="chart-grid-2">
@@ -242,6 +257,7 @@ tbody td { padding: 9px 14px; color: var(--slate); }
     <div class="section-title">¿Cuántos chats gestionó Lucía y cómo le fue?</div>
     <div class="section-sub" id="chatSubtitle">Fuente: HubSpot — Reports Dashboard 6180490 · vista 20257473 (conversaciones)</div>
 
+    <div id="chatRangeBar"></div>
     <div class="kpi-strip" id="chatKpiStrip"></div>
 
     <div class="chart-grid-2">
@@ -270,12 +286,12 @@ tbody td { padding: 9px 14px; color: var(--slate); }
 
 <div class="fallback" id="fallback" style="display:none;">
   <h2>No se pudo cargar los datos</h2>
-  <p>Verifica que <code>lucia_dashboard_data.js</code> (o <code>lucia_dashboard_data.json</code>) esté en la misma carpeta que este archivo.</p>
+  <p>Verifica que <code>lucia_dashboard_history.js</code> (o <code>lucia_dashboard_history.json</code>) esté en la misma carpeta que este archivo.</p>
 </div>
 
 <div class="footer">Alegra — Lucía Correo + Chat · HubSpot Reports Dashboard 6180490 · Servicio al cliente</div>
 
-<script src="./lucia_dashboard_data.js"></script>
+<script src="./lucia_dashboard_history.js"></script>
 <script>
 (function checkAuth() {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') {
@@ -328,12 +344,28 @@ const COLORS = { teal:'#00BFA5', tealDk:'#008C7A', dark:'#1A2B4A', slate:'#4A556
 const fmt = n => typeof n === 'number' ? n.toLocaleString('es-CO') : (n ?? '—');
 const fmtPct = n => typeof n === 'number' ? n.toFixed(2) + '%' : '—';
 
-function runRender(data) {
+// HISTORY: lista de snapshots (uno por semana, ver INSTRUCTIVO.md), ordenada de más
+// antiguo a más reciente. El dashboard nunca lee un solo "estado actual": todo se
+// arma agregando los snapshots que caen dentro del rango de fechas seleccionado.
+let HISTORY = [];
+
+function runRender(historyData) {
   try {
-    render(data);
+    HISTORY = (historyData.snapshots || []).slice().sort((a, b) => a.semana_inicio.localeCompare(b.semana_inicio));
+    if (!HISTORY.length) throw new Error('El histórico no tiene snapshots.');
+    const last = HISTORY[HISTORY.length - 1];
+    document.getElementById('lastUpdated').textContent = 'Datos hasta: ' + (last.semana_fin || last.semana_inicio) + (last.generado ? ' · actualizado ' + last.generado : '');
+    setupRangeBar('correo', (primary, compare) => {
+      try { renderCorreo(aggregateCorreo(primary), compare ? aggregateCorreo(compare).kpis : null); }
+      catch (e) { console.error('Error en renderCorreo:', e); }
+    });
+    setupRangeBar('chat', (primary, compare) => {
+      try { renderChat(aggregateChat(primary), compare ? aggregateChat(compare).kpis : null); }
+      catch (e) { console.error('Error en renderChat:', e); }
+    });
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) {
-    console.error('Error en render():', e);
+    console.error('Error en runRender():', e);
     document.getElementById('lucia-main').style.display = 'none';
     document.getElementById('fallback').innerHTML = `<h2>Error al renderizar</h2><p><code>${e.message}</code></p>`;
     document.getElementById('fallback').style.display = 'block';
@@ -342,29 +374,222 @@ function runRender(data) {
 
 // Carga de datos: se abre normalmente con doble clic (file://), y Chrome bloquea
 // fetch() de archivos locales por CORS (falla en silencio, sin mensaje claro).
-// Por eso el dato principal se carga como <script src="./lucia_dashboard_data.js">
-// (window.LUCIA_DATA), que sí funciona desde file://. Si ese archivo no está
+// Por eso el dato principal se carga como <script src="./lucia_dashboard_history.js">
+// (window.LUCIA_HISTORY), que sí funciona desde file://. Si ese archivo no está
 // (p.ej. si en el futuro esto se sirve desde un servidor real), se intenta con
 // fetch() del JSON como respaldo.
-if (typeof window.LUCIA_DATA !== 'undefined') {
-  runRender(window.LUCIA_DATA);
+//
+// MESES_ES se declara aquí (antes de invocar runRender) porque runRender() dispara
+// setupRangeBar() -> computeMonthButtons() -> monthLabel() de forma síncrona, y una
+// const declarada más abajo en el archivo (aunque sea antes en la función que la usa)
+// no está disponible todavía por temporal dead zone — a diferencia de las `function`
+// declaradas con la palabra `function`, que sí quedan disponibles desde el inicio.
+const MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+if (typeof window.LUCIA_HISTORY !== 'undefined') {
+  runRender(window.LUCIA_HISTORY);
 } else {
-  fetch('./lucia_dashboard_data.json')
+  fetch('./lucia_dashboard_history.json')
     .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(runRender)
     .catch(e => {
-      console.error('Error al cargar datos (ni lucia_dashboard_data.js ni el JSON via fetch funcionaron):', e);
+      console.error('Error al cargar datos (ni lucia_dashboard_history.js ni el JSON via fetch funcionaron):', e);
       document.getElementById('lucia-main').style.display = 'none';
       document.getElementById('fallback').style.display = 'block';
     });
 }
 
-function render(data) {
-  document.getElementById('lastUpdated').textContent = data.meta?.generado ? 'Actualizado: ' + data.meta.generado : '';
-  // Cada sección se renderiza en su propio try/catch: si una falla (p.ej. un CDN
-  // bloqueado por la red y Chart.js no cargó), la otra sección igual se ve.
-  try { renderCorreo(data.correo); } catch (e) { console.error('Error en renderCorreo:', e); }
-  try { renderChat(data.chat); } catch (e) { console.error('Error en renderChat:', e); }
+// ══════════ SELECTOR DE PERIODO + COMPARACIÓN ══════════
+// Cada snapshot representa una semana (o, el primero, un acumulado inicial — ver
+// meta.nota en el histórico). "Desde"/"Hasta" seleccionan un rango de snapshots
+// consecutivos que se agregan entre sí; el bloque opcional "Comparar con" hace lo
+// mismo con un segundo rango, y las tarjetas KPI muestran la diferencia entre ambos.
+function buildRangeBarHTML(prefix) {
+  return `
+    <div class="range-field"><label>Desde</label><select id="${prefix}From"></select></div>
+    <div class="range-field"><label>Hasta</label><select id="${prefix}To"></select></div>
+    <button type="button" class="range-preset" data-preset="all">Todo el histórico</button>
+    <button type="button" class="range-preset" data-preset="last">Última semana</button>
+    <div class="range-months" id="${prefix}MonthBtns"></div>
+    <label class="compare-toggle"><input type="checkbox" id="${prefix}CompareToggle"> Comparar con otro periodo</label>
+    <div class="range-compare" id="${prefix}CompareFields" style="display:none">
+      <div class="range-field"><label>Desde</label><select id="${prefix}CFrom"></select></div>
+      <div class="range-field"><label>Hasta</label><select id="${prefix}CTo"></select></div>
+    </div>`;
+}
+
+function monthKey(dateStr) { return dateStr.slice(0, 7); }
+function monthLabel(key) { const [y, m] = key.split('-'); return MESES_ES[parseInt(m, 10) - 1] + ' ' + y; }
+
+// Un snapshot puede cruzar más de un mes (el acumulado inicial cruza jul-ago). Se
+// asocia a un mes si al menos una parte de su rango cae en ese mes, así un botón de
+// mes siempre incluye toda la data disponible que le corresponde, sin dejar huecos.
+function computeMonthButtons() {
+  const months = new Map(); // monthKey -> { fromIdx, toIdx }
+  HISTORY.forEach((s, i) => {
+    const keys = new Set([monthKey(s.semana_inicio), monthKey(s.semana_fin)]);
+    keys.forEach(key => {
+      if (!months.has(key)) months.set(key, { fromIdx: i, toIdx: i });
+      else { const m = months.get(key); m.fromIdx = Math.min(m.fromIdx, i); m.toIdx = Math.max(m.toIdx, i); }
+    });
+  });
+  return Array.from(months.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([key, v]) => ({ key, label: monthLabel(key), ...v }));
+}
+
+function populateRangeSelect(sel, selectedIndex) {
+  sel.innerHTML = HISTORY.map((s, i) => `<option value="${i}">${s.etiqueta || (s.semana_inicio + ' – ' + s.semana_fin)}</option>`).join('');
+  sel.value = String(selectedIndex);
+}
+
+function setupRangeBar(prefix, applyFn) {
+  const container = document.getElementById(prefix + 'RangeBar');
+  if (!container) return;
+  container.className = 'range-bar';
+  container.innerHTML = buildRangeBarHTML(prefix);
+
+  const fromSel = document.getElementById(prefix + 'From');
+  const toSel = document.getElementById(prefix + 'To');
+  const cFromSel = document.getElementById(prefix + 'CFrom');
+  const cToSel = document.getElementById(prefix + 'CTo');
+  const compareToggle = document.getElementById(prefix + 'CompareToggle');
+  const compareFields = document.getElementById(prefix + 'CompareFields');
+  const lastIdx = HISTORY.length - 1;
+  const prevIdx = Math.max(0, lastIdx - 1);
+
+  populateRangeSelect(fromSel, lastIdx);
+  populateRangeSelect(toSel, lastIdx);
+  populateRangeSelect(cFromSel, prevIdx);
+  populateRangeSelect(cToSel, prevIdx);
+
+  function snapsBetween(sel1, sel2) {
+    const a = +sel1.value, b = +sel2.value;
+    return HISTORY.slice(Math.min(a, b), Math.max(a, b) + 1);
+  }
+  function trigger() {
+    const primary = snapsBetween(fromSel, toSel);
+    const compare = compareToggle.checked ? snapsBetween(cFromSel, cToSel) : null;
+    applyFn(primary, compare);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  [fromSel, toSel, cFromSel, cToSel].forEach(sel => sel.addEventListener('change', trigger));
+  compareToggle.addEventListener('change', () => {
+    compareFields.style.display = compareToggle.checked ? 'flex' : 'none';
+    trigger();
+  });
+  container.querySelectorAll('.range-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.preset === 'all') { fromSel.value = '0'; toSel.value = String(lastIdx); }
+      else { fromSel.value = String(lastIdx); toSel.value = String(lastIdx); }
+      trigger();
+    });
+  });
+
+  const monthBtnsEl = document.getElementById(prefix + 'MonthBtns');
+  computeMonthButtons().forEach(m => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'range-preset range-month-btn';
+    btn.textContent = m.label;
+    btn.addEventListener('click', () => {
+      fromSel.value = String(m.fromIdx);
+      toSel.value = String(m.toIdx);
+      trigger();
+    });
+    monthBtnsEl.appendChild(btn);
+  });
+
+  trigger();
+}
+
+// ══════════ AGREGACIÓN DE SNAPSHOTS ══════════
+// Suma lo que se debe sumar (conteos), promedia ponderado lo que se debe promediar
+// (CSAT, tiempo de solución) y recalcula los porcentajes sobre los totales del
+// rango — nunca promedia porcentajes directamente entre semanas.
+function mergeWeeklySeries(items, valueKeys) {
+  const map = new Map();
+  items.forEach(item => {
+    if (!item || !item.semana) return;
+    if (!map.has(item.semana)) map.set(item.semana, { ...item });
+    else {
+      const existing = map.get(item.semana);
+      valueKeys.forEach(k => { existing[k] = (existing[k] || 0) + (item[k] || 0); });
+    }
+  });
+  return Array.from(map.values()).sort((a, b) => a.semana.localeCompare(b.semana));
+}
+
+function aggregateCorreo(snaps) {
+  if (!snaps || !snaps.length) return null;
+  const kpis = { demanda: 0, gestionados: 0, escalados: 0 };
+  const stageMap = new Map();
+  let tendencia = [], csatWeeks = [];
+  snaps.forEach(s => {
+    const c = s.correo; if (!c) return;
+    kpis.demanda += c.kpis?.demanda || 0;
+    kpis.gestionados += c.kpis?.gestionados || 0;
+    kpis.escalados += c.kpis?.escalados || 0;
+    (c.por_stage || []).forEach(st => stageMap.set(st.stage, (stageMap.get(st.stage) || 0) + st.count));
+    tendencia = tendencia.concat(c.tendencia_semanal || []);
+    csatWeeks = csatWeeks.concat((c.csat?.serie_semanal || []).map(w => ({ semana: w.semana, respuestas: w.respuestas || 0 })));
+  });
+  kpis.pct_gestion = kpis.demanda ? (kpis.gestionados / kpis.demanda * 100) : 0;
+  return {
+    kpis,
+    por_stage: Array.from(stageMap.entries()).map(([stage, count]) => ({ stage, count })),
+    tendencia_semanal: mergeWeeklySeries(tendencia, ['escaladas', 'gestionadas']),
+    csat: { nota: snaps[snaps.length - 1].correo?.csat?.nota, serie_semanal: mergeWeeklySeries(csatWeeks, ['respuestas']) }
+  };
+}
+
+function aggregateChat(snaps) {
+  if (!snaps || !snaps.length) return null;
+  const kpis = { demanda: 0, ingresados_bot: 0, escalados: 0, gestionados: 0 };
+  const versionMap = new Map();
+  const motivosMap = new Map(); // vertical -> Map(motivo -> count)
+  let csatWeighted = 0, csatWeight = 0, tiempoWeighted = 0, tiempoWeight = 0;
+  snaps.forEach(s => {
+    const c = s.chat; if (!c) return;
+    const k = c.kpis || {};
+    kpis.demanda += k.demanda || 0;
+    kpis.ingresados_bot += k.ingresados_bot || 0;
+    kpis.escalados += k.escalados || 0;
+    kpis.gestionados += k.gestionados || 0;
+    (c.ingresados_por_version || []).forEach(v => versionMap.set(v.version, (versionMap.get(v.version) || 0) + v.count));
+    Object.entries(c.motivos_solicitud || {}).forEach(([vert, items]) => {
+      if (!motivosMap.has(vert)) motivosMap.set(vert, new Map());
+      const m = motivosMap.get(vert);
+      items.forEach(it => m.set(it.motivo, (m.get(it.motivo) || 0) + it.count));
+    });
+    const w = k.gestionados || 0;
+    if (typeof k.csat_bot === 'number') { csatWeighted += k.csat_bot * w; csatWeight += w; }
+    if (typeof c.tiempo_promedio_solucion_min === 'number') { tiempoWeighted += c.tiempo_promedio_solucion_min * w; tiempoWeight += w; }
+  });
+  kpis.pct_gestion = kpis.ingresados_bot ? (kpis.gestionados / kpis.ingresados_bot * 100) : 0;
+  kpis.csat_bot = csatWeight ? (csatWeighted / csatWeight) : null;
+  const motivos_solicitud = {};
+  motivosMap.forEach((m, vert) => {
+    motivos_solicitud[vert] = Array.from(m.entries()).map(([motivo, count]) => ({ motivo, count })).sort((a, b) => b.count - a.count).slice(0, 8);
+  });
+  return {
+    kpis,
+    ingresados_por_version: Array.from(versionMap.entries()).map(([version, count]) => ({ version, count })),
+    tiempo_promedio_solucion_min: tiempoWeight ? +(tiempoWeighted / tiempoWeight).toFixed(1) : null,
+    motivos_solicitud
+  };
+}
+
+// Compara un valor actual contra el mismo campo del periodo de comparación.
+// higherIsBetter: true (más es mejor), false (menos es mejor), null (neutro/informativo).
+function deltaInfo(current, previous, higherIsBetter) {
+  if (typeof current !== 'number' || typeof previous !== 'number' || !previous) return null;
+  const diffPct = ((current - previous) / Math.abs(previous)) * 100;
+  const flat = Math.abs(diffPct) < 0.05;
+  const up = diffPct > 0;
+  let cls = 'neu';
+  if (!flat && higherIsBetter !== null) cls = (higherIsBetter ? up : !up) ? 'up' : 'down';
+  const arrow = flat ? '→' : (up ? '↑' : '↓');
+  return { text: `${arrow} ${Math.abs(diffPct).toFixed(1)}% vs periodo comparado`, cls };
 }
 
 // Crea un Chart.js de forma segura: si Chart no cargó (CDN bloqueado) o el chart
@@ -384,17 +609,27 @@ function safeChart(canvasId, config) {
 }
 
 // ══════════ CORREO ══════════
-function renderCorreo(c) {
-  if (!c) return;
-  const k = c.kpis || {};
+// cmp (opcional): kpis del periodo de comparación seleccionado en el range-bar.
+// Si viene, las tarjetas muestran el cambio % vs ese periodo en vez del texto fijo.
+function renderCorreo(c, cmp) {
   const strip = document.getElementById('correoKpiStrip');
-  const cards = [
-    { label: 'Demanda', value: fmt(k.demanda), icon: 'inbox', cls: 'kc-dark', vcls: 'v-dark', delta: 'tickets recibidos', dcls: 'neu' },
-    { label: 'Gestionados', value: fmt(k.gestionados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', delta: 'tickets cerrados por Lucía', dcls: 'neu' },
-    { label: 'Escalados', value: fmt(k.escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', delta: 'tickets pasados a humano', dcls: 'neu' },
-    { label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', delta: 'gestionados / demanda', dcls: 'neu' },
+  if (!c) { strip.innerHTML = '<p class="info-note">No hay datos para el periodo seleccionado.</p>'; return; }
+  const k = c.kpis || {};
+  const cardDefs = [
+    { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'inbox', cls: 'kc-dark', vcls: 'v-dark', staticText: 'tickets recibidos', higher: null },
+    { key: 'gestionados', label: 'Gestionados', value: fmt(k.gestionados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: 'tickets cerrados por Lucía', higher: true },
+    { key: 'escalados', label: 'Escalados', value: fmt(k.escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: 'tickets pasados a humano', higher: false },
+    { key: 'pct_gestion', label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', staticText: 'gestionados / demanda', higher: true },
   ];
-  strip.innerHTML = cards.map(k => `<div class="kpi-card ${k.cls}"><div class="kpi-icon-lucide" data-lucide="${k.icon}"></div><div class="kpi-label">${k.label}</div><div class="kpi-value ${k.vcls}">${k.value}</div><div class="kpi-delta ${k.dcls}">${k.delta}</div></div>`).join('');
+  strip.innerHTML = cardDefs.map(cd => {
+    let text = cd.staticText, cls = 'neu';
+    if (cmp) {
+      const d = deltaInfo(k[cd.key], cmp[cd.key], cd.higher);
+      text = d ? d.text : 'sin dato comparable en ese periodo';
+      cls = d ? d.cls : 'neu';
+    }
+    return `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta ${cls}">${text}</div></div>`;
+  }).join('');
 
   // Tendencia semanal (barras escaladas vs gestionadas)
   const weeks = c.tendencia_semanal || [];
@@ -436,19 +671,28 @@ function renderCorreo(c) {
 }
 
 // ══════════ CHAT ══════════
-function renderChat(c) {
-  if (!c) return;
-  const k = c.kpis || {};
+// cmp (opcional): kpis del periodo de comparación seleccionado en el range-bar.
+function renderChat(c, cmp) {
   const strip = document.getElementById('chatKpiStrip');
-  const cards = [
-    { label: 'Demanda', value: fmt(k.demanda), icon: 'message-square', cls: 'kc-dark', vcls: 'v-dark', delta: 'conversaciones totales', dcls: 'neu' },
-    { label: 'Ingresados al bot', value: fmt(k.ingresados_bot), icon: 'log-in', cls: 'kc-blue', vcls: 'v-blue', delta: `${k.demanda ? (k.ingresados_bot/k.demanda*100).toFixed(1) : '—'}% de la demanda`, dcls: 'neu' },
-    { label: 'Escalados', value: fmt(k.escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', delta: 'pasaron a humano', dcls: 'neu' },
-    { label: 'Gestionados', value: fmt(k.gestionados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', delta: 'resueltos por Lucía', dcls: 'neu' },
-    { label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', delta: 'gestionados / ingresados', dcls: 'neu' },
-    { label: 'CSAT bot', value: fmtPct(k.csat_bot), icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', delta: 'satisfacción gestión Lucía', dcls: 'neu' },
+  if (!c) { strip.innerHTML = '<p class="info-note">No hay datos para el periodo seleccionado.</p>'; return; }
+  const k = c.kpis || {};
+  const cardDefs = [
+    { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'message-square', cls: 'kc-dark', vcls: 'v-dark', staticText: 'conversaciones totales', higher: null },
+    { key: 'ingresados_bot', label: 'Ingresados al bot', value: fmt(k.ingresados_bot), icon: 'log-in', cls: 'kc-blue', vcls: 'v-blue', staticText: `${k.demanda ? (k.ingresados_bot/k.demanda*100).toFixed(1) : '—'}% de la demanda`, higher: null },
+    { key: 'escalados', label: 'Escalados', value: fmt(k.escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: 'pasaron a humano', higher: false },
+    { key: 'gestionados', label: 'Gestionados', value: fmt(k.gestionados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: 'resueltos por Lucía', higher: true },
+    { key: 'pct_gestion', label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', staticText: 'gestionados / ingresados', higher: true },
+    { key: 'csat_bot', label: 'CSAT bot', value: fmtPct(k.csat_bot), icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', staticText: 'satisfacción gestión Lucía', higher: true },
   ];
-  strip.innerHTML = cards.map(k => `<div class="kpi-card ${k.cls}"><div class="kpi-icon-lucide" data-lucide="${k.icon}"></div><div class="kpi-label">${k.label}</div><div class="kpi-value ${k.vcls}">${k.value}</div><div class="kpi-delta ${k.dcls}">${k.delta}</div></div>`).join('');
+  strip.innerHTML = cardDefs.map(cd => {
+    let text = cd.staticText, cls = 'neu';
+    if (cmp) {
+      const d = deltaInfo(k[cd.key], cmp[cd.key], cd.higher);
+      text = d ? d.text : 'sin dato comparable en ese periodo';
+      cls = d ? d.cls : 'neu';
+    }
+    return `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta ${cls}">${text}</div></div>`;
+  }).join('');
 
   // Embudo
   const noIngresaron = (k.demanda||0) - (k.ingresados_bot||0);
