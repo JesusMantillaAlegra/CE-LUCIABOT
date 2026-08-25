@@ -62,13 +62,18 @@ body { font-family: var(--font-body); background: #F7F9FB; color: var(--dark); f
 
 /* App body: sidebar + main */
 .app-body { display: flex; align-items: flex-start; max-width: 1600px; margin: 0 auto; }
-.sidebar { width: 232px; flex-shrink: 0; background: #fff; border-right: 1px solid #EDF1F5; padding: 22px 14px; position: sticky; top: 60px; height: calc(100vh - 60px); box-sizing: border-box; }
+.sidebar { width: 232px; flex-shrink: 0; background: #fff; border-right: 1px solid #EDF1F5; padding: 22px 14px; position: sticky; top: 60px; height: calc(100vh - 60px); box-sizing: border-box; overflow: hidden; transition: width .18s ease, padding .18s ease; }
+.sidebar.collapsed { width: 60px; padding: 22px 9px; }
 .sidebar-top { display: flex; align-items: center; justify-content: space-between; padding: 0 10px; margin-bottom: 10px; }
-.sidebar-label { font-size: 10.5px; font-weight: 700; color: var(--slate-lt); letter-spacing: 1px; }
-.sidebar-collapse { width: 22px; height: 22px; border-radius: 6px; border: 1px solid #E2E8F0; background: #fff; color: var(--slate-lt); font-size: 11px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.sidebar.collapsed .sidebar-top { justify-content: center; padding: 0; }
+.sidebar-label { font-size: 10.5px; font-weight: 700; color: var(--slate-lt); letter-spacing: 1px; white-space: nowrap; }
+.sidebar.collapsed .sidebar-label { display: none; }
+.sidebar-collapse { width: 22px; height: 22px; border-radius: 6px; border: 1px solid #E2E8F0; background: #fff; color: var(--slate-lt); font-size: 11px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .sidebar-collapse:hover { background: #F5F7FA; color: var(--dark); }
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
-.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; text-decoration: none; color: var(--slate); font-size: 13px; font-weight: 600; transition: background .15s, color .15s; cursor: pointer; }
+.sidebar.collapsed .nav-item { justify-content: center; padding: 10px 8px; gap: 0; }
+.sidebar.collapsed .nav-item span { display: none; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; text-decoration: none; color: var(--slate); font-size: 13px; font-weight: 600; transition: background .15s, color .15s; cursor: pointer; white-space: nowrap; }
 .nav-item svg { width: 18px; height: 18px; stroke-width: 2; flex-shrink: 0; }
 .nav-item span { display: flex; flex-direction: column; gap: 1px; line-height: 1.25; }
 .nav-item small { font-size: 10.5px; font-weight: 500; color: var(--slate-lt); }
@@ -259,9 +264,9 @@ tbody td { padding: 9px 14px; color: var(--slate); }
 
     <div class="chart-card">
       <div class="chart-card-title">CSAT — Lucía Correo</div>
-      <div class="chart-card-sub">Respuestas de encuesta de satisfacción por semana</div>
-      <div id="correoCsatWrap"></div>
-      <p class="info-note">Muestra pequeña — pocas respuestas de encuesta por semana. No usar como métrica única de calidad hasta tener más volumen.</p>
+      <div class="chart-card-sub">Distribución de respuestas de encuesta (Detractor / Neutro / Promoter)</div>
+      <div id="correoCsatHeroWrap" style="display:flex;gap:24px;align-items:center;margin-bottom:14px"></div>
+      <div class="chart-wrap" style="height:220px"><canvas id="chartCorreoCsat"></canvas></div>
     </div>
   </div>
 
@@ -273,7 +278,6 @@ tbody td { padding: 9px 14px; color: var(--slate); }
 
     <div id="chatRangeBar"></div>
     <div class="kpi-strip" id="chatKpiStrip"></div>
-    <p class="info-note" id="chatVersionNote" style="display:none;margin-bottom:20px"></p>
 
     <div class="chart-card">
       <div class="chart-card-title">Embudo de gestión</div>
@@ -314,7 +318,6 @@ tbody td { padding: 9px 14px; color: var(--slate); }
         <div class="chart-card-title">Motivo de escalamiento</div>
         <div class="chart-card-sub">Por qué las llamadas terminan pasando a un humano</div>
         <div id="llamadasMotivoWrap"></div>
-        <p class="info-note" id="llamadasMotivoNote" style="display:none"></p>
       </div>
     </div>
 
@@ -322,7 +325,6 @@ tbody td { padding: 9px 14px; color: var(--slate); }
       <div class="chart-card-title">Cruce técnico — ElevenLabs</div>
       <div class="chart-card-sub">Duración y % de llamadas completadas sin error técnico</div>
       <div id="llamadasElevenlabsWrap"></div>
-      <p class="info-note" id="llamadasElevenlabsNota"></p>
     </div>
   </div>
 
@@ -354,9 +356,14 @@ tbody td { padding: 9px 14px; color: var(--slate); }
     .catch(() => { document.body.style.visibility = 'visible'; }); // fallback: no bloquear en preview local
 })();
 
-document.getElementById('sidebarCollapse')?.addEventListener('click', () => {
+document.getElementById('sidebarCollapse')?.addEventListener('click', (e) => {
   const sb = document.querySelector('.sidebar');
-  sb.classList.toggle('collapsed');
+  const collapsed = sb.classList.toggle('collapsed');
+  e.currentTarget.textContent = collapsed ? '»' : '«';
+  document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+    const label = item.querySelector('span > span, span')?.firstChild?.textContent?.trim() || item.textContent.trim();
+    if (collapsed) item.setAttribute('title', label); else item.removeAttribute('title');
+  });
 });
 document.getElementById('btnActualizar')?.addEventListener('click', () => location.reload());
 
@@ -503,8 +510,7 @@ function setupFilterBar(prefix, dataKey, versions, applyFn) {
       <span class="filter-arrow">→</span>
       <input type="date" id="${prefix}To" min="${minDate}" max="${maxDate}" value="${defaultTo}">
     </div>
-    <button type="button" class="btn-apply" id="${prefix}Apply">Aplicar</button>
-    ${hasVersions ? '' : `<p class="filter-note">Filtro por versión no disponible todavía para esta sección — los datos de origen no vienen segmentados por país/versión. Ver INSTRUCTIVO.md.</p>`}`;
+    <button type="button" class="btn-apply" id="${prefix}Apply">Aplicar</button>`;
 
   const fromInp = document.getElementById(prefix + 'From');
   const toInp = document.getElementById(prefix + 'To');
@@ -561,7 +567,7 @@ function aggregateCorreo(snaps) {
       stageMap.set(st.stage, (stageMap.get(st.stage) || 0) + st.count);
     });
     tendencia = tendencia.concat(c.tendencia_semanal || []);
-    csatWeeks = csatWeeks.concat((c.csat?.serie_semanal || []).map(w => ({ semana: w.semana, respuestas: w.respuestas || 0 })));
+    csatWeeks = csatWeeks.concat((c.csat?.serie_semanal || []).map(w => ({ semana: w.semana, promoter: w.promoter || 0, passive: w.passive || 0, detractor: w.detractor || 0 })));
   });
   kpis.pct_gestion = kpis.demanda ? (kpis.gestionados / kpis.demanda * 100) : 0;
   kpis.pct_escalados = kpis.demanda ? (kpis.escalados / kpis.demanda * 100) : 0;
@@ -569,7 +575,7 @@ function aggregateCorreo(snaps) {
     kpis,
     por_stage: Array.from(stageMap.entries()).map(([stage, count]) => ({ stage, count })),
     tendencia_semanal: mergeWeeklySeries(tendencia, ['escaladas', 'gestionadas']),
-    csat: { nota: snaps[snaps.length - 1].correo?.csat?.nota, serie_semanal: mergeWeeklySeries(csatWeeks, ['respuestas']) }
+    csat: { nota: snaps[snaps.length - 1].correo?.csat?.nota, serie_semanal: mergeWeeklySeries(csatWeeks, ['promoter', 'passive', 'detractor']) }
   };
 }
 
@@ -725,29 +731,47 @@ function renderCorreo(c) {
   const strip = document.getElementById('correoKpiStrip');
   if (!c) { strip.innerHTML = '<p class="info-note">No hay datos para el periodo seleccionado.</p>'; return; }
   const k = c.kpis || {};
+  // CSAT — se calcula aquí arriba (antes iba al final) porque ahora también
+  // alimenta la 4ª tarjeta del KPI strip, a pedido de Lauren (25-ago-2026).
+  const csatWeeks = c.csat?.serie_semanal || [];
+  const csatTotals = csatWeeks.reduce((a, w) => ({
+    promoter: a.promoter + (w.promoter || 0),
+    passive: a.passive + (w.passive || 0),
+    detractor: a.detractor + (w.detractor || 0)
+  }), { promoter: 0, passive: 0, detractor: 0 });
+  const csatTotal = csatTotals.promoter + csatTotals.passive + csatTotals.detractor;
+  const pctPromoter = csatTotal ? (csatTotals.promoter / csatTotal * 100) : null;
   // Formato pedido por Lauren (reunión 21-ago-2026): el número grande es el %, y el
   // conteo absoluto va chiquito debajo, en vez de al revés como estaba antes.
   const cardDefs = [
     { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'inbox', cls: 'kc-dark', vcls: 'v-dark', staticText: 'tickets recibidos' },
-    { key: 'gestionados', label: 'Gestionados', value: fmtPct(k.pct_gestion), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionados)} tickets` },
-    { key: 'escalados', label: 'Escalados', value: fmtPct(k.pct_escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escalados)} tickets` },
+    { key: 'gestionados', label: 'Gestionados', value: fmtPct(k.pct_gestion), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionados)} tickets gestionados por Lucía` },
+    { key: 'escalados', label: 'Escalados', value: fmtPct(k.pct_escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escalados)} tickets escalados a un agente` },
+    { key: 'csat', label: 'CSAT (Promotores)', value: pctPromoter == null ? '—' : pctPromoter.toFixed(0) + '%', icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', staticText: csatTotal ? `${fmt(csatTotal)} encuestas en el periodo` : 'sin encuestas en el periodo' },
   ];
   strip.innerHTML = cardDefs.map(cd =>
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
   ).join('');
 
-  // Tendencia semanal — gráfico de líneas (antes barras), con % de gestión de esa
-  // semana (gestionadas / (escaladas+gestionadas)) como etiqueta en cada punto de la
-  // línea de Gestionadas, a pedido de Lauren.
+  // Tendencia semanal — gráfico de líneas, con % de gestión de esa semana
+  // (gestionadas / (escaladas+gestionadas)) como etiqueta en cada punto de la línea
+  // de Gestionadas, a pedido de Lauren. Fechas del eje X en formato corto "29 jun"
+  // en vez de "2026-06-29" (pedido 25-ago-2026).
   const weeks = c.tendencia_semanal || [];
   const pctPorSemana = weeks.map(w => {
     const total = (w.escaladas || 0) + (w.gestionadas || 0);
     return total ? (w.gestionadas / total * 100) : null;
   });
+  const fmtFechaCorta = iso => {
+    const [y, m, d] = (iso || '').split('-').map(Number);
+    if (!y || !m || !d) return iso;
+    const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    return `${d} ${meses[m - 1]}`;
+  };
   safeChart('chartCorreoTendencia', {
     type: 'line',
     data: {
-      labels: weeks.map(w => w.semana),
+      labels: weeks.map(w => fmtFechaCorta(w.semana)),
       datasets: [
         { type: 'line', label: 'Escaladas', data: weeks.map(w => w.escaladas), borderColor: COLORS.red, backgroundColor: COLORS.red, tension: .3, pointRadius: 4, pointBackgroundColor: COLORS.red, datalabels: { display: false } },
         { type: 'line', label: 'Gestionadas', data: weeks.map(w => w.gestionadas), borderColor: COLORS.teal, backgroundColor: COLORS.teal, tension: .3, pointRadius: 4, pointBackgroundColor: COLORS.teal,
@@ -758,7 +782,10 @@ function renderCorreo(c) {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 11 }, color: COLORS.slate } } },
-      scales: { x: { grid: { display: false }, ticks: { color: COLORS.slate, font: { size: 10 } } }, y: { beginAtZero: true, grid: { color: '#EDF2F7' } } }
+      scales: {
+        x: { grid: { display: false }, ticks: { color: COLORS.slate, font: { size: 10 } } },
+        y: { beginAtZero: true, grid: { color: '#EDF2F7' } }
+      }
     }
   });
 
@@ -773,16 +800,32 @@ function renderCorreo(c) {
       <span class="st-num">${k.demanda ? (s.count/k.demanda*100).toFixed(1) : '—'}% (${fmt(s.count)})</span>
     </div>`).join('');
 
-  // CSAT
-  const csatWeeks = c.csat?.serie_semanal || [];
-  document.getElementById('correoCsatWrap').innerHTML = `
-    <div class="st-hero"><span class="st-hero-num">${fmt(csatWeeks.reduce((a,w)=>a+(w.respuestas||0),0))}</span><span class="st-hero-lbl">respuestas totales en el periodo</span></div>
-    ${csatWeeks.map(w => `
-    <div class="st-row">
-      <div class="st-tema"><span>${w.semana}</span></div>
-      <div class="st-bar"><div style="width:${w.respuestas ? Math.min(w.respuestas*10,100) : 0}%;background:${COLORS.amber}"></div></div>
-      <span class="st-num">${w.respuestas ?? '—'}</span>
-    </div>`).join('')}`;
+  // CSAT — Detractor/Neutro/Promoter (no hay puntaje 1-10 capturado en HubSpot
+  // para Correo, ver INSTRUCTIVO.md sección 1.6). Totales calculados arriba, junto
+  // a la 4ª tarjeta del KPI strip.
+  document.getElementById('correoCsatHeroWrap').innerHTML = `
+    <div class="st-hero"><span class="st-hero-num">${pctPromoter == null ? '—' : pctPromoter.toFixed(0) + '%'}</span><span class="st-hero-lbl">CSAT (Promotores)</span></div>
+    <div class="st-hero"><span class="st-hero-num">${fmt(csatTotal)}</span><span class="st-hero-lbl">respuestas totales en el periodo</span></div>`;
+  safeChart('chartCorreoCsat', {
+    type: 'bar',
+    data: {
+      labels: ['Detractor', 'Neutro', 'Promoter'],
+      datasets: [{
+        data: [csatTotals.detractor, csatTotals.passive, csatTotals.promoter],
+        backgroundColor: [COLORS.red, COLORS.amber, COLORS.green],
+        borderRadius: 4,
+        datalabels: { display: true, anchor: 'end', align: 'top', color: COLORS.dark, font: { weight: '700', size: 12 } }
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: COLORS.slate, font: { size: 11, weight: '600' } } },
+        y: { beginAtZero: true, grid: { color: '#EDF2F7' }, ticks: { color: COLORS.slate, font: { size: 10 } } }
+      }
+    }
+  });
 }
 
 // ══════════ CHAT — diagrama de flujo del embudo de gestión ══════════
@@ -841,8 +884,6 @@ function renderChat(c) {
   const strip = document.getElementById('chatKpiStrip');
   if (!c) {
     strip.innerHTML = '<p class="info-note">No hay datos para el periodo seleccionado.</p>';
-    const noteEl = document.getElementById('chatVersionNote');
-    if (noteEl) noteEl.style.display = 'none';
     return;
   }
   const k = c.kpis || {};
@@ -852,17 +893,13 @@ function renderChat(c) {
   const cardDefs = [
     { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'message-square', cls: 'kc-dark', vcls: 'v-dark', staticText: 'conversaciones totales' },
     { key: 'ingresados_bot', label: 'Ingresados al bot', value: fmt(k.ingresados_bot), icon: 'log-in', cls: 'kc-blue', vcls: 'v-blue', staticText: `${k.demanda ? (k.ingresados_bot/k.demanda*100).toFixed(1) : '—'}% de la demanda` },
-    { key: 'gestionados', label: 'Gestionados', value: fmtPct(k.pct_gestion), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionados)} conversaciones` },
-    { key: 'escalados', label: 'Escalados', value: fmtPct(k.pct_escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escalados)} conversaciones` },
+    { key: 'gestionados', label: 'Gestionados', value: fmtPct(k.pct_gestion), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionados)} conversaciones gestionadas por Lucía` },
+    { key: 'escalados', label: 'Escalados', value: fmtPct(k.pct_escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escalados)} conversaciones escaladas a un agente` },
     { key: 'csat_bot', label: 'CSAT bot', value: fmtPct(k.csat_bot), icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', staticText: 'satisfacción gestión Lucía' },
   ];
   strip.innerHTML = cardDefs.map(cd =>
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
   ).join('');
-
-  const versionNoteEl = document.getElementById('chatVersionNote');
-  if (c.versionNote) { versionNoteEl.textContent = c.versionNote; versionNoteEl.style.display = 'block'; }
-  else { versionNoteEl.style.display = 'none'; }
 
   // Embudo — diagrama de flujo/árbol (reemplazó las barras horizontales, pedido de
   // Lauren 21-ago-2026: "un diagrama de árbol o Sankey es la representación perfecta"
@@ -938,9 +975,7 @@ function renderLlamadas(c) {
     strip.innerHTML = '<p class="info-note">No hay datos de Llamadas para el periodo seleccionado.</p>';
     document.getElementById('llamadasVersionWrap').innerHTML = '';
     document.getElementById('llamadasMotivoWrap').innerHTML = '';
-    document.getElementById('llamadasMotivoNote').style.display = 'none';
     document.getElementById('llamadasElevenlabsWrap').innerHTML = '';
-    document.getElementById('llamadasElevenlabsNota').textContent = '';
     document.getElementById('llamadasSubtitle').textContent = 'Fuente: HubSpot CRM (objeto CALL) + ElevenLabs Conversational AI API';
     return;
   }
@@ -948,8 +983,8 @@ function renderLlamadas(c) {
   const durMin = v => (typeof v === 'number' ? (v / 60).toFixed(1) + ' min' : '—');
   const cardDefs = [
     { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'phone-call', cls: 'kc-dark', vcls: 'v-dark', staticText: 'llamadas totales' },
-    { key: 'gestionadas', label: 'Gestionadas por Lucía', value: fmtPct(k.pct_gestion), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionadas)} llamadas` },
-    { key: 'escaladas', label: 'Escaladas a humano', value: fmtPct(k.pct_escaladas), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escaladas)} llamadas` },
+    { key: 'gestionadas', label: 'Gestionadas por Lucía', value: fmtPct(k.pct_gestion), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionadas)} llamadas gestionadas por Lucía` },
+    { key: 'escaladas', label: 'Escaladas a humano', value: fmtPct(k.pct_escaladas), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escaladas)} llamadas escaladas a un agente` },
     { key: 'no_contestadas', label: 'No contestadas', value: fmtPct(k.pct_no_contestadas), icon: 'phone-missed', cls: 'kc-amber', vcls: 'v-amber', staticText: `${fmt(k.no_contestadas)} llamadas` },
     { key: 'duracion_prom_seg', label: 'Duración prom.', value: durMin(k.duracion_prom_seg), icon: 'clock', cls: 'kc-blue', vcls: 'v-blue', staticText: 'por llamada' },
   ];
@@ -957,25 +992,21 @@ function renderLlamadas(c) {
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
   ).join('');
 
-  // Por versión (COL / DOM / Fuera de horario)
-  const versiones = [...(c.por_version || [])].sort((a, b) => b.demanda - a.demanda);
-  const maxV = versiones[0]?.demanda || 1;
+  // Por versión (COL / DOM / Fuera de horario) — ordenado dinámicamente por % de
+  // gestión (mayor a menor), barra proporcional al % de gestión (no al volumen), y
+  // detalle "18.80% (200/1.064)" — pedido por Lauren (reunión 25-ago-2026).
+  const versiones = [...(c.por_version || [])].sort((a, b) => (b.pct_gestion || 0) - (a.pct_gestion || 0));
   document.getElementById('llamadasVersionWrap').innerHTML = versiones.map(v => `
     <div class="st-row">
       <div class="st-tema"><span>${v.version}</span></div>
-      <div class="st-bar"><div style="width:${(v.demanda / maxV * 100).toFixed(0)}%;background:${COLORS.teal}"></div></div>
-      <span class="st-num">${fmt(v.demanda)}</span>
-      <span class="st-pct">${fmtPct(v.pct_gestion)} gest.</span>
+      <div class="st-bar"><div style="width:${(v.pct_gestion || 0).toFixed(0)}%;background:${COLORS.teal}"></div></div>
+      <span class="st-num"><b>${fmtPct(v.pct_gestion)}</b> (${fmt(v.gestionadas)}/${fmt(v.demanda)})</span>
     </div>`).join('');
 
   // Motivo de escalamiento — no disponible desglosado por versión (ver aggregateLlamadas)
-  const motivoNoteEl = document.getElementById('llamadasMotivoNote');
   if (c.motivoDisponible === false) {
     document.getElementById('llamadasMotivoWrap').innerHTML = '';
-    motivoNoteEl.textContent = 'No disponible con un filtro de versión activo: el motivo de escalamiento se captura agregado (todas las versiones juntas) en los datos actuales de HubSpot — quita el filtro de versión para verlo, o mejora la captura para desglosarlo. Ver INSTRUCTIVO.md.';
-    motivoNoteEl.style.display = 'block';
   } else {
-    motivoNoteEl.style.display = 'none';
     const motivos = c.motivo_escalamiento || [];
     const maxM = motivos[0]?.count || 1;
     const totalM = motivos.reduce((a, m) => a + (m.count || 0), 0) || 1;
@@ -994,10 +1025,8 @@ function renderLlamadas(c) {
   if (el) {
     document.getElementById('llamadasElevenlabsWrap').innerHTML = `
       <div class="st-hero"><span class="st-hero-num">${fmtPct(el.pct_completadas_sin_error_tecnico)}</span><span class="st-hero-lbl">completadas sin error técnico</span></div>`;
-    document.getElementById('llamadasElevenlabsNota').textContent = [el.nota, el.cobertura_incompleta].filter(Boolean).join(' ');
   } else {
     document.getElementById('llamadasElevenlabsWrap').innerHTML = '<p class="info-note">Sin cruce de ElevenLabs para este periodo.</p>';
-    document.getElementById('llamadasElevenlabsNota').textContent = '';
   }
 
   document.getElementById('llamadasSubtitle').textContent = `Fuente: HubSpot CALL + ElevenLabs — ${fmt(k.demanda)} llamadas · duración promedio: ${durMin(k.duracion_prom_seg)}`;

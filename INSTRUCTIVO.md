@@ -106,6 +106,64 @@ Corrección aplicada: se excluyó esa pipeline (cualquier stage cuyo nombre cont
 
 **"Motivo de escalamiento":** cambió de mostrar solo el conteo absoluto a mostrar **% con el absoluto entre paréntesis** (ej. "50% (520)"), mismo formato que las otras listas de motivos/stages. El % es sobre el total de escalamientos con motivo capturado en el periodo/filtro activo.
 
+### 1.6 CSAT de Correo — Detractor/Neutro/Promoter (25-ago-2026)
+
+Lauren pidió un gráfico de distribución del CSAT por puntaje 1-10 con una tarjeta "CSAT (Promotores) %" (ver ejemplo que mandó por Slack). Se investigó en HubSpot (vía `search_properties`/`query_crm_data` sobre TICKET) qué tan granular es el dato real disponible para los pipelines de Correo (COL_Sup, Payments Sup, Nómina_Sup, POS_Sup, Consultas API_Sup):
+
+- El CSAT nativo de HubSpot (`hs_last_csat_rating`) solo tiene 3 valores (0/1/2) y está muy poco poblado.
+- El NPS nativo (`hs_feedback_last_nps_rating_number`, 0-10) está **vacío** para estos tickets — no hay puntaje crudo capturado en ningún lado.
+- La propiedad `clasificacion_encuesta_ces_csat` ("Satisfacción del ticket proveniente de email, chat o llamada") sí trae un enum ya clasificado en **Promoter / Passive / Detractor** — la agrupación NPS estándar (9-10 / 7-8 / 0-6), solo que sin el número exacto detrás. Tiene 198 respuestas en el periodo del snapshot (01-jul al 19-ago), muchísimas más que las 6 que traía el widget nativo "CSAT - Lucía" que se usaba antes.
+
+Como no existe el puntaje 1-10 en ningún campo de HubSpot para Correo, se implementó la tarjeta y el gráfico con las 3 categorías (Detractor/Neutro/Promoter) en vez de un eje 1-10: `correo.csat.serie_semanal` ahora guarda `{semana, promoter, passive, detractor}` por semana (antes guardaba `{semana, respuestas}`). La tarjeta muestra "CSAT (Promotores) %" = Promoter / (Promoter+Passive+Detractor) del periodo filtrado, y un gráfico de barras Detractor(rojo)/Passive(amarillo)/Promoter(verde) con los totales.
+
+⚠️ Se intentó cruzar esta clasificación específicamente con lo gestionado por el bot Lucía (usando `categoria_bot_lucia`, la propiedad que marca "gestionadas"/"escaladas" por el bot), pero esa propiedad está muy poco poblada y casi no se superpone con las respuestas de CSAT (solo 13 tickets en todo el histórico tienen ambos campos a la vez). Por eso el CSAT queda scopeado a los pipelines de Correo en general (la misma fuente que usa todo el reporte), sin poder aislar "solo lo que resolvió el bot" — HubSpot no tiene esa relación capturada de forma confiable todavía.
+
+### 1.7 Ajustes finos pedidos por Lauren sobre lo anterior (25-ago-2026)
+
+- **CSAT como 4ª tarjeta de Correo:** el CSAT (Promotores) ahora también es una tarjeta en el KPI strip de arriba (Demanda, Gestionados, Escalados, CSAT), no solo la tarjeta de abajo con el gráfico — quedan 4 tarjetas en vez de 3.
+- **Texto adicional en las tarjetas de Gestionados/Escalados:** en Correo, Chat y Llamadas, el texto chiquito debajo del % ahora dice explícitamente "X tickets/conversaciones/llamadas gestionados por Lucía" / "...escalados a un agente" (antes solo decía el número, ej. "226 tickets").
+- **"Passive" → "Neutro":** se cambió la etiqueta de la categoría intermedia del CSAT para que coincida con el término que usa Lauren.
+- **Pregunta de Lauren: "¿solo tenemos info hasta el 2 de agosto?"** — sí, es real: el gráfico "Escaladas vs. Gestionadas por semana" solo tiene 3 puntos (2026-07-03, 2026-07-13, 2026-08-02) porque `tendencia_semanal` viene de un widget de HubSpot distinto al de "Demanda"/"Gestionados" (con su propio filtro, probablemente también dependiente de Conversaciones — ver sección 1.3), y esa captura no se ha vuelto a correr desde el bootstrap. **Esto no es algo que se arregle en el dashboard ni que se pueda reconstruir de forma confiable vía la API de CRM** (el mismo problema de acceso a Conversaciones de la sección 1.3) — hay que volver a correr la captura de ese widget específico en HubSpot para traer las semanas de agosto que faltan.
+
+### 1.8 Limpieza de texto explicativo visible en el dashboard (25-ago-2026)
+
+Lauren pidió quitar todo el texto explicativo/de metodología que aparecía directamente en la vista del dashboard ("no debería verse nada que no debería mostrarse"). Ese tipo de nota (de dónde sale el dato, qué limitación tiene, por qué un filtro no aplica) es información interna para quien mantiene el dashboard — vive en este documento, no en la pantalla que ve el equipo. Se quitaron del HTML (elemento y su lógica en JS) las siguientes notas, sin perder la información — queda documentada donde ya estaba (secciones 1.3, 1.6, 3):
+
+- `correoCsatNota` (metodología del CSAT, debajo del gráfico de Correo).
+- `chatVersionNote` (nota condicional sobre disponibilidad del filtro de versión en Chat).
+- `llamadasMotivoNote` (nota sobre que el motivo de escalamiento no se puede desglosar por versión con un filtro activo).
+- `llamadasElevenlabsNota` (nota + advertencia de cobertura incompleta del cruce con ElevenLabs).
+- El `<p class="filter-note">` que aparecía en la barra de filtros cuando una sección no tenía filtro de versión disponible.
+
+Los mensajes de estado vacío normales (ej. "No hay datos para el periodo seleccionado.", "Sin llamadas escaladas en este periodo.") se mantuvieron — esos no son texto de metodología, son el estado normal de una tarjeta/tabla sin datos.
+
+### 1.9 "Llamadas por versión" — formato %(abs/total) y orden dinámico por % de gestión (25-ago-2026)
+
+Lauren pidió que la tarjeta "Llamadas por versión" siguiera el mismo lenguaje visual que "Motivo de escalamiento": versión a la izquierda, barra, y a la derecha el % en negrita seguido del conteo absoluto entre paréntesis — ej. `18.80% (200/1.064)` para COL. También señaló que la barra no era coherente (salía casi llena aunque la gestión fuera baja) y pidió que el orden fuera dinámico según el % de gestión, de mayor a menor.
+
+Cambios en `renderLlamadas`:
+- El ancho de la barra ahora es proporcional a `pct_gestion` (antes era proporcional al volumen de `demanda`, por eso una versión con mucho volumen y poca gestión salía con la barra casi llena).
+- El orden de las filas ahora es `sort` descendente por `pct_gestion` (antes era por `demanda`) — con los datos actuales queda Fuera de horario (30.33%) → COL (18.80%) → DOM (8.48%), y se reordena solo si los números cambian en un snapshot futuro.
+- El texto pasó de `"1.064" + "18.80% gest."` (dos columnas separadas) a una sola columna `**18.80%** (200/1.064)`.
+
+### 1.10 Mapeo REAL de filtros de Correo, verificado contra la API (25-ago-2026)
+
+El 25-ago se le pidió a Lauren que abriera cada tarjeta del panel de Correo (HubSpot → "Filtros (N)") y mandara captura del panel de filtros — esto reveló la definición exacta de cada widget, que **no coincidía** con lo que se había asumido hasta ahora (que todo usaba `categoria_bot_lucia`). Cada consulta de abajo se verificó vía `query_crm_data` contra el CRM real y el resultado coincidió casi exacto (±1-5 tickets, por la diferencia entre "hoy" y la fecha de corte usada) con el número que muestra HubSpot en vivo — quedan listas para usarse tal cual cuando se configure la automatización por API (Vercel):
+
+| Tarjeta HubSpot | Filtros reales (panel "Filtros") | Objeto | Consulta SQL equivalente (API CRM) |
+|---|---|---|---|
+| **Demanda** (por pipeline/versión) | Fuente=Correo AND Fecha creación > fecha AND HD-Versión=X AND Pipeline=Y AND **Bandeja de entrada=Service Mail Inbox (Conversaciones)** | TICKET + **Conversaciones** | 🔴 Bloqueado — el filtro de Bandeja de entrada vive en el objeto Conversaciones, no accesible por este conector. Necesita HubSpot Private App con scope de Conversations API. |
+| **% Gestión** (por pipeline/versión) | Mismo filtro que Demanda, sin Propietario | TICKET + **Conversaciones** | 🔴 Bloqueado — mismo motivo que Demanda. |
+| **Gestionados** | Propietario del ticket = **Lucía Pérez** (ownerId `89503870`) AND Fuente=Correo AND Fecha creación > fecha | TICKET solamente | 🟢 `SELECT COUNT(*) FROM TICKET WHERE hubspot_owner_id = '89503870' AND source_type = 'EMAIL' AND createdate > 'YYYY-MM-DD'` |
+| **Escalados** | El valor de **`escalamiento_lucia_email`** es conocido AND Fecha creación > fecha | TICKET solamente | 🟢 `SELECT COUNT(*) FROM TICKET WHERE escalamiento_lucia_email IS NOT NULL AND createdate > 'YYYY-MM-DD'` |
+| **Gestión de Lucía por stage** | Propietario = Lucía Pérez AND Fuente=Correo | TICKET solamente | 🟢 `SELECT hs_pipeline_stage, COUNT(*) FROM TICKET WHERE hubspot_owner_id = '89503870' AND source_type = 'EMAIL' AND createdate > 'YYYY-MM-DD' GROUP BY hs_pipeline_stage` |
+
+**⚠️ Filtro de ruido — aplicar SIEMPRE junto con lo anterior:** tanto Gestionados como Escalados, tal como los calcula HubSpot nativamente (1.439 y 473 respectivamente, al 25-ago), **incluyen la pipeline "Correos que no requieren respuesta" (`hs_pipeline = '1860940'`)** — la misma pipeline de notificaciones automáticas identificada en la corrección del 21-ago (sección 2). HubSpot NO la excluye en sus propias tarjetas — se comprobó en vivo que 1.200 de los 1.439 "Gestionados" y 261 de los 473 "Escalados" que muestra hoy el panel de HubSpot son de esa pipeline. Para que el dashboard refleje tráfico real de soporte (no ruido), agregar siempre `AND hs_pipeline != '1860940'` a las dos consultas de arriba. Con ese filtro, para el periodo 01-jul al 19-ago-2026: Gestionados=**218**, Escalados=**199** (antes 226/411, calculados con la definición vieja e incorrecta basada en `categoria_bot_lucia` — esa propiedad no es la que usan los widgets reales, se descarta).
+
+Esto también resolvió el gráfico "Escaladas vs. Gestionadas por semana" (el que solo tenía 3 puntos hasta el 2 de agosto, sección 1.7): con las mismas dos consultas agrupadas por semana (`DATE_TRUNC(createdate, 'WEEK')`) se reconstruyó la serie completa hasta el 24 de agosto — ya no depende de una captura manual del gráfico nativo.
+
+**Cuando se configure la automatización (Vercel + HubSpot Private App):** el script de fetch semanal puede correr las 4 consultas 🟢 de la tabla de arriba (con `createdate BETWEEN` la semana que cierra) directamente contra `/crm/v3/objects/tickets/search`, sin pasar por Conversations API — solo Demanda y % Gestión necesitan ese acceso adicional. El ownerId de Lucía Pérez (`89503870`) y el pipelineId de ruido (`1860940`) son fijos, no deberían cambiar salvo que HubSpot reconfigure el equipo/las pipelines.
+
 ## 2. Mapeo de métricas — Lucía Correo
 
 Fuente: HubSpot → Reports Dashboard `6180490` → vista `20862583` (tickets de Servicio al cliente, filtrados a gestión de Lucía).
@@ -136,6 +194,39 @@ Contexto: `mailer-daemon@amazonses.com` es el remitente automático de notificac
 Este mismo filtro se aplicó ya en el dashboard hermano de CE-Retention (`ce-retention-soporte-ops`) — aquí se documenta para que la automatización de Lucía Correo (sección 5) lo aplique también desde el primer script de fetch.
 
 **Recomendación práctica:** antes de escribir el script de automatización, pedirle a quien construyó estos reportes (Estefanía) el filtro exacto de cada widget (clic en "Filtros (N)" de cada tarjeta en HubSpot) para copiar exactamente esos criterios a la Search API. Así el número automatizado coincide con el que ve el equipo en HubSpot.
+
+### 1.11 Mapeo REAL de filtros de Chat, verificado contra la API (25-ago-2026)
+
+Igual que en Correo (sección 1.10), Lauren abrió cada widget de Chat y mandó captura del panel de filtros. El resultado es distinto al de Correo: **casi todo depende genuinamente del objeto Conversaciones**, sin el atajo que sí funcionó para Gestionados/Escalados.
+
+| Widget | Filtros reales | Objeto(s) | Estado |
+|---|---|---|---|
+| **Ingresados a Lucía por versión** | Bandeja de entrada=[lista de inboxes de chat] AND Fuente=Live chat AND Flujo de chat=[lista] AND Fecha creación=Este mes AND Asignado a bot=Falso | 100% **Conversaciones** | 🔴 Bloqueado — sin ningún equivalente en TICKET (el país se determina por bandeja/flujo de chat, no por un campo limpio). |
+| **Motivos de solicitud - COL AC** | Mismos 5 filtros de Conversaciones + **"Motivo de solicitud - CE" (`ce_lever3`) conocido** (Tickets) | Conversaciones + TICKET | 🟡 Aproximable — probé `SELECT COUNT(*) FROM TICKET WHERE hs_pipeline='125444762' AND ce_lever3 IS NOT NULL AND createdate BETWEEN ...` (usando la pipeline de Chat como sustituto de "Bandeja de entrada") y dio **1.839** vs. los **1.832** que muestra HubSpot — casi exacto. |
+| **Motivos de solicitud - Payments** (`solicitud_para_payment`) | Igual, propiedad distinta | Conversaciones + TICKET | 🟠 Aproximación floja — la misma consulta con `solicitud_para_payment IS NOT NULL` dio **467** vs. **410** reales (+14%). |
+| **Motivos de solicitud - Countries AC** (`funcionalidad_de_ticket`) | Igual, propiedad distinta | Conversaciones + TICKET | 🔴 No sirve — la misma consulta con `funcionalidad_de_ticket IS NOT NULL` dio **693** vs. **334** reales (más del doble) — esta propiedad se usa en más flujos que solo el widget de Countries, así que no aísla lo mismo que "Flujo de chat". |
+| **Motivos de solicitud - Contador** (`motivo_de_solicitud_contador`), **POS** (`motivo_de_consulta_ticket_pos`), **NE** (`propiedades_ne`) | Igual, cada una con su propia propiedad | Conversaciones + TICKET | ⚪ No verificadas todavía — mismo patrón esperado: puede salir cerca (como COL AC) o lejos (como Countries), no hay forma de saberlo sin probar cada una. |
+
+**Conclusión honesta:** a diferencia de Correo, donde el owner del ticket y `escalamiento_lucia_email` resultaron ser sustitutos *exactos* y confiables, en Chat la pipeline de Chat (`125444762`) es solo una aproximación de "Bandeja de entrada + Flujo de chat" — funciona bien cuando la propiedad de motivo es exclusiva de ese flujo (COL AC), y falla cuando la propiedad se reutiliza en otros flujos (Countries). **No se recomienda automatizar Chat con este atajo sin validar cada propiedad una por una contra el número real de HubSpot primero** — el riesgo de mostrar un dato incorrecto es alto. Por ahora el dashboard sigue mostrando los datos de Chat capturados a mano (sección 3); no se tocaron con esta investigación.
+
+**Para cuando se configure la API en Vercel:** Chat va a necesitar sí o sí el HubSpot Private App con scope de **Conversations API** (`/conversations/v3/conversations`) para reproducir "Ingresados por versión" con exactitud. Para los 6 widgets de "Motivos de solicitud", la ruta más segura es igual usar Conversations API con el filtro real (Bandeja + Flujo de chat + Asignado a bot) y cruzar con el ticket asociado para leer la propiedad de motivo — replicar el atajo de TICKET-only solo si se valida cada propiedad primero contra el número visible en HubSpot.
+
+### 1.12 Mapeo REAL de 4 widgets más de Chat, verificado contra la API (25-ago-2026)
+
+Lauren mandó captura de 4 widgets más de Chat: **Tiempo promedio de solución** (131,2 min), **CSAT gestionado por bot** (88,44%), **% Gestión** (69,84%) y **Gestionados** (3.552). A diferencia de los widgets de "Motivos de solicitud" (sección 1.11), estos 4 **no tienen ningún componente de filtro de Tickets visible** — todos sus filtros viven en Conversaciones (Bandeja de entrada, Fuente=Live chat, Flujo de chat, Asignado a bot=Falso, Fecha de creación) y, en el caso de CSAT, también en el objeto "Respuestas a encuesta" (Nombre de la encuesta, Campo de fórmula "diferencia de días"). Owner ids usados: Lucía Pérez = `89503870`, Isabel = `76066940` (recién identificado — no estaba documentado antes).
+
+| Widget | Filtros reales | Objeto(s) | Proxy probado (TICKET, pipeline Chat `125444762`) | Resultado proxy vs. real | Estado |
+|---|---|---|---|---|---|
+| **Tiempo promedio de solución** | Bandeja de entrada=[lista], Fuente=Live chat, Asignado a bot=Falso, Fecha creación después de 01/06/2026, Flujo de chat=[lista] | 100% Conversaciones | `AVG(time_to_close)` → 259,1 min. `AVG(hs_time_to_close_in_operating_hours)` → 25,5 min | +97,5% y −80,5% respectivamente (quedan en lados opuestos del valor real) | 🔴 No sirve — ninguna propiedad de tiempo en TICKET se acerca, y no hay forma de filtrar por bandeja/flujo/bot en TICKET. |
+| **CSAT gestionado por bot** | Nombre de la encuesta contiene [lista] (Respuestas a encuesta), Bandeja de entrada, Fuente=Live chat, Asignado a bot=Falso, Flujo de chat, Fecha=Este mes (Conversaciones), diferencia de días < 14, Propietario=Isabel o Lucía Pérez | Conversaciones + Respuestas a encuesta | Ninguno — no existe propiedad de encuesta/CSAT en TICKET | No aplicable | 🔴 Bloqueado — no hay ninguna propiedad candidata en TICKET, ni siquiera aproximada. |
+| **% Gestión** | Bandeja de entrada, Fuente=Live chat, Flujo de chat, Asignado a bot=Falso, Fecha=Este mes | 100% Conversaciones | Denominador: `COUNT(*) FROM TICKET WHERE hs_pipeline='125444762' AND createdate BETWEEN '2026-08-01' AND '2026-08-25'` → 6.034. Numerador (owner Isabel/Lucía): 3.446. Proxy % = 57,10% | vs. real 69,84% → **−12,7 puntos porcentuales (−18,2% relativo)** | 🔴 No sirve — fuera de la banda de tolerancia (~15%); el denominador mezcla todos los dueños/canales porque Fuente/Flujo/bot no existen en TICKET. |
+| **Gestionados** | Bandeja de entrada, Fuente=Live chat, Flujo de chat, Propietario=Isabel o Lucía Pérez, Asignado a bot=Falso, Fecha=Este mes | 100% Conversaciones | `COUNT(*) FROM TICKET WHERE hs_pipeline='125444762' AND createdate BETWEEN '2026-08-01' AND '2026-08-25' AND hubspot_owner_id IN ('89503870','76066940')` → 3.446 | vs. real 3.552 → **−3,0%** (única cifra cercana) | 🟡 Coincidencia de una sola muestra, NO validada — ver advertencia abajo. |
+
+**Advertencia sobre el único resultado cercano (Gestionados, −3%):** no se recomienda tratarlo como un atajo confiable todavía. La consulta de TICKET no puede exigir Fuente=Live chat, Asignado a bot=Falso, ni Flujo de chat — así que un acierto del 3% en una sola fecha no prueba que el atajo funcione en general, igual que pasó con "Motivos de solicitud - Payments" (que dio +14%) o "Countries AC" (que dio el doble). Antes de confiar en este número habría que repetirlo en 2-3 periodos distintos y ver si el margen se mantiene cerca de 3% o se dispara como en esos otros casos.
+
+**Conclusión honesta:** de estos 4 widgets, 3 quedan claramente bloqueados o no confiables (Tiempo promedio de solución, CSAT gestionado por bot, % Gestión), y el cuarto (Gestionados) tiene un acierto de una sola muestra que no se debe automatizar sin más validación. **No se modificaron los datos del dashboard con esta investigación** — se mantiene el mismo criterio conservador usado en toda la sección de Chat (1.11): solo se toca el dashboard cuando el atajo queda probado, no cuando "parece" cercano.
+
+**Para la automatización en Vercel:** estos 4 widgets necesitan Conversations API sí o sí — no hay ruta alterna vía TICKET. El de CSAT además necesita leer el objeto "Respuestas a encuesta" (Marketing/Feedback Surveys API o el objeto custom asociado), algo que ni siquiera se puede aproximar con TICKET.
 
 ## 3. Mapeo de métricas — Lucía Chat
 

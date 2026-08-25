@@ -14,36 +14,42 @@
       "bootstrap": true,
       "etiqueta": "01 jul – 19 ago 2026 (acumulado inicial)",
       "correo": {
-        "kpis": { "demanda": 689, "gestionados": 226, "escalados": 411, "pct_gestion": 32.8 },
-        "_nota_correccion_21ago2026": "gestionados corregido de 1400 a 226 (21-ago-2026): el número original sumaba la pipeline 'Correos que no requieren respuesta' (notificaciones automáticas, no tráfico real de soporte), inflando el conteo por encima de la demanda (203% de gestión, imposible). 226 = suma de por_stage excluyendo esa pipeline. Ver INSTRUCTIVO.md sección 2.",
+        "kpis": { "demanda": 689, "gestionados": 218, "escalados": 199, "pct_gestion": 31.64 },
+        "_nota_correccion_25ago2026": "gestionados/escalados recalculados (25-ago-2026) con la definición REAL de los widgets de HubSpot, confirmada exacta contra el panel en vivo vía API: Gestionados = tickets con Propietario = 'Lucía Pérez' (no 'categoria_bot_lucia' como se asumió el 21-ago); Escalados = tickets con la propiedad 'escalamiento_lucia_email' conocida (no 'categoria_bot_lucia' tampoco). Ambas excluyen la pipeline 'Correos que no requieren respuesta' (mismo ruido de notificaciones automáticas de la corrección anterior) y se limitan a Fuente=Correo, creados entre 01-jul y 19-ago-2026 (mismo periodo que 'demanda'). 226/411 (definición anterior, basada en categoria_bot_lucia) quedan obsoletos. Ver INSTRUCTIVO.md sección 1.10 para el mapeo completo y las consultas SQL listas para la automatización por API.",
         "por_stage": [
-          { "stage": "Closed (COL_Sup)", "count": 161 },
+          { "stage": "Closed (COL_Sup)", "count": 174 },
           { "stage": "Cerrados (Consultas API_Sup)", "count": 19 },
           { "stage": "Closed (Nómina_Sup)", "count": 10 },
-          { "stage": "Waiting on contact (COL_Sup)", "count": 9 },
           { "stage": "Closed (Payments Sup)", "count": 9 },
-          { "stage": "API productos WOC (Consultas API_Sup)", "count": 6 },
-          { "stage": "Verificación de cliente (Tickets Sales)", "count": 2 },
-          { "stage": "Waiting on us (COL_Sup)", "count": 2 },
+          { "stage": "Verificación de cliente (Tickets Sales)", "count": 3 },
+          { "stage": "Waiting on contact (COL_Sup)", "count": 3 },
+          { "stage": "Follow up (COL_Sup)", "count": 3 },
           { "stage": "Closed (POS_Sup)", "count": 2 },
-          { "stage": "Follow up (COL_Sup)", "count": 2 },
           { "stage": "Gestionados (Retention)", "count": 1 },
-          { "stage": "Waiting on contact (DOM_Sup)", "count": 1 },
-          { "stage": "Follow up 1 (POS_Sup)", "count": 1 },
-          { "stage": "Seguimiento (Retention)", "count": 1 }
+          { "stage": "Waiting on us (COL_Sup)", "count": 1 }
         ],
         "tendencia_semanal": [
-          { "semana": "2026-07-03", "escaladas": 474, "gestionadas": 563 },
-          { "semana": "2026-07-13", "escaladas": 187, "gestionadas": 3 },
-          { "semana": "2026-08-02", "escaladas": 108, "gestionadas": 134 }
+          { "semana": "2026-06-29", "escaladas": 9, "gestionadas": 7 },
+          { "semana": "2026-07-06", "escaladas": 37, "gestionadas": 51 },
+          { "semana": "2026-07-13", "escaladas": 30, "gestionadas": 16 },
+          { "semana": "2026-07-20", "escaladas": 28, "gestionadas": 12 },
+          { "semana": "2026-07-27", "escaladas": 29, "gestionadas": 28 },
+          { "semana": "2026-08-03", "escaladas": 34, "gestionadas": 21 },
+          { "semana": "2026-08-10", "escaladas": 28, "gestionadas": 76 },
+          { "semana": "2026-08-17", "escaladas": 10, "gestionadas": 20 },
+          { "semana": "2026-08-24", "escaladas": 8, "gestionadas": 8 }
         ],
         "csat": {
-          "nota": "muestra pequeña — pocas respuestas de encuesta por semana",
+          "nota": "Fuente: propiedad de HubSpot 'clasificacion_encuesta_ces_csat' (Promoter/Neutro/Detractor), tickets de Correo. No hay puntaje individual 1-10 capturado en HubSpot para este pipeline, por eso se agrupa en las 3 categorías NPS en vez de un eje 1-10. No se pudo aislar solo lo gestionado por el bot Lucía vs. gestión humana dentro del pipeline (ver INSTRUCTIVO.md sección 1.6).",
           "serie_semanal": [
-            { "semana": "2026-07-06", "respuestas": 4 },
-            { "semana": "2026-07-13", "respuestas": null },
-            { "semana": "2026-07-20", "respuestas": null },
-            { "semana": "2026-07-27", "respuestas": 2 }
+            { "semana": "2026-06-29", "promoter": 19, "passive": 1, "detractor": 3 },
+            { "semana": "2026-07-06", "promoter": 26, "passive": 0, "detractor": 5 },
+            { "semana": "2026-07-13", "promoter": 13, "passive": 1, "detractor": 6 },
+            { "semana": "2026-07-20", "promoter": 19, "passive": 1, "detractor": 4 },
+            { "semana": "2026-07-27", "promoter": 27, "passive": 0, "detractor": 5 },
+            { "semana": "2026-08-03", "promoter": 26, "passive": 1, "detractor": 2 },
+            { "semana": "2026-08-10", "promoter": 20, "passive": 1, "detractor": 1 },
+            { "semana": "2026-08-17", "promoter": 15, "passive": 0, "detractor": 2 }
           ]
         }
       },
