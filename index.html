@@ -116,6 +116,7 @@ body { font-family: var(--font-body); background: #F7F9FB; color: var(--dark); f
 
 /* Chart card */
 .chart-card { background: #FFFFFF; border: 1px solid #EDF1F5; border-radius: 14px; padding: 22px; box-shadow: 0 1px 2px rgba(26,43,74,0.04); }
+.chart-card + .chart-card { margin-top: 16px; }
 .chart-card-title { font-family: var(--font-head); font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
 .chart-card-sub { font-size: 11px; color: var(--slate-lt); margin-bottom: 14px; }
 .chart-wrap { position: relative; height: 220px; }
@@ -133,6 +134,19 @@ body { font-family: var(--font-body); background: #F7F9FB; color: var(--dark); f
 .st-num { font-family: var(--font-head); font-size: 15px; font-weight: 800; color: var(--dark); min-width: 30px; text-align: right; flex-shrink: 0; }
 .st-pct { font-size: 11px; font-weight: 600; color: var(--slate-lt); min-width: 34px; text-align: right; flex-shrink: 0; }
 @media (max-width: 560px) { .st-tema { min-width: 130px; } }
+
+/* Diagrama de flujo (embudo de gestión — árbol tipo Sankey, pedido de Lauren 21-ago-2026) */
+.flow-wrap { position: relative; height: 300px; }
+.flow-hero { position: absolute; left: 0; top: 0; width: 18%; display: flex; flex-direction: column; }
+.flow-hero-num { font-family: var(--font-head); font-size: 32px; font-weight: 800; color: var(--dark); line-height: 1; }
+.flow-hero-lbl { font-size: 10.5px; font-weight: 700; color: var(--slate); margin-top: 6px; line-height: 1.3; }
+.flow-hero-sub { font-size: 10px; color: var(--slate-lt); margin-top: 2px; }
+.flow-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.flow-node { position: absolute; border-radius: 10px; padding: 10px 12px; box-sizing: border-box; border: 1.5px solid; display: flex; flex-direction: column; justify-content: center; }
+.flow-node-title { font-size: 10.5px; font-weight: 700; }
+.flow-node-value { font-family: var(--font-head); font-size: 19px; font-weight: 800; margin-top: 3px; line-height: 1.1; }
+.flow-node-sub { font-size: 10px; color: var(--slate-lt); margin-top: 3px; }
+@media (max-width: 760px) { .flow-wrap { height: 420px; } }
 
 /* Tabs de motivos por vertical */
 .tab-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -261,17 +275,16 @@ tbody td { padding: 9px 14px; color: var(--slate); }
     <div class="kpi-strip" id="chatKpiStrip"></div>
     <p class="info-note" id="chatVersionNote" style="display:none;margin-bottom:20px"></p>
 
-    <div class="chart-grid-2">
-      <div class="chart-card">
-        <div class="chart-card-title">Embudo de gestión</div>
-        <div class="chart-card-sub">Demanda → Ingresados al bot → Escalados / Gestionados</div>
-        <div id="chatEmbudoWrap"></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-card-title">Ingresados a Lucía por versión (país)</div>
-        <div class="chart-card-sub">Distribución de conversaciones por versión de Alegra</div>
-        <div class="chart-wrap"><canvas id="chartChatVersion"></canvas></div>
-      </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Embudo de gestión</div>
+      <div class="chart-card-sub">Demanda → Ingresados al bot → Escalados / Gestionados</div>
+      <div id="chatEmbudoWrap"></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-title">Ingresados a Lucía por versión (país)</div>
+      <div class="chart-card-sub">Distribución de conversaciones por versión de Alegra</div>
+      <div class="chart-wrap" style="height:300px"><canvas id="chartChatVersion"></canvas></div>
     </div>
 
     <div class="chart-card">
@@ -529,6 +542,10 @@ function mergeWeeklySeries(items, valueKeys) {
   return Array.from(map.values()).sort((a, b) => a.semana.localeCompare(b.semana));
 }
 
+// "Correos que no requieren respuesta" es una pipeline aparte de notificaciones
+// automáticas (confirmaciones, etc.) — no es tráfico real de soporte gestionado por
+// Lucía, así que se excluye del desglose por stage (y por lo tanto de cualquier % o
+// suma derivada de por_stage). Mismo criterio que el filtro de bounce de mailer-daemon.
 function aggregateCorreo(snaps) {
   if (!snaps || !snaps.length) return null;
   const kpis = { demanda: 0, gestionados: 0, escalados: 0 };
@@ -539,11 +556,15 @@ function aggregateCorreo(snaps) {
     kpis.demanda += c.kpis?.demanda || 0;
     kpis.gestionados += c.kpis?.gestionados || 0;
     kpis.escalados += c.kpis?.escalados || 0;
-    (c.por_stage || []).forEach(st => stageMap.set(st.stage, (stageMap.get(st.stage) || 0) + st.count));
+    (c.por_stage || []).forEach(st => {
+      if (st.stage.includes('correos que no requieren respuesta')) return;
+      stageMap.set(st.stage, (stageMap.get(st.stage) || 0) + st.count);
+    });
     tendencia = tendencia.concat(c.tendencia_semanal || []);
     csatWeeks = csatWeeks.concat((c.csat?.serie_semanal || []).map(w => ({ semana: w.semana, respuestas: w.respuestas || 0 })));
   });
   kpis.pct_gestion = kpis.demanda ? (kpis.gestionados / kpis.demanda * 100) : 0;
+  kpis.pct_escalados = kpis.demanda ? (kpis.escalados / kpis.demanda * 100) : 0;
   return {
     kpis,
     por_stage: Array.from(stageMap.entries()).map(([stage, count]) => ({ stage, count })),
@@ -580,6 +601,7 @@ function aggregateChat(snaps, version) {
     if (typeof c.tiempo_promedio_solucion_min === 'number') { tiempoWeighted += c.tiempo_promedio_solucion_min * w; tiempoWeight += w; }
   });
   kpis.pct_gestion = kpis.ingresados_bot ? (kpis.gestionados / kpis.ingresados_bot * 100) : 0;
+  kpis.pct_escalados = kpis.ingresados_bot ? (kpis.escalados / kpis.ingresados_bot * 100) : 0;
   kpis.csat_bot = csatWeight ? (csatWeighted / csatWeight) : null;
   const motivos_solicitud = {};
   motivosMap.forEach((m, vert) => {
@@ -661,6 +683,8 @@ function aggregateLlamadas(snaps, version) {
   });
   if (!any) return null;
   kpis.pct_gestion = kpis.demanda ? (kpis.gestionadas / kpis.demanda * 100) : 0;
+  kpis.pct_escaladas = kpis.demanda ? (kpis.escaladas / kpis.demanda * 100) : 0;
+  kpis.pct_no_contestadas = kpis.demanda ? (kpis.no_contestadas / kpis.demanda * 100) : 0;
   kpis.duracion_prom_seg = durWeight ? (durWeighted / durWeight) : null;
 
   const por_version = Array.from(versionMap.values()).map(v => ({ ...v, pct_gestion: v.demanda ? (v.gestionadas / v.demanda * 100) : 0 }));
@@ -701,42 +725,52 @@ function renderCorreo(c) {
   const strip = document.getElementById('correoKpiStrip');
   if (!c) { strip.innerHTML = '<p class="info-note">No hay datos para el periodo seleccionado.</p>'; return; }
   const k = c.kpis || {};
+  // Formato pedido por Lauren (reunión 21-ago-2026): el número grande es el %, y el
+  // conteo absoluto va chiquito debajo, en vez de al revés como estaba antes.
   const cardDefs = [
     { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'inbox', cls: 'kc-dark', vcls: 'v-dark', staticText: 'tickets recibidos' },
-    { key: 'gestionados', label: 'Gestionados', value: fmt(k.gestionados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: 'tickets cerrados por Lucía' },
-    { key: 'escalados', label: 'Escalados', value: fmt(k.escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: 'tickets pasados a humano' },
-    { key: 'pct_gestion', label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', staticText: 'gestionados / demanda' },
+    { key: 'gestionados', label: 'Gestionados', value: fmtPct(k.pct_gestion), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionados)} tickets` },
+    { key: 'escalados', label: 'Escalados', value: fmtPct(k.pct_escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escalados)} tickets` },
   ];
   strip.innerHTML = cardDefs.map(cd =>
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
   ).join('');
 
-  // Tendencia semanal (barras escaladas vs gestionadas)
+  // Tendencia semanal — gráfico de líneas (antes barras), con % de gestión de esa
+  // semana (gestionadas / (escaladas+gestionadas)) como etiqueta en cada punto de la
+  // línea de Gestionadas, a pedido de Lauren.
   const weeks = c.tendencia_semanal || [];
+  const pctPorSemana = weeks.map(w => {
+    const total = (w.escaladas || 0) + (w.gestionadas || 0);
+    return total ? (w.gestionadas / total * 100) : null;
+  });
   safeChart('chartCorreoTendencia', {
-    type: 'bar',
+    type: 'line',
     data: {
       labels: weeks.map(w => w.semana),
       datasets: [
-        { type: 'bar', label: 'Escaladas', data: weeks.map(w => w.escaladas), backgroundColor: COLORS.red, borderRadius: 4 },
-        { type: 'bar', label: 'Gestionadas', data: weeks.map(w => w.gestionadas), backgroundColor: COLORS.teal, borderRadius: 4 },
+        { type: 'line', label: 'Escaladas', data: weeks.map(w => w.escaladas), borderColor: COLORS.red, backgroundColor: COLORS.red, tension: .3, pointRadius: 4, pointBackgroundColor: COLORS.red, datalabels: { display: false } },
+        { type: 'line', label: 'Gestionadas', data: weeks.map(w => w.gestionadas), borderColor: COLORS.teal, backgroundColor: COLORS.teal, tension: .3, pointRadius: 4, pointBackgroundColor: COLORS.teal,
+          datalabels: { display: true, align: 'top', color: COLORS.tealDk, font: { weight: '700', size: 10 },
+            formatter: (v, ctx) => { const p = pctPorSemana[ctx.dataIndex]; return p == null ? '' : p.toFixed(0) + '%'; } } },
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 11 }, color: COLORS.slate } }, datalabels: { display: false } },
+      plugins: { legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 11 }, color: COLORS.slate } } },
       scales: { x: { grid: { display: false }, ticks: { color: COLORS.slate, font: { size: 10 } } }, y: { beginAtZero: true, grid: { color: '#EDF2F7' } } }
     }
   });
 
-  // Stage breakdown (top 8 como barras horizontales)
+  // Stage breakdown (top 8 como barras horizontales) — % sobre demanda total del
+  // periodo, con el número absoluto entre paréntesis (pedido de Lauren).
   const stages = [...(c.por_stage || [])].sort((a,b) => b.count - a.count).slice(0, 8);
   const maxStage = stages[0]?.count || 1;
   document.getElementById('correoStageWrap').innerHTML = stages.map(s => `
     <div class="st-row">
       <div class="st-tema"><span>${s.stage}</span></div>
       <div class="st-bar"><div style="width:${(s.count/maxStage*100).toFixed(0)}%;background:${COLORS.teal}"></div></div>
-      <span class="st-num">${fmt(s.count)}</span>
+      <span class="st-num">${k.demanda ? (s.count/k.demanda*100).toFixed(1) : '—'}% (${fmt(s.count)})</span>
     </div>`).join('');
 
   // CSAT
@@ -751,6 +785,57 @@ function renderCorreo(c) {
     </div>`).join('')}`;
 }
 
+// ══════════ CHAT — diagrama de flujo del embudo de gestión ══════════
+// Construido a mano con divs posicionados en % + un SVG superpuesto para las curvas
+// (no se agregó ninguna librería nueva de Sankey/diagramas — mantiene el dashboard
+// autocontenido). Las coordenadas de nodos/curvas están en un sistema 0-100 que
+// coincide 1:1 entre el HTML (posiciones en %) y el viewBox del SVG.
+function renderChatFlow(k) {
+  const demanda = k.demanda || 0;
+  const ingresados = k.ingresados_bot || 0;
+  const noIngresaron = Math.max(0, demanda - ingresados);
+  const gestionados = k.gestionados || 0;
+  const escalados = k.escalados || 0;
+  const pctIngresados = demanda ? (ingresados / demanda * 100) : 0;
+  const pctAbandono = demanda ? (noIngresaron / demanda * 100) : 0;
+  const pctContencion = k.pct_gestion || 0;   // gestionados / ingresados_bot
+  const pctEsc = k.pct_escalados || 0;        // escalados / ingresados_bot
+
+  const nodes = {
+    demanda:     { x: 0,  y: 30, w: 17, h: 58, color: COLORS.dark,   title: 'Demanda Total', value: fmt(demanda), sub: '100% de la demanda' },
+    ingresados:  { x: 37, y: 4,  w: 25, h: 34, color: COLORS.blue,   title: 'Ingresados al Bot', value: fmt(ingresados), sub: `${pctIngresados.toFixed(0)}% de la demanda` },
+    abandono:    { x: 37, y: 62, w: 25, h: 34, color: COLORS.purple, title: 'No Ingresaron al Flujo', value: fmt(noIngresaron), sub: `${pctAbandono.toFixed(0)}% de la demanda` },
+    gestionados: { x: 76, y: 4,  w: 24, h: 34, color: COLORS.teal,   title: 'Gestionados por Bot', value: fmt(gestionados), sub: `${pctContencion.toFixed(0)}% de los ingresados` },
+    escalados:   { x: 76, y: 62, w: 24, h: 34, color: COLORS.red,    title: 'Escalados a Agente', value: fmt(escalados), sub: `${pctEsc.toFixed(0)}% de los ingresados` },
+  };
+  const edge = (n, side) => ({ x: side === 'right' ? n.x + n.w : n.x, y: n.y + n.h / 2 });
+  const curve = (p1, p2) => { const mx = (p1.x + p2.x) / 2; return `M ${p1.x},${p1.y} C ${mx},${p1.y} ${mx},${p2.y} ${p2.x},${p2.y}`; };
+  const links = [
+    { from: edge(nodes.demanda, 'right'), to: edge(nodes.ingresados, 'left'), color: COLORS.blue },
+    { from: edge(nodes.demanda, 'right'), to: edge(nodes.abandono, 'left'), color: COLORS.purple },
+    { from: edge(nodes.ingresados, 'right'), to: edge(nodes.gestionados, 'left'), color: COLORS.teal },
+    { from: edge(nodes.ingresados, 'right'), to: edge(nodes.escalados, 'left'), color: COLORS.red },
+  ];
+  const pathsSvg = links.map(l => `<path d="${curve(l.from, l.to)}" stroke="${l.color}" stroke-width="0.6" fill="none" opacity="0.55"/>`).join('');
+  const nodesHtml = Object.values(nodes).map(n => `
+    <div class="flow-node" style="left:${n.x}%;top:${n.y}%;width:${n.w}%;height:${n.h}%;border-color:${n.color};background:${n.color}14">
+      <div class="flow-node-title" style="color:${n.color}">${n.title}</div>
+      <div class="flow-node-value" style="color:${n.color}">${n.value}</div>
+      <div class="flow-node-sub">${n.sub}</div>
+    </div>`).join('');
+
+  return `
+    <div class="flow-wrap">
+      <div class="flow-hero">
+        <span class="flow-hero-num">${pctContencion.toFixed(0)}%</span>
+        <span class="flow-hero-lbl">Tasa de Contención del Bot</span>
+        <span class="flow-hero-sub">Gestionados / Ingresados al bot</span>
+      </div>
+      <svg class="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">${pathsSvg}</svg>
+      ${nodesHtml}
+    </div>`;
+}
+
 // ══════════ CHAT ══════════
 function renderChat(c) {
   const strip = document.getElementById('chatKpiStrip');
@@ -761,12 +846,14 @@ function renderChat(c) {
     return;
   }
   const k = c.kpis || {};
+  // Orden y formato pedidos por Lauren (reunión 21-ago-2026): Gestionados justo
+  // después de Ingresados al bot, y tanto Gestionados como Escalados muestran el %
+  // como número grande con el conteo absoluto debajo — mismo tratamiento que Correo.
   const cardDefs = [
     { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'message-square', cls: 'kc-dark', vcls: 'v-dark', staticText: 'conversaciones totales' },
     { key: 'ingresados_bot', label: 'Ingresados al bot', value: fmt(k.ingresados_bot), icon: 'log-in', cls: 'kc-blue', vcls: 'v-blue', staticText: `${k.demanda ? (k.ingresados_bot/k.demanda*100).toFixed(1) : '—'}% de la demanda` },
-    { key: 'escalados', label: 'Escalados', value: fmt(k.escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: 'pasaron a humano' },
-    { key: 'gestionados', label: 'Gestionados', value: fmt(k.gestionados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: 'resueltos por Lucía' },
-    { key: 'pct_gestion', label: '% Gestión', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', staticText: 'gestionados / ingresados' },
+    { key: 'gestionados', label: 'Gestionados', value: fmtPct(k.pct_gestion), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionados)} conversaciones` },
+    { key: 'escalados', label: 'Escalados', value: fmtPct(k.pct_escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escalados)} conversaciones` },
     { key: 'csat_bot', label: 'CSAT bot', value: fmtPct(k.csat_bot), icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', staticText: 'satisfacción gestión Lucía' },
   ];
   strip.innerHTML = cardDefs.map(cd =>
@@ -777,42 +864,34 @@ function renderChat(c) {
   if (c.versionNote) { versionNoteEl.textContent = c.versionNote; versionNoteEl.style.display = 'block'; }
   else { versionNoteEl.style.display = 'none'; }
 
-  // Embudo
-  const noIngresaron = (k.demanda||0) - (k.ingresados_bot||0);
-  const noGestionados = (k.ingresados_bot||0) - (k.gestionados||0) - (k.escalados||0);
-  const steps = [
-    { label: 'Demanda', value: k.demanda, color: COLORS.dark },
-    { label: '↳ Ingresados al bot', value: k.ingresados_bot, color: COLORS.blue },
-    { label: '↳ No ingresaron al flujo', value: noIngresaron, color: '#8B5CF6' },
-    { label: '↳ Gestionados', value: k.gestionados, color: COLORS.teal },
-    { label: '↳ Escalados', value: k.escalados, color: COLORS.red },
-  ];
-  const maxVal = k.demanda || 1;
-  document.getElementById('chatEmbudoWrap').innerHTML = steps.map(s => {
-    const barW = ((s.value / maxVal) * 100).toFixed(1);
-    const indent = s.label.startsWith('↳') ? 'padding-left:20px' : '';
-    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;${indent}">
-      <span style="width:170px;font-size:12px;font-weight:${s.label.startsWith('↳')?500:700};color:var(--slate);flex-shrink:0">${s.label}</span>
-      <div style="flex:1;background:#EDF2F7;border-radius:4px;height:22px;position:relative;overflow:hidden">
-        <div style="width:${barW}%;height:100%;background:${s.color};border-radius:4px"></div>
-      </div>
-      <span style="font-family:var(--font-head);font-size:14px;font-weight:800;color:${s.color};min-width:50px;text-align:right">${fmt(s.value)}</span>
-    </div>`;
-  }).join('');
+  // Embudo — diagrama de flujo/árbol (reemplazó las barras horizontales, pedido de
+  // Lauren 21-ago-2026: "un diagrama de árbol o Sankey es la representación perfecta"
+  // para un proceso de decisiones Entra/No entra → Lo resuelve el bot/Lo escala).
+  document.getElementById('chatEmbudoWrap').innerHTML = renderChatFlow(k);
 
-  // Ingresados por versión (bar chart)
-  const versiones = c.ingresados_por_version || [];
+  // Ingresados por versión — barras horizontales en %, ordenadas de mayor a menor
+  // (mayor arriba), con el número absoluto disponible al pasar el mouse (pedido de
+  // Lauren 21-ago-2026).
+  const versionesSorted = [...(c.ingresados_por_version || [])].sort((a, b) => b.count - a.count);
+  const totalIngresadosVersion = versionesSorted.reduce((a, v) => a + (v.count || 0), 0) || 1;
   safeChart('chartChatVersion', {
     type: 'bar',
     data: {
-      labels: versiones.map(v => v.version),
-      datasets: [{ data: versiones.map(v => v.count), backgroundColor: COLORS.teal, borderRadius: 4,
-        datalabels: { display: true, color: COLORS.dark, font: { weight: '700', size: 11 }, anchor: 'end', align: 'top', formatter: v => fmt(v) } }]
+      labels: versionesSorted.map(v => v.version),
+      datasets: [{ data: versionesSorted.map(v => v.count / totalIngresadosVersion * 100), backgroundColor: COLORS.teal, borderRadius: 4,
+        datalabels: { display: true, color: COLORS.dark, font: { weight: '700', size: 11 }, anchor: 'end', align: 'right', formatter: v => v.toFixed(0) + '%' } }]
     },
     options: {
+      indexAxis: 'y',
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { x: { grid: { display: false }, ticks: { color: COLORS.slate, font: { size: 10 } } }, y: { beginAtZero: true, grid: { color: '#EDF2F7' } } }
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `${ctx.parsed.x.toFixed(1)}% (${fmt(versionesSorted[ctx.dataIndex]?.count)})` } }
+      },
+      scales: {
+        x: { beginAtZero: true, grid: { color: '#EDF2F7' }, ticks: { color: COLORS.slate, font: { size: 10 }, callback: v => v + '%' } },
+        y: { grid: { display: false }, ticks: { color: COLORS.slate, font: { size: 10 } } }
+      }
     }
   });
 
@@ -824,11 +903,12 @@ function renderChat(c) {
   function renderMotivosTable(vertical) {
     const items = motivos[vertical] || [];
     const max = items[0]?.count || 1;
+    const total = items.reduce((a, m) => a + (m.count || 0), 0) || 1;
     document.getElementById('motivosWrap').innerHTML = items.map(m => `
       <div class="st-row">
         <div class="st-tema"><span>${m.motivo}</span></div>
         <div class="st-bar"><div style="width:${(m.count/max*100).toFixed(0)}%;background:${COLORS.purple}"></div></div>
-        <span class="st-num">${fmt(m.count)}</span>
+        <span class="st-num">${(m.count/total*100).toFixed(1)}% (${fmt(m.count)})</span>
       </div>`).join('');
   }
   tabsEl.querySelectorAll('.tab-btn').forEach(btn => {
@@ -868,10 +948,9 @@ function renderLlamadas(c) {
   const durMin = v => (typeof v === 'number' ? (v / 60).toFixed(1) + ' min' : '—');
   const cardDefs = [
     { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'phone-call', cls: 'kc-dark', vcls: 'v-dark', staticText: 'llamadas totales' },
-    { key: 'gestionadas', label: 'Gestionadas', value: fmt(k.gestionadas), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: 'resueltas por Lucía' },
-    { key: 'pct_gestion', label: '% Gestión Lucía', value: fmtPct(k.pct_gestion), icon: 'percent', cls: 'kc-teal', vcls: 'v-teal', staticText: 'gestionadas / demanda' },
-    { key: 'escaladas', label: 'Escaladas', value: fmt(k.escaladas), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: 'pasaron a humano' },
-    { key: 'no_contestadas', label: 'No contestadas', value: fmt(k.no_contestadas), icon: 'phone-missed', cls: 'kc-amber', vcls: 'v-amber', staticText: 'no respuesta / colgó' },
+    { key: 'gestionadas', label: 'Gestionadas por Lucía', value: fmtPct(k.pct_gestion), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionadas)} llamadas` },
+    { key: 'escaladas', label: 'Escaladas a humano', value: fmtPct(k.pct_escaladas), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escaladas)} llamadas` },
+    { key: 'no_contestadas', label: 'No contestadas', value: fmtPct(k.pct_no_contestadas), icon: 'phone-missed', cls: 'kc-amber', vcls: 'v-amber', staticText: `${fmt(k.no_contestadas)} llamadas` },
     { key: 'duracion_prom_seg', label: 'Duración prom.', value: durMin(k.duracion_prom_seg), icon: 'clock', cls: 'kc-blue', vcls: 'v-blue', staticText: 'por llamada' },
   ];
   strip.innerHTML = cardDefs.map(cd =>
@@ -899,12 +978,13 @@ function renderLlamadas(c) {
     motivoNoteEl.style.display = 'none';
     const motivos = c.motivo_escalamiento || [];
     const maxM = motivos[0]?.count || 1;
+    const totalM = motivos.reduce((a, m) => a + (m.count || 0), 0) || 1;
     document.getElementById('llamadasMotivoWrap').innerHTML = motivos.length
       ? motivos.map(m => `
       <div class="st-row">
         <div class="st-tema"><span>${m.motivo}</span></div>
         <div class="st-bar"><div style="width:${(m.count / maxM * 100).toFixed(0)}%;background:${COLORS.purple}"></div></div>
-        <span class="st-num">${fmt(m.count)}</span>
+        <span class="st-num">${(m.count/totalM*100).toFixed(1)}% (${fmt(m.count)})</span>
       </div>`).join('')
       : '<p class="info-note">Sin llamadas escaladas en este periodo.</p>';
   }

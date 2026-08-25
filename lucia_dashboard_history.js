@@ -16,15 +16,12 @@ window.LUCIA_HISTORY = {
       "correo": {
         "kpis": {
           "demanda": 689,
-          "gestionados": 1400,
+          "gestionados": 226,
           "escalados": 411,
-          "pct_gestion": 21.19
+          "pct_gestion": 32.8
         },
+        "_nota_correccion_21ago2026": "gestionados corregido de 1400 a 226 (21-ago-2026): el número original sumaba la pipeline 'Correos que no requieren respuesta' (notificaciones automáticas, no tráfico real de soporte), inflando el conteo por encima de la demanda (203% de gestión, imposible). 226 = suma de por_stage excluyendo esa pipeline. Ver INSTRUCTIVO.md sección 2.",
         "por_stage": [
-          {
-            "stage": "Closed (correos que no requieren respuesta)",
-            "count": 1171
-          },
           {
             "stage": "Closed (COL_Sup)",
             "count": 161
@@ -79,10 +76,6 @@ window.LUCIA_HISTORY = {
           },
           {
             "stage": "Seguimiento (Retention)",
-            "count": 1
-          },
-          {
-            "stage": "Pending (correos que no requieren respuesta)",
             "count": 1
           }
         ],

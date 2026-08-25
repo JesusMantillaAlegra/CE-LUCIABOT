@@ -60,6 +60,52 @@ Lauren pidió (reunión 21-ago-2026) poder filtrar el dashboard por versión/pa�
 - **Chat — filtro parcial.** Solo el widget "Ingresados a Lucía por versión" tiene desglose por país (COL, MEX, DOM, CRI, PER, VEN, OTHER); el resto de KPIs del panel de Chat en HubSpot (demanda, escalados, gestionados, % gestión, CSAT bot) **no vienen separados por versión** — son un solo número agregado. El selector de versión en Chat filtra ese gráfico y muestra una nota aclarando la limitación; las tarjetas KPI de arriba siempre muestran el total, sin importar la versión elegida. Para que el filtro fuera completo, habría que pedirle a HubSpot (o a Estefanía, quien administra los paneles) que desglose esos widgets por país/versión igual que ya está desglosado "Ingresados por versión".
 - **Correo — sin filtro todavía.** El desglose que existe (`correo.por_stage[]`) es por *stage del pipeline* (Closed COL_Sup, Nómina_Sup, Payments Sup, POS_Sup, etc.), que mezcla país y tipo de consulta — no es un campo limpio de "versión/país" que se pueda usar para filtrar. El selector de versión en esta sección queda deshabilitado con la etiqueta "No disponible" y una nota explicando por qué. Para habilitarlo de verdad haría falta que el reporte de origen en HubSpot traiga una propiedad de país/versión limpia a nivel de ticket (no solo mezclada en el nombre del stage).
 
+### 1.4 Cambios de la reunión Jesus/Lauren (21-ago-2026) — segunda ronda
+
+Después de revisar la primera versión del filtro y las tarjetas, Lauren mandó una serie de ajustes por Slack. Estos ya están implementados:
+
+**Corrección de dato — Correo `gestionados` (prioridad, dato incorrecto desde el bootstrap):**
+El snapshot `boot-2026-07-01` traía `correo.kpis.gestionados: 1400`, un número **mayor que la demanda (689)** — imposible, daba 203% de gestión. Investigado directamente contra HubSpot (`query_crm_data`/`search_properties` sobre el objeto TICKET): el desglose `por_stage` de ese mismo snapshot sumaba 1.398, casi idéntico a 1.400, y **el 84% de esa suma (1.171) venía de la pipeline "Correos que no requieren respuesta"** — notificaciones automáticas, no tráfico real de soporte gestionado por Lucía. Es el mismo patrón que el bounce de `mailer-daemon@amazonses.com`: ruido automático inflando un conteo.
+
+Corrección aplicada: se excluyó esa pipeline (cualquier stage cuyo nombre contenga "correos que no requieren respuesta") tanto del `por_stage` guardado como del cálculo de `gestionados`. Resultado: **`gestionados: 226`** (suma exacta del `por_stage` corregido), **`pct_gestion: 32.8%`** — un número que sí tiene sentido. El campo `pct_gestion` guardado en el JSON es solo informativo (el dashboard lo recalcula en vivo desde `demanda`/`gestionados`), pero se actualizó igual para que quien lea el JSON crudo no se confunda.
+
+⚠️ No se pudo verificar 100% que esto reproduce el filtro exacto que usó originalmente el widget "Gestionados" de HubSpot (se intentó vía la propiedad `categoria_bot_lucia`, pero esa propiedad devolvió 14.443 tickets con asunto "Conversación..." — parece pertenecer a Chat, no a este reporte de Correo). La corrección se basa en la aritmética del propio `por_stage` ya capturado, que es sólida. Si en algún momento se automatiza la captura de Correo (sección 5), hay que asegurarse de que el filtro de la nueva pipeline de fetch excluya esta misma pipeline "Correos que no requieren respuesta" desde el origen.
+
+**Tarjetas KPI — Correo:**
+- El número grande de cada tarjeta ahora es el **%**, con el conteo absoluto chiquito debajo (antes era al revés). Aplica a "Gestionados" (`gestionados/demanda`) y "Escalados" (`escalados/demanda`, tarjeta nueva `kpis.pct_escalados`).
+- Se eliminó la tarjeta suelta de "% Gestión" (ya queda implícita en la tarjeta de Gestionados). Quedan 3 tarjetas: Demanda, Gestionados, Escalados.
+- *Pendiente, no resuelto en esta ronda*: una 4ª tarjeta de CSAT tipo NPS — bloqueada porque hoy solo se captura el conteo de respuestas por semana, no el puntaje individual (1-10) de cada una. Ver sección 2 para el detalle.
+
+**"Gestión de Lucía por stage":** cambió de mostrar solo el conteo absoluto a mostrar **% sobre la demanda total del periodo, con el absoluto entre paréntesis** — ej. "23% (161)". La pipeline "Correos que no requieren respuesta" ya no aparece en esta lista (ver corrección de dato arriba).
+
+**"Escaladas vs. Gestionadas por semana":** pasó de barras a **líneas de tendencia**. El eje Y sigue en números absolutos, pero cada punto de la línea "Gestionadas" trae una etiqueta con el **% de gestión de esa semana** (`gestionadas / (escaladas + gestionadas)`).
+
+**Tarjetas KPI — Chat:**
+- Se reordenaron: Demanda → Ingresados al bot → **Gestionados** → Escalados → CSAT bot (antes Escalados iba antes que Gestionados).
+- Mismo tratamiento que Correo: Gestionados y Escalados muestran el % como número grande (`gestionados/ingresados_bot`, `escalados/ingresados_bot` — nuevo `kpis.pct_escalados`) con el conteo absoluto debajo. Se eliminó la tarjeta suelta de "% Gestión".
+
+**"Embudo de gestión" (Chat) — reemplazado por un diagrama de flujo/árbol:** Lauren pidió específicamente un diagrama tipo árbol o Sankey en vez de las barras horizontales apiladas, porque el proceso es un flujo de decisiones (Entra/No entra → Lo resuelve el bot/Lo escala). Se construyó a mano con divs posicionados en % + un SVG superpuesto para las curvas (función `renderChatFlow()`) — **no se agregó ninguna librería nueva**, sigue siendo un solo archivo autocontenido. Incluye un número destacado arriba con la "Tasa de Contención del Bot" (`gestionados/ingresados_bot`). La tarjeta pasó de media-columna a ancho completo porque el diagrama necesita más espacio horizontal que el embudo de barras.
+
+**"Ingresados a Lucía por versión":** pasó de barras verticales a **horizontales, en %** (sobre el total de ingresados de todas las versiones), **ordenadas de mayor a menor % empezando arriba**, con el número absoluto disponible al pasar el mouse (tooltip).
+
+**"Motivos de solicitud por vertical" (Chat):** cambió de mostrar solo el conteo absoluto a mostrar **% con el absoluto entre paréntesis** — mismo formato que "Gestión de Lucía por stage" (ej. "25% (114)"). ⚠️ Diferencia importante en el denominador: `aggregateChat` solo guarda el **top 8 motivos** por vertical (no el total real de conversaciones de esa vertical), así que el % es *"porción de los 8 motivos más frecuentes que representa este"*, no *"porción de toda la demanda de la vertical"*. Es la única base disponible con los datos actuales — si más adelante se captura el total real por vertical, este cálculo debería cambiar para usar ese total en vez de la suma del top 8.
+
+### 1.5 Cambios de la reunión Jesus/Lauren (24-ago-2026) — tercera ronda (Llamadas)
+
+**Tarjetas KPI — Llamadas:** mismo tratamiento que Correo y Chat.
+- "Gestionadas" → renombrada **"Gestionadas por Lucía"**: número grande ahora es el % (`kpis.pct_gestion`), el absoluto (`gestionadas`) va chiquito debajo.
+- Se eliminó la tarjeta suelta "% Gestión Lucía" (ya queda implícita en la tarjeta de Gestionadas).
+- "Escaladas" → renombrada **"Escaladas a humano"**: número grande = % (`kpis.pct_escaladas`, nuevo, `escaladas/demanda`), absoluto chiquito debajo.
+- "No contestadas": número grande = % (`kpis.pct_no_contestadas`, nuevo, `no_contestadas/demanda`), absoluto chiquito debajo.
+- Demanda y Duración prom. no cambiaron (no son proporciones sobre la demanda, se quedan con su valor absoluto como número grande).
+- Quedan 5 tarjetas en vez de 6.
+
+**"¿Se pueden hacer dinámicas las leyendas chiquitas?"** — sí: antes eran texto fijo (ej. "resueltas por Lucía", "pasaron a humano"); ahora, para las tres tarjetas que muestran %, la leyenda chiquita es el conteo absoluto real del periodo filtrado (ej. "251 llamadas"), calculado en cada render — ya no es texto estático.
+
+**"¿La data se ordena sola de mayor a menor?"** — confirmado que sí, ya estaba implementado antes de esta ronda: tanto "Llamadas por versión" (`por_version.sort((a,b) => b.demanda - a.demanda)`) como "Motivo de escalamiento" (`motivo_escalamiento` ya se genera ordenado por `count` descendente en `aggregateLlamadas`) recalculan el orden en cada render a partir del periodo/filtro activo — si un mes cambia qué versión recibe más llamadas, la lista se reordena sola, no hay ningún orden fijo hardcodeado.
+
+**"Motivo de escalamiento":** cambió de mostrar solo el conteo absoluto a mostrar **% con el absoluto entre paréntesis** (ej. "50% (520)"), mismo formato que las otras listas de motivos/stages. El % es sobre el total de escalamientos con motivo capturado en el periodo/filtro activo.
+
 ## 2. Mapeo de métricas — Lucía Correo
 
 Fuente: HubSpot → Reports Dashboard `6180490` → vista `20862583` (tickets de Servicio al cliente, filtrados a gestión de Lucía).
