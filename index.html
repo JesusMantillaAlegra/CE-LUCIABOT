@@ -802,7 +802,7 @@ function renderCorreo(c) {
   // para Correo, ver INSTRUCTIVO.md sección 1.6). Totales calculados arriba, junto
   // a la 4ª tarjeta del KPI strip.
   document.getElementById('correoCsatHeroWrap').innerHTML = `
-    <div class="st-hero"><span class="st-hero-num">${pctPromoter == null ? '—' : pctPromoter.toFixed(0) + '%'}</span><span class="st-hero-lbl">CSAT (Promotores)</span></div>
+    <div class="st-hero"><span class="st-hero-lbl">Promotores</span></div>
     <div class="st-hero"><span class="st-hero-num">${fmt(csatTotal)}</span><span class="st-hero-lbl">respuestas totales en el periodo</span></div>`;
   safeChart('chartCorreoCsat', {
     type: 'bar',
