@@ -403,7 +403,6 @@ function runRender(historyData) {
     HISTORY = (historyData.snapshots || []).slice().sort((a, b) => a.semana_inicio.localeCompare(b.semana_inicio));
     if (!HISTORY.length) throw new Error('El histórico no tiene snapshots.');
     const last = HISTORY[HISTORY.length - 1];
-    document.getElementById('lastUpdated').textContent = 'Datos hasta: ' + (last.semana_fin || last.semana_inicio) + (last.generado ? ' · actualizado ' + last.generado : '');
     setupFilterBar('correo', 'correo', null, (primary) => {
       try { renderCorreo(aggregateCorreo(primary)); }
       catch (e) { console.error('Error en renderCorreo:', e); }
