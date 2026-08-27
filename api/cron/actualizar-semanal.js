@@ -132,10 +132,20 @@ export default async function handler(req, res) {
     kpisLlamadas.duracion_prom_seg = kpisLlamadas.demanda ? +(durPonderada / kpisLlamadas.demanda).toFixed(1) : null;
     log.push(`Llamadas: demanda=${kpisLlamadas.demanda}, gestionadas=${kpisLlamadas.gestionadas}, escaladas=${kpisLlamadas.escaladas}`);
 
+    // ElevenLabs es solo un cruce técnico de control de calidad (duración, % sin error
+    // técnico) — las métricas de negocio (gestionadas/escaladas/demanda) ya están
+    // completas con lo de HubSpot arriba. Si ElevenLabs falla (token vencido, rate
+    // limit, etc.) el snapshot se guarda igual, sin ese bloque, en vez de perder toda
+    // la corrida por un dato que es secundario.
     log.push("Trayendo Llamadas de ElevenLabs...");
-    const { content: elevenlabsConfigRaw } = await getFile(ELEVENLABS_CONFIG_PATH);
-    const elevenlabsConfig = JSON.parse(elevenlabsConfigRaw);
-    const elevenlabs = await fetchElevenlabsLlamadas(elevenlabsConfig, semanaInicio, semanaFinExclusive);
+    let elevenlabs = null;
+    try {
+      const { content: elevenlabsConfigRaw } = await getFile(ELEVENLABS_CONFIG_PATH);
+      const elevenlabsConfig = JSON.parse(elevenlabsConfigRaw);
+      elevenlabs = await fetchElevenlabsLlamadas(elevenlabsConfig, semanaInicio, semanaFinExclusive);
+    } catch (err) {
+      log.push(`ElevenLabs falló (no crítico, se sigue sin ese bloque): ${err.message}`);
+    }
 
     const llamadas = {
       kpis: kpisLlamadas,
