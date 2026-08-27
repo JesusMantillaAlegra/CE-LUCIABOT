@@ -341,3 +341,58 @@ Se revisó a fondo qué otros widgets existen **dentro de los mismos dos paneles
 - **"Chats ingresados" / "Chats gestionados" / "Chats escalados" / "Chats que ingresan no ingresan al flujo"**: son tablas de conversaciones individuales (nombre del contacto, ID de hilo, bandeja de entrada) — sirven para auditar casos puntuales, no para un KPI de dashboard.
 
 **Recomendación:** si más adelante se quiere sumar "CSAT - Lucía" (la única candidata sólida), lo más seguro es pedir el export a CSV directamente desde HubSpot (menú "..." de la tarjeta → Exportar) en vez de leer los números desde la pantalla, para eliminar cualquier margen de error de transcripción.
+
+## 8. Automatización semanal vía API en Vercel (implementada 27-ago-2026)
+
+Se construyó un job automático que corre **todos los miércoles** y agrega un snapshot nuevo al histórico sin intervención manual, para Correo y Llamadas. **Chat sigue siendo 100% manual** — ver por qué más abajo.
+
+### 8.1 Qué se automatizó y qué no
+
+| Bloque | Automatizado? | Detalle |
+|---|---|---|
+| Correo — Gestionados | ✅ Sí | Filtro real verificado (sección 1.10): owner=Lucía Pérez, Fuente=EMAIL, excluye pipeline de ruido. |
+| Correo — Escalados | ✅ Sí | Filtro real verificado: `escalamiento_lucia_email` con valor, misma exclusión de ruido. |
+| Correo — Gestión por stage | ✅ Sí | Mismos tickets de "Gestionados", agrupados por pipeline+stage vía la API de Pipelines de HubSpot. |
+| Correo — CSAT (Promoter/Passive/Detractor) | ✅ Sí | `clasificacion_encuesta_ces_csat`, scope de todos los pipelines de Correo (sección 1.6). |
+| **Correo — Demanda y % Gestión** | 🔴 **No** | Dependen del objeto Conversations ("Bandeja de entrada = Service Mail Inbox"), bloqueado sin el scope de Conversations API — quedan en `null` en cada snapshot automático. **Hay que seguir copiándolos a mano de HubSpot cada semana** (sección 4) hasta conseguir ese scope. |
+| Llamadas — todo (HubSpot + ElevenLabs) | ✅ Sí | `bot_calificador` + `estado_llamada` (sección 7) vía la API de Calls, cruzado con ElevenLabs. |
+| **Chat — todo** | 🔴 **No** | Casi todos sus widgets dependen 100% de Conversations (secciones 1.11/1.12) — sin ese scope no hay forma de traerlo por API. Sigue el proceso manual de la sección 4. |
+
+⚠️ **Importante sobre el dashboard mientras Correo tenga `demanda: null` en los snapshots automáticos:** `aggregateCorreo()` en `index.html` suma `demanda` de todos los snapshots con `(c.kpis?.demanda || 0)` — un snapshot automático sin demanda simplemente no aporta a esa suma, así que el "% Gestión" acumulado de Correo va a quedar **subestimado** en cualquier periodo que incluya semanas automáticas, porque el numerador (gestionados) sí crece pero el denominador (demanda) no. Mientras no se consiga el scope de Conversations, alguien tiene que seguir completando `demanda` y `pct_gestion` a mano en el snapshot de esa semana después de que el job corra (editar el JSON en GitHub y dejar los demás campos intactos).
+
+### 8.2 Arquitectura
+
+- `vercel.json` — define el cron: `0 11 * * 3` (miércoles 11:00 UTC = 6:00 a.m. hora Colombia).
+- `api/cron/actualizar-semanal.js` — el handler. Calcula la última semana completa (lunes a domingo) ya cerrada, trae Correo y Llamadas de HubSpot y Llamadas de ElevenLabs, arma el snapshot y lo escribe en GitHub.
+- `lib/hubspot.js`, `lib/elevenlabs.js`, `lib/github.js` — helpers de cada API, usando `fetch` nativo (Node 18+), sin dependencias externas.
+- **No usa `git` ni un working tree** — como Vercel no mantiene un checkout persistente entre invocaciones del cron, el job lee y escribe `lucia_dashboard_history.json` y `.js` directo contra la **API de contenidos de GitHub** (`PUT /repos/.../contents/...`), que crea un commit real en el repo cada vez que corre.
+- **Idempotencia:** si ya existe un snapshot con la misma `semana_inicio` (con datos de correo), el job no agrega uno nuevo — así que si se dispara dos veces la misma semana (manualmente, por ejemplo) no duplica datos.
+
+### 8.3 Variables de entorno necesarias (configurarlas en Vercel, nunca en el código)
+
+En el proyecto de Vercel → **Settings → Environment Variables**, agregar:
+
+| Variable | Qué es | Cómo conseguirla |
+|---|---|---|
+| `HUBSPOT_TOKEN` | Token de un HubSpot Private App | HubSpot → ⚙️ Configuración → Integraciones → Private Apps → Crear una app con scopes de lectura `crm.objects.tickets.read` y `crm.objects.calls.read` (y de owners/pipelines, que suelen venir incluidos). Copiar el token que empieza con `pat-...`. **Esto lo tiene que hacer alguien con acceso de administrador en HubSpot** — yo no puedo crear ni ver ese token. |
+| `XI_API_KEY` | API key de ElevenLabs | La misma que ya usa `fetch_elevenlabs_llamadas.mjs` a mano — si no la tienes a la vista, se genera en ElevenLabs → Settings → API Keys. |
+| `GITHUB_TOKEN` | Token de GitHub con permiso de escritura sobre este repo | GitHub → Settings → Developer settings → **Fine-grained personal access tokens** → Generate new token, con acceso limitado SOLO al repo `CE-LUCIABOT` y permiso **Contents: Read and write**. No usar un token con acceso a todos tus repos. |
+| `GITHUB_REPO` | `JesusMantillaAlegra/CE-LUCIABOT` | — |
+| `GITHUB_BRANCH` | `main` (opcional, ese es el default) | — |
+| `CRON_SECRET` | Cualquier string larga y aleatoria que tú inventes | Vercel manda automáticamente un header `Authorization: Bearer <CRON_SECRET>` en cada llamada del cron cuando esta variable existe — así el endpoint rechaza cualquier llamada que no venga del cron real de Vercel. |
+
+**Nota de seguridad:** ninguno de estos valores se escribe en el código ni en este documento — se configuran directamente en el panel de Vercel. Yo no puedo crear el Private App de HubSpot ni el token de GitHub por ti (necesitan tu sesión/permisos), así que este es el único paso manual que falta para que el cron empiece a correr.
+
+### 8.4 Cómo probarlo antes del primer miércoles
+
+Una vez configuradas las variables de entorno y desplegado el proyecto, se puede disparar el endpoint a mano desde una terminal (reemplazando el dominio y el secreto):
+
+```
+curl -H "Authorization: Bearer TU_CRON_SECRET" https://TU-PROYECTO.vercel.app/api/cron/actualizar-semanal
+```
+
+La respuesta trae un `log` paso a paso (qué semana capturó, cuántos tickets/llamadas encontró) y, si algo falla, el mensaje de error exacto (por ejemplo, un token faltante o un scope insuficiente) — revisar eso antes de confiar en la primera corrida automática del miércoles.
+
+### 8.5 Cuando se consiga el scope de Conversations API
+
+Si más adelante se crea un Private App con scope de Conversations, hay que extender `lib/hubspot.js` con funciones equivalentes que llamen `/conversations/v3/conversations` (o el endpoint que corresponda) replicando los filtros documentados en las secciones 1.10 (Demanda/%Gestión de Correo) y 1.11/1.12 (todo Chat), y agregar esos bloques al snapshot que arma `api/cron/actualizar-semanal.js` — la estructura del snapshot y el resto del pipeline (lectura/escritura a GitHub, idempotencia) no cambia.

@@ -1,0 +1,8 @@
+{
+  "name": "ce-luciabot-dashboard",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  }
+}
