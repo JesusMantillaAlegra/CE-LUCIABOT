@@ -79,10 +79,13 @@ export default async function handler(req, res) {
     const { content: historyRaw, sha: historySha } = await getFile(HISTORY_JSON_PATH);
     const history = JSON.parse(historyRaw);
 
-    // idempotencia: no duplicar si ya existe un snapshot para esta semana
+    // idempotencia: no duplicar si ya existe un snapshot para esta semana — salvo que se
+    // pase ?force=true (o header X-Force-Reprocess: true), que REEMPLAZA ese snapshot en
+    // vez de agregar uno nuevo. Útil para reprocesar una semana si se corrige un bug.
+    const force = req.query?.force === "true" || req.headers["x-force-reprocess"] === "true";
     const yaExiste = (history.snapshots || []).some((s) => s.semana_inicio === semanaInicio && s.correo);
-    if (yaExiste) {
-      log.push(`Ya existe un snapshot de Correo/Llamadas para ${semanaInicio} — no se agrega otro.`);
+    if (yaExiste && !force) {
+      log.push(`Ya existe un snapshot de Correo/Llamadas para ${semanaInicio} — no se agrega otro (usa ?force=true para reemplazarlo).`);
       return res.status(200).json({ ok: true, skipped: true, log });
     }
 
@@ -116,7 +119,7 @@ export default async function handler(req, res) {
 
     // ---------- 3. Llamadas (HubSpot + ElevenLabs) ----------
     log.push("Trayendo Llamadas de HubSpot...");
-    const { porVersion, motivo_escalamiento } = await llamadasPorVersion(semanaInicio, semanaFinExclusive);
+    const { porVersion, motivo_escalamiento, otros_raw_debug } = await llamadasPorVersion(semanaInicio, semanaFinExclusive);
     const kpisLlamadas = porVersion.reduce(
       (acc, v) => ({
         demanda: acc.demanda + v.demanda,
@@ -131,6 +134,9 @@ export default async function handler(req, res) {
     kpisLlamadas.pct_gestion = kpisLlamadas.demanda ? +((100 * kpisLlamadas.gestionadas) / kpisLlamadas.demanda).toFixed(2) : 0;
     kpisLlamadas.duracion_prom_seg = kpisLlamadas.demanda ? +(durPonderada / kpisLlamadas.demanda).toFixed(1) : null;
     log.push(`Llamadas: demanda=${kpisLlamadas.demanda}, gestionadas=${kpisLlamadas.gestionadas}, escaladas=${kpisLlamadas.escaladas}`);
+    if (otros_raw_debug.length) {
+      log.push(`⚠️ ${otros_raw_debug.reduce((a, o) => a + o.count, 0)} llamadas escaladas cayeron en "Otro" — textos crudos no reconocidos: ${JSON.stringify(otros_raw_debug)}`);
+    }
 
     // ElevenLabs es solo un cruce técnico de control de calidad (duración, % sin error
     // técnico) — las métricas de negocio (gestionadas/escaladas/demanda) ya están
@@ -167,6 +173,10 @@ export default async function handler(req, res) {
       chat: null, // Chat sigue siendo manual — ver nota arriba y INSTRUCTIVO 1.11/1.12
       llamadas,
     };
+    if (force && yaExiste) {
+      history.snapshots = (history.snapshots || []).filter((s) => s.semana_inicio !== semanaInicio);
+      log.push(`Reemplazando snapshot existente de ${semanaInicio} (force=true).`);
+    }
     history.snapshots = [...(history.snapshots || []), nuevoSnapshot];
 
     // ---------- 5. escribir de vuelta a GitHub (JSON + JS regenerado) ----------
