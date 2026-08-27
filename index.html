@@ -450,17 +450,6 @@ if (typeof window.LUCIA_HISTORY !== 'undefined') {
 // (Desde/Hasta); se incluye todo snapshot cuya semana se solape con el rango elegido.
 // No hay comparación entre periodos: se removió a pedido — una sola vista, limpia.
 
-// dataKey: nombre de la sección dentro de cada snapshot ('correo' | 'chat' | 'llamadas').
-// El valor "por defecto" debe ser el último snapshot que SÍ trae esa sección — no
-// simplemente el último snapshot del histórico completo, porque no todas las secciones
-// empiezan a capturarse la misma semana (p.ej. Llamadas arrancó después que Correo/Chat).
-function lastIndexWithData(dataKey) {
-  for (let i = HISTORY.length - 1; i >= 0; i--) {
-    if (HISTORY[i][dataKey]) return i;
-  }
-  return HISTORY.length - 1; // fallback: no hay ningún snapshot con esta sección todavía
-}
-
 // Recolecta las etiquetas de versión disponibles en el histórico para una sección,
 // leyendo el campo "version" de la lista indicada (p.ej. 'por_version' en Llamadas,
 // 'ingresados_por_version' en Chat). Se recalcula sobre HISTORY en vez de hardcodearse
@@ -485,9 +474,11 @@ function setupFilterBar(prefix, dataKey, versions, applyFn) {
   const withData = HISTORY.filter(s => s[dataKey]);
   const minDate = withData.length ? withData.reduce((a, s) => s.semana_inicio < a ? s.semana_inicio : a, withData[0].semana_inicio) : '';
   const maxDate = withData.length ? withData.reduce((a, s) => s.semana_fin > a ? s.semana_fin : a, withData[0].semana_fin) : '';
-  const lastIdx = lastIndexWithData(dataKey);
-  const defaultFrom = HISTORY[lastIdx] ? HISTORY[lastIdx].semana_inicio : minDate;
-  const defaultTo = HISTORY[lastIdx] ? HISTORY[lastIdx].semana_fin : maxDate;
+  // Por defecto se muestra TODO el rango disponible (min..max), no solo el último
+  // snapshot — así se ve el acumulado completo al entrar, igual que antes de agregar
+  // el filtro de fecha. El usuario puede acotar a la última semana manualmente.
+  const defaultFrom = minDate;
+  const defaultTo = maxDate;
 
   const hasVersions = Array.isArray(versions) && versions.length > 0;
   const versionOptions = hasVersions
