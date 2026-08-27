@@ -457,6 +457,55 @@ window.LUCIA_HISTORY = {
           ]
         }
       }
+    },
+    {
+      "id": "chat-wk-2026-08-20",
+      "semana_inicio": "2026-08-20",
+      "semana_fin": "2026-08-23",
+      "generado": "2026-08-27",
+      "bootstrap": false,
+      "etiqueta": "20 – 23 ago 2026 (Chat)",
+      "correo": null,
+      "llamadas": null,
+      "chat": {
+        "kpis": {
+          "demanda": 717,
+          "ingresados_bot": 653,
+          "escalados": 199,
+          "gestionados": 451,
+          "pct_gestion": 69.07,
+          "csat_bot": 89.8
+        },
+        "ingresados_por_version": [
+          {
+            "version": "COL",
+            "count": 497
+          },
+          {
+            "version": "DOM",
+            "count": 63
+          },
+          {
+            "version": "MEX",
+            "count": 31
+          },
+          {
+            "version": "PER",
+            "count": 30
+          },
+          {
+            "version": "CRI",
+            "count": 29
+          },
+          {
+            "version": "VEN",
+            "count": 3
+          }
+        ],
+        "tiempo_promedio_solucion_min": 378,
+        "motivos_solicitud": {},
+        "_nota_captura_manual_27ago2026": "Capturado manualmente vía Chrome desde el panel de HubSpot (Conversations API sigue bloqueada) para la ventana 20-23 ago 2026, alineada con la misma ventana no solapada usada para el reprocesamiento de Correo/Llamadas. 'motivos_solicitud' se dejó vacío esta vez porque las etiquetas de las categorías venían truncadas en el gráfico y no se quiso arriesgar una transcripción incorrecta; se puede completar en una futura captura con zoom por categoría si se necesita el detalle."
+      }
     }
   ]
 };

@@ -71,7 +71,19 @@ export default async function handler(req, res) {
 
   const log = [];
   try {
-    const [semanaInicio, semanaFinExclusive] = lastCompleteWeek();
+    // Por default calcula la última semana completa (lunes-domingo) ya cerrada. Se puede
+    // forzar una ventana específica con ?semanaInicio=YYYY-MM-DD&semanaFin=YYYY-MM-DD
+    // (ambas inclusive) — usado para reprocesar/corregir una semana puntual.
+    const overrideInicio = req.query?.semanaInicio;
+    const overrideFin = req.query?.semanaFin;
+    let semanaInicio, semanaFinExclusive;
+    if (overrideInicio && overrideFin) {
+      semanaInicio = overrideInicio;
+      semanaFinExclusive = fmt(new Date(Date.parse(`${overrideFin}T00:00:00Z`) + 86400000));
+      log.push(`Semana forzada manualmente vía query params: ${semanaInicio} a ${overrideFin}`);
+    } else {
+      [semanaInicio, semanaFinExclusive] = lastCompleteWeek();
+    }
     const semanaFinInclusive = fmt(new Date(Date.parse(`${semanaFinExclusive}T00:00:00Z`) - 86400000));
     log.push(`Semana a capturar: ${semanaInicio} a ${semanaFinInclusive}`);
 
@@ -79,10 +91,25 @@ export default async function handler(req, res) {
     const { content: historyRaw, sha: historySha } = await getFile(HISTORY_JSON_PATH);
     const history = JSON.parse(historyRaw);
 
+    const force = req.query?.force === "true" || req.headers["x-force-reprocess"] === "true";
+
+    // Guarda contra traslapes: si la semana a capturar empieza antes o el mismo día en que
+    // termina la cobertura más reciente que ya existe en el histórico (de OTRO snapshot),
+    // los mismos tickets quedarían contados dos veces en los KPIs acumulados. Esto pasó una
+    // vez (25/27-ago-2026, ver INSTRUCTIVO 8) porque el snapshot inicial cubría hasta el
+    // 19-ago y la primera semana automática arrancó en 17-ago, traslapando 3 días.
+    const coberturaMax = (history.snapshots || [])
+      .filter((s) => s.correo && s.semana_fin && s.semana_inicio !== semanaInicio)
+      .reduce((max, s) => (s.semana_fin > max ? s.semana_fin : max), "0000-00-00");
+    if (coberturaMax !== "0000-00-00" && semanaInicio <= coberturaMax && !overrideInicio) {
+      const msg = `La semana calculada (${semanaInicio}) se traslapa con cobertura que ya existe hasta ${coberturaMax} — se aborta para no duplicar tickets. Si esto pasa en una corrida normal del cron, hay que revisar por qué (¿se saltó una semana? ¿cambió el huso horario?).`;
+      log.push(`ERROR: ${msg}`);
+      return res.status(409).json({ ok: false, error: msg, log });
+    }
+
     // idempotencia: no duplicar si ya existe un snapshot para esta semana — salvo que se
     // pase ?force=true (o header X-Force-Reprocess: true), que REEMPLAZA ese snapshot en
     // vez de agregar uno nuevo. Útil para reprocesar una semana si se corrige un bug.
-    const force = req.query?.force === "true" || req.headers["x-force-reprocess"] === "true";
     const yaExiste = (history.snapshots || []).some((s) => s.semana_inicio === semanaInicio && s.correo);
     if (yaExiste && !force) {
       log.push(`Ya existe un snapshot de Correo/Llamadas para ${semanaInicio} — no se agrega otro (usa ?force=true para reemplazarlo).`);
