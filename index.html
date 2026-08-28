@@ -931,11 +931,20 @@ function renderCorreo(c) {
   // 6-7 encuestas totales no era representativa para mostrarla como tarjeta). El 4º cupo
   // del strip queda para otra métrica una vez la consigamos (tiempo promedio de gestión,
   // ver c.tiempo_promedio_gestion_min -- todavía no hay dato real, por eso muestra "—").
+  // Formatea minutos a la unidad más legible: min (<60), horas (60-4319, i.e. <72h),
+  // días (>=72h = 4320 min) -- pedido de Jesus 28-ago-2026 porque el dato real de
+  // Correo (jul 2026 ≈ 9.484 min) se leía mal como "9484 min".
+  const fmtDuracionMin = min => {
+    if (typeof min !== 'number') return '—';
+    if (min >= 4320) return (min / 1440).toFixed(1) + ' días';
+    if (min >= 60) return (min / 60).toFixed(1) + ' h';
+    return min.toFixed(0) + ' min';
+  };
   const cardDefs = [
     { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'inbox', cls: 'kc-dark', vcls: 'v-dark', staticText: 'tickets recibidos' },
     { key: 'gestionados', label: 'Gestionados', value: fmtPct(k.pct_gestion), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionados)} tickets gestionados por Lucía` },
     { key: 'escalados', label: 'Escalados', value: fmtPct(k.pct_escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escalados)} tickets escalados a un agente` },
-    { key: 'tiempo', label: 'Tiempo prom. de gestión', value: (typeof c.tiempo_promedio_gestion_min === 'number' ? c.tiempo_promedio_gestion_min.toFixed(0) + ' min' : '—'), icon: 'clock', cls: 'kc-blue', vcls: 'v-blue', staticText: (typeof c.tiempo_promedio_gestion_min === 'number' ? 'por ticket gestionado' : 'dato pendiente') },
+    { key: 'tiempo', label: 'Tiempo prom. de gestión', value: fmtDuracionMin(c.tiempo_promedio_gestion_min), icon: 'clock', cls: 'kc-blue', vcls: 'v-blue', staticText: (typeof c.tiempo_promedio_gestion_min === 'number' ? 'por ticket gestionado' : 'dato pendiente') },
   ];
   strip.innerHTML = cardDefs.map(cd =>
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
