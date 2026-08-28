@@ -397,6 +397,13 @@ const fmtPct = n => typeof n === 'number' ? n.toFixed(2) + '%' : '—';
 // arma agregando los snapshots que caen dentro del rango de fechas seleccionado.
 let HISTORY = [];
 
+// Declarado acá arriba (no más abajo, junto al resto del filtro de PERÍODO) porque
+// runRender() se invoca de forma síncrona más abajo apenas carga window.LUCIA_HISTORY,
+// y esa llamada dispara setupFilterBar() -> necesita MESES_LARGO ya inicializado. Si se
+// deja declarado después (como const), cae en zona muerta temporal y truena con
+// "Cannot access 'MESES_LARGO' before initialization", dejando toda la página en blanco.
+const MESES_LARGO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
 function runRender(historyData) {
   try {
     HISTORY = (historyData.snapshots || []).slice().sort((a, b) => a.semana_inicio.localeCompare(b.semana_inicio));
@@ -462,8 +469,6 @@ function todayStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
-
-const MESES_LARGO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 function finDeMesStr(anio, mes) {
   const d = new Date(anio, mes, 0); // día 0 del mes siguiente = último día de este mes
