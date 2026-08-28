@@ -247,15 +247,14 @@ tbody td { padding: 9px 14px; color: var(--slate); }
 
     <div class="chart-card">
       <div class="chart-card-title">Embudo de gestión</div>
-      <div class="chart-card-sub">Demanda → Gestionados por Lucía / Escalados a un agente / Sin intervención de Lucía</div>
+      <div class="chart-card-sub">Demanda → Ingresados al flujo → Escalados / Gestionados</div>
       <div id="correoEmbudoWrap"></div>
     </div>
 
     <div class="chart-card">
-      <div class="chart-card-title">CSAT — Lucía Correo</div>
-      <div class="chart-card-sub">Distribución de respuestas de encuesta (Detractor / Neutro / Promoter)</div>
-      <div id="correoCsatHeroWrap" style="display:flex;gap:24px;align-items:center;margin-bottom:14px"></div>
-      <div class="chart-wrap" style="height:220px"><canvas id="chartCorreoCsat"></canvas></div>
+      <div class="chart-card-title">Gestionados a Lucía por versión (país)</div>
+      <div class="chart-card-sub">Distribución de tickets de correo gestionados por versión de Alegra</div>
+      <div class="chart-wrap" style="height:300px"><canvas id="chartCorreoVersion"></canvas></div>
     </div>
   </div>
 
@@ -294,8 +293,9 @@ tbody td { padding: 9px 14px; color: var(--slate); }
     <div class="chart-grid-2">
       <div class="chart-card">
         <div class="chart-card-title">Llamadas por versión</div>
-        <div class="chart-card-sub">Volumen y % de gestión — COL / DOM / Fuera de horario</div>
+        <div class="chart-card-sub">Volumen y % de gestión — COL / DOM (por país)</div>
         <div id="llamadasVersionWrap"></div>
+        <div id="llamadasFueraHorarioWrap" style="margin-top:14px"></div>
       </div>
       <div class="chart-card">
         <div class="chart-card-title">Motivo de escalamiento</div>
@@ -648,6 +648,8 @@ function aggregateCorreo(snaps) {
   // snapshots pre-migración -- se sigue sumando si aparece, para no romper histórico viejo.
   let csatPositivasMensual = 0, csatTotalMensual = 0, huboCsatMensual = false;
   let huboStage = false, huboTendencia = false;
+  const versionMap = new Map();
+  let tiempoWeighted = 0, tiempoWeight = 0;
   snaps.forEach(s => {
     const c = s.correo; if (!c) return;
     kpis.demanda += c.kpis?.demanda || 0;
@@ -666,6 +668,11 @@ function aggregateCorreo(snaps) {
       csatPositivasMensual += c.csat_detalle.positivas || 0;
       csatTotalMensual += c.csat_detalle.total || 0;
     }
+    // Gestionados por país -- todavía no lo tenemos, ver renderCorreo (muestra "no
+    // disponible" hasta que este campo llegue en los snapshots mensuales).
+    (c.gestionados_por_version || []).forEach(v => versionMap.set(v.version, (versionMap.get(v.version) || 0) + (v.count || 0)));
+    const wTiempo = c.kpis?.gestionados || 0;
+    if (typeof c.tiempo_promedio_gestion_min === 'number') { tiempoWeighted += c.tiempo_promedio_gestion_min * wTiempo; tiempoWeight += wTiempo; }
   });
   kpis.pct_gestion = kpis.demanda ? (kpis.gestionados / kpis.demanda * 100) : 0;
   kpis.pct_escalados = kpis.demanda ? (kpis.escalados / kpis.demanda * 100) : 0;
@@ -676,7 +683,9 @@ function aggregateCorreo(snaps) {
     tendencia_semanal: mergeWeeklySeries(tendencia, ['escaladas', 'gestionadas']),
     tendenciaDisponible: huboTendencia,
     csat: { nota: snaps[snaps.length - 1].correo?.csat?.nota, serie_semanal: mergeWeeklySeries(csatWeeks, ['promoter', 'passive', 'detractor']) },
-    csatMensual: huboCsatMensual ? { positivas: csatPositivasMensual, total: csatTotalMensual } : null
+    csatMensual: huboCsatMensual ? { positivas: csatPositivasMensual, total: csatTotalMensual } : null,
+    gestionados_por_version: Array.from(versionMap.entries()).map(([version, count]) => ({ version, count })),
+    tiempo_promedio_gestion_min: tiempoWeight ? +(tiempoWeighted / tiempoWeight).toFixed(1) : null
   };
 }
 
@@ -923,69 +932,62 @@ function renderCorreo(c) {
   // Detractor/Neutro/Promoter (c.csat.serie_semanal) -- solo total + positivas
   // (c.csatMensual, ver aggregateCorreo). Si no hay desglose semanal pero sí hay dato
   // mensual, se usa ese para no mostrar "sin encuestas" habiendo datos reales.
-  const csatTotal = csatTotals.promoter + csatTotals.passive + csatTotals.detractor || (c.csatMensual?.total || 0);
-  const pctPromoter = csatTotal
-    ? ((csatTotals.promoter + csatTotals.passive + csatTotals.detractor)
-        ? (csatTotals.promoter / csatTotal * 100)
-        : (c.csatMensual.positivas / c.csatMensual.total * 100))
-    : null;
-  // Formato pedido por Lauren (reunión 21-ago-2026): el número grande es el %, y el
-  // conteo absoluto va chiquito debajo, en vez de al revés como estaba antes.
+  // CSAT eliminado del KPI strip y del panel (pedido de Jesus 28-ago-2026: la muestra de
+  // 6-7 encuestas totales no era representativa para mostrarla como tarjeta). El 4º cupo
+  // del strip queda para otra métrica una vez la consigamos (tiempo promedio de gestión,
+  // ver c.tiempo_promedio_gestion_min -- todavía no hay dato real, por eso muestra "—").
   const cardDefs = [
     { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'inbox', cls: 'kc-dark', vcls: 'v-dark', staticText: 'tickets recibidos' },
     { key: 'gestionados', label: 'Gestionados', value: fmtPct(k.pct_gestion), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionados)} tickets gestionados por Lucía` },
     { key: 'escalados', label: 'Escalados', value: fmtPct(k.pct_escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escalados)} tickets escalados a un agente` },
-    { key: 'csat', label: 'CSAT (Promotores)', value: pctPromoter == null ? '—' : pctPromoter.toFixed(0) + '%', icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', staticText: csatTotal ? `${fmt(csatTotal)} encuestas en el periodo` : 'sin encuestas en el periodo' },
+    { key: 'tiempo', label: 'Tiempo prom. de gestión', value: (typeof c.tiempo_promedio_gestion_min === 'number' ? c.tiempo_promedio_gestion_min.toFixed(0) + ' min' : '—'), icon: 'clock', cls: 'kc-blue', vcls: 'v-blue', staticText: (typeof c.tiempo_promedio_gestion_min === 'number' ? 'por ticket gestionado' : 'dato pendiente') },
   ];
   strip.innerHTML = cardDefs.map(cd =>
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
   ).join('');
 
   // Embudo — mismo diagrama visual que Chat (pedido de Jesus 28-ago-2026: "no se puede
-  // hacer un embudo con correo como con chat?"). La diferencia es que Correo no tiene un
-  // paso intermedio "ingresados al bot" como Chat -- Gestionados y Escalados salen
-  // directo de Demanda, y lo que no cae en ninguna de las dos categorías queda como
-  // "Sin intervención de Lucía" (tickets de correo que ni gestionó ni escaló el bot).
+  // hacer un embudo con correo como con chat?"). Correo no tiene un dato de "ingresados al
+  // flujo" reportado directo como Chat, así que se deriva como Gestionados + Escalados.
   document.getElementById('correoEmbudoWrap').innerHTML = renderCorreoFlow(k);
 
-  // CSAT — Detractor/Neutro/Promoter (no hay puntaje 1-10 capturado en HubSpot
-  // para Correo, ver INSTRUCTIVO.md sección 1.6). Totales calculados arriba, junto
-  // a la 4ª tarjeta del KPI strip. Los snapshots mensuales solo traen positivas/total
-  // (sin desglose Detractor/Neutro), así que el gráfico de barras por categoría solo se
-  // dibuja cuando SÍ hay ese desglose semanal viejo -- si no, se muestra nada más el hero
-  // con el total y el % positivo, que es el dato real disponible.
-  const csatDetalleDisponible = (csatTotals.promoter + csatTotals.passive + csatTotals.detractor) > 0;
-  document.getElementById('correoCsatHeroWrap').innerHTML = `
-    <div class="st-hero"><span class="st-hero-num">${fmt(csatTotal)}</span><span class="st-hero-lbl">respuestas totales en el periodo${csatDetalleDisponible ? '' : (pctPromoter == null ? '' : ` · ${pctPromoter.toFixed(0)}% positivas`)}</span></div>`;
-  if (!csatDetalleDisponible) {
-    document.getElementById('chartCorreoCsat').style.display = 'none';
-    const wrapC = document.getElementById('chartCorreoCsat').parentElement;
-    if (!wrapC.querySelector('.info-note-csat')) {
-      wrapC.insertAdjacentHTML('beforeend', '<p class="info-note info-note-csat">No disponible: los snapshots mensuales solo traen el total de respuestas y el % positivo, no el desglose Detractor/Neutro/Promoter.</p>');
+  // Gestionados por versión (país) — mismo tipo de gráfico que "Ingresados a Lucía por
+  // versión" en Chat (pedido de Jesus 28-ago-2026, en reemplazo del CSAT que se quitó).
+  // Todavía no tenemos el dato real desglosado por país para Correo (ver aggregateCorreo:
+  // c.gestionados_por_version), así que por ahora se muestra el aviso "no disponible" en
+  // vez del gráfico -- se activa solo apenas carguemos ese desglose mensual.
+  const versionesCorreo = c.gestionados_por_version || [];
+  if (!versionesCorreo.length) {
+    document.getElementById('chartCorreoVersion').style.display = 'none';
+    const wrapV = document.getElementById('chartCorreoVersion').parentElement;
+    if (!wrapV.querySelector('.info-note-version')) {
+      wrapV.insertAdjacentHTML('beforeend', '<p class="info-note info-note-version">No disponible todavía: falta pedirle a la IA de HubSpot el desglose de Gestionados por país, mes a mes.</p>');
     }
   } else {
-    document.getElementById('chartCorreoCsat').style.display = '';
-    document.querySelectorAll('.info-note-csat').forEach(n => n.remove());
-  safeChart('chartCorreoCsat', {
-    type: 'bar',
-    data: {
-      labels: ['Detractor', 'Neutro', 'Promoter'],
-      datasets: [{
-        data: [csatTotals.detractor, csatTotals.passive, csatTotals.promoter],
-        backgroundColor: [COLORS.red, COLORS.amber, COLORS.green],
-        borderRadius: 4,
-        datalabels: { display: true, anchor: 'end', align: 'top', color: COLORS.dark, font: { weight: '700', size: 12 } }
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: COLORS.slate, font: { size: 11, weight: '600' } } },
-        y: { beginAtZero: true, grid: { color: '#EDF2F7' }, ticks: { color: COLORS.slate, font: { size: 10 } } }
+    document.getElementById('chartCorreoVersion').style.display = '';
+    document.querySelectorAll('.info-note-version').forEach(n => n.remove());
+    const versionesSortedCorreo = [...versionesCorreo].sort((a, b) => b.count - a.count);
+    const totalVersionCorreo = versionesSortedCorreo.reduce((a, v) => a + (v.count || 0), 0) || 1;
+    safeChart('chartCorreoVersion', {
+      type: 'bar',
+      data: {
+        labels: versionesSortedCorreo.map(v => v.version),
+        datasets: [{ data: versionesSortedCorreo.map(v => v.count / totalVersionCorreo * 100), backgroundColor: COLORS.teal, borderRadius: 4,
+          datalabels: { display: true, color: COLORS.dark, font: { weight: '700', size: 11 }, anchor: 'end', align: 'right', formatter: v => v.toFixed(0) + '%' } }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => `${ctx.parsed.x.toFixed(1)}% (${fmt(versionesSortedCorreo[ctx.dataIndex]?.count)})` } }
+        },
+        scales: {
+          x: { beginAtZero: true, grid: { color: '#EDF2F7' }, ticks: { color: COLORS.slate, font: { size: 10 }, callback: v => v + '%' } },
+          y: { grid: { display: false }, ticks: { color: COLORS.slate, font: { size: 10 } } }
+        }
       }
-    }
-  });
+    });
   }
 }
 
@@ -1110,6 +1112,7 @@ function renderLlamadas(c) {
   if (!c) {
     strip.innerHTML = '<p class="info-note">No hay datos de Llamadas para el periodo seleccionado.</p>';
     document.getElementById('llamadasVersionWrap').innerHTML = '';
+    document.getElementById('llamadasFueraHorarioWrap').innerHTML = '';
     document.getElementById('llamadasMotivoWrap').innerHTML = '';
     document.getElementById('llamadasSubtitle').textContent = 'Fuente: HubSpot CRM (objeto CALL) + ElevenLabs Conversational AI API';
     return;
@@ -1127,10 +1130,16 @@ function renderLlamadas(c) {
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
   ).join('');
 
-  // Por versión (COL / DOM / Fuera de horario) — ordenado dinámicamente por % de
-  // gestión (mayor a menor), barra proporcional al % de gestión (no al volumen), y
-  // detalle "18.80% (200/1.064)" — pedido por Lauren (reunión 25-ago-2026).
-  const versiones = [...(c.por_version || [])].sort((a, b) => (b.pct_gestion ?? -1) - (a.pct_gestion ?? -1));
+  // Por versión (país) — SOLO COL / DOM. "Fuera de horario" no es un país (se
+  // confirmó por HubSpot que se solapa con Colombia, es un bucket de horario), así
+  // que se excluye de este comparativo y se muestra aparte en llamadasFueraHorarioWrap
+  // para que no se confunda con un tercer país — pedido por Jesus 28-ago-2026.
+  // Ordenado dinámicamente por % de gestión (mayor a menor), barra proporcional al %
+  // de gestión (no al volumen), y detalle "18.80% (200/1.064)" — pedido por Lauren
+  // (reunión 25-ago-2026).
+  const todasVersiones = c.por_version || [];
+  const versiones = todasVersiones.filter(v => v.version !== 'Fuera de horario')
+    .sort((a, b) => (b.pct_gestion ?? -1) - (a.pct_gestion ?? -1));
   document.getElementById('llamadasVersionWrap').innerHTML = versiones.map(v => `
     <div class="st-row">
       <div class="st-tema"><span>${v.version}</span></div>
@@ -1139,6 +1148,13 @@ function renderLlamadas(c) {
         ? `<b>${fmt(v.demanda)}</b>`
         : `<b>${fmtPct(v.pct_gestion)}</b> (${fmt(v.gestionadas)}/${fmt(v.demanda)})`}</span>
     </div>`).join('');
+
+  const fueraHorario = todasVersiones.find(v => v.version === 'Fuera de horario');
+  document.getElementById('llamadasFueraHorarioWrap').innerHTML = fueraHorario
+    ? `<div class="info-note" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+         <span><b>Fuera de horario:</b> ${fmt(fueraHorario.demanda)} llamadas — no es un país, son llamadas recibidas fuera del horario laboral (se solapan con Colombia)</span>
+       </div>`
+    : '';
 
   // Motivo de escalamiento — no disponible desglosado por versión (ver aggregateLlamadas)
   if (c.motivoDisponible === false) {
