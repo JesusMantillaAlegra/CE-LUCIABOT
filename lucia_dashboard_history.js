@@ -146,43 +146,8 @@ window.LUCIA_HISTORY = {
       "etiqueta": "Enero 2026 (Chat)",
       "correo": null,
       "llamadas": null,
-      "chat": {
-        "kpis": {
-          "demanda": 7333,
-          "ingresados_bot": 0,
-          "escalados": 0,
-          "gestionados": 0,
-          "pct_escalados": null,
-          "pct_gestion": null,
-          "csat_bot": null
-        },
-        "csat_bot_detalle": null,
-        "ingresados_por_version": [
-          {
-            "version": "MEX",
-            "count": 0
-          },
-          {
-            "version": "DOM",
-            "count": 0
-          },
-          {
-            "version": "CRI",
-            "count": 0
-          },
-          {
-            "version": "VEN",
-            "count": 0
-          },
-          {
-            "version": "COL",
-            "count": 0
-          }
-        ],
-        "tiempo_promedio_solucion_min": null,
-        "motivos_solicitud": {},
-        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
-      }
+      "chat": null,
+      "_nota_chat_limitado_28ago2026": "Este snapshot se limitó (chat: null) el 28-ago-2026 a pedido de Jesus: enero 2026 tiene Demanda pero cero actividad real del bot (Ingresados/Escalados/Gestionados/CSAT todos en 0, el bot aún no estaba activo), y mostrarlo confundía más de lo que aportaba. El rango de fechas disponible para filtrar Chat ahora arranca en febrero 2026."
     },
     {
       "id": "chat-month-2026-02",
@@ -550,17 +515,8 @@ window.LUCIA_HISTORY = {
       "etiqueta": "Enero 2026 (Correo)",
       "chat": null,
       "llamadas": null,
-      "correo": {
-        "kpis": {
-          "demanda": 1024,
-          "gestionados": 0,
-          "escalados": 0,
-          "pct_gestion": 0.0,
-          "csat_bot": null
-        },
-        "csat_detalle": null,
-        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
-      }
+      "correo": null,
+      "_nota_correo_limitado_28ago2026": "Este snapshot se limitó (correo: null) el 28-ago-2026 a pedido de Jesus: antes de junio la gestión de Lucía Correo era practicamente cero (0/0/0/0/1 tickets gestionados ene-may, ver conversación) y mostrar Demanda sin nada de Gestión/Escalados/CSAT confundía más de lo que aportaba. El rango de fechas disponible para filtrar Correo ahora arranca en junio 2026."
     },
     {
       "id": "correo-month-2026-02",
@@ -571,17 +527,8 @@ window.LUCIA_HISTORY = {
       "etiqueta": "Febrero 2026 (Correo)",
       "chat": null,
       "llamadas": null,
-      "correo": {
-        "kpis": {
-          "demanda": 888,
-          "gestionados": 0,
-          "escalados": 0,
-          "pct_gestion": 0.0,
-          "csat_bot": null
-        },
-        "csat_detalle": null,
-        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
-      }
+      "correo": null,
+      "_nota_correo_limitado_28ago2026": "Este snapshot se limitó (correo: null) el 28-ago-2026 a pedido de Jesus: antes de junio la gestión de Lucía Correo era practicamente cero (0/0/0/0/1 tickets gestionados ene-may, ver conversación) y mostrar Demanda sin nada de Gestión/Escalados/CSAT confundía más de lo que aportaba. El rango de fechas disponible para filtrar Correo ahora arranca en junio 2026."
     },
     {
       "id": "correo-month-2026-03",
@@ -592,17 +539,8 @@ window.LUCIA_HISTORY = {
       "etiqueta": "Marzo 2026 (Correo)",
       "chat": null,
       "llamadas": null,
-      "correo": {
-        "kpis": {
-          "demanda": 1098,
-          "gestionados": 0,
-          "escalados": 1,
-          "pct_gestion": 0.0,
-          "csat_bot": null
-        },
-        "csat_detalle": null,
-        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
-      }
+      "correo": null,
+      "_nota_correo_limitado_28ago2026": "Este snapshot se limitó (correo: null) el 28-ago-2026 a pedido de Jesus: antes de junio la gestión de Lucía Correo era practicamente cero (0/0/0/0/1 tickets gestionados ene-may, ver conversación) y mostrar Demanda sin nada de Gestión/Escalados/CSAT confundía más de lo que aportaba. El rango de fechas disponible para filtrar Correo ahora arranca en junio 2026."
     },
     {
       "id": "correo-month-2026-04",
@@ -613,17 +551,8 @@ window.LUCIA_HISTORY = {
       "etiqueta": "Abril 2026 (Correo)",
       "chat": null,
       "llamadas": null,
-      "correo": {
-        "kpis": {
-          "demanda": 1146,
-          "gestionados": 0,
-          "escalados": 1,
-          "pct_gestion": 0.0,
-          "csat_bot": null
-        },
-        "csat_detalle": null,
-        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
-      }
+      "correo": null,
+      "_nota_correo_limitado_28ago2026": "Este snapshot se limitó (correo: null) el 28-ago-2026 a pedido de Jesus: antes de junio la gestión de Lucía Correo era practicamente cero (0/0/0/0/1 tickets gestionados ene-may, ver conversación) y mostrar Demanda sin nada de Gestión/Escalados/CSAT confundía más de lo que aportaba. El rango de fechas disponible para filtrar Correo ahora arranca en junio 2026."
     },
     {
       "id": "correo-month-2026-05",
@@ -634,17 +563,8 @@ window.LUCIA_HISTORY = {
       "etiqueta": "Mayo 2026 (Correo)",
       "chat": null,
       "llamadas": null,
-      "correo": {
-        "kpis": {
-          "demanda": 1130,
-          "gestionados": 1,
-          "escalados": 1,
-          "pct_gestion": 0.09,
-          "csat_bot": null
-        },
-        "csat_detalle": null,
-        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
-      }
+      "correo": null,
+      "_nota_correo_limitado_28ago2026": "Este snapshot se limitó (correo: null) el 28-ago-2026 a pedido de Jesus: antes de junio la gestión de Lucía Correo era practicamente cero (0/0/0/0/1 tickets gestionados ene-may, ver conversación) y mostrar Demanda sin nada de Gestión/Escalados/CSAT confundía más de lo que aportaba. El rango de fechas disponible para filtrar Correo ahora arranca en junio 2026."
     },
     {
       "id": "correo-month-2026-06",

@@ -245,19 +245,6 @@ tbody td { padding: 9px 14px; color: var(--slate); }
     <div id="correoRangeBar"></div>
     <div class="kpi-strip" id="correoKpiStrip"></div>
 
-    <div class="chart-grid-2">
-      <div class="chart-card">
-        <div class="chart-card-title">Escaladas vs. Gestionadas por semana</div>
-        <div class="chart-card-sub">Tendencia de tickets de Lucía correo</div>
-        <div class="chart-wrap"><canvas id="chartCorreoTendencia"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-card-title">Gestión de Lucía por stage</div>
-        <div class="chart-card-sub">Top stages donde terminan los tickets de correo</div>
-        <div id="correoStageWrap"></div>
-      </div>
-    </div>
-
     <div class="chart-card">
       <div class="chart-card-title">CSAT — Lucía Correo</div>
       <div class="chart-card-sub">Distribución de respuestas de encuesta (Detractor / Neutro / Promoter)</div>
@@ -287,12 +274,6 @@ tbody td { padding: 9px 14px; color: var(--slate); }
       <div class="chart-wrap" style="height:300px"><canvas id="chartChatVersion"></canvas></div>
     </div>
 
-    <div class="chart-card">
-      <div class="chart-card-title">Motivos de solicitud por vertical</div>
-      <div class="chart-card-sub">Top motivos de conversación — cambia de vertical con las pestañas</div>
-      <div class="tab-row" id="motivosTabs"></div>
-      <div id="motivosWrap"></div>
-    </div>
   </div>
 
   <!-- ══════════ VISTA: LLAMADAS ══════════ -->
@@ -317,11 +298,6 @@ tbody td { padding: 9px 14px; color: var(--slate); }
       </div>
     </div>
 
-    <div class="chart-card">
-      <div class="chart-card-title">Cruce técnico — ElevenLabs</div>
-      <div class="chart-card-sub">Duración y % de llamadas completadas sin error técnico</div>
-      <div id="llamadasElevenlabsWrap"></div>
-    </div>
   </div>
 
 </main>
@@ -906,71 +882,6 @@ function renderCorreo(c) {
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
   ).join('');
 
-  // Tendencia semanal — gráfico de líneas, con % de gestión de esa semana
-  // (gestionadas / (escaladas+gestionadas)) como etiqueta en cada punto de la línea
-  // de Gestionadas, a pedido de Lauren. Fechas del eje X en formato corto "29 jun"
-  // en vez de "2026-06-29" (pedido 25-ago-2026).
-  const weeks = c.tendencia_semanal || [];
-  const pctPorSemana = weeks.map(w => {
-    const total = (w.escaladas || 0) + (w.gestionadas || 0);
-    return total ? (w.gestionadas / total * 100) : null;
-  });
-  const fmtFechaCorta = iso => {
-    const [y, m, d] = (iso || '').split('-').map(Number);
-    if (!y || !m || !d) return iso;
-    const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-    return `${d} ${meses[m - 1]}`;
-  };
-  // Si el rango solo cruza snapshots mensuales (correo-month-2026-*), esta serie
-  // semanal no existe -- ese detalle no se captura mes a mes, solo el total. En vez de
-  // dejar el gráfico vacío (se ve como si algo estuviera roto), se avisa por qué.
-  if (!c.tendenciaDisponible) {
-    document.getElementById('chartCorreoTendencia').style.display = 'none';
-    const wrapT = document.getElementById('chartCorreoTendencia').parentElement;
-    if (!wrapT.querySelector('.info-note-tendencia')) {
-      wrapT.insertAdjacentHTML('beforeend', '<p class="info-note info-note-tendencia">No disponible: los snapshots mensuales no traen el desglose semana a semana, solo el total del mes.</p>');
-    }
-  } else {
-    document.getElementById('chartCorreoTendencia').style.display = '';
-    document.querySelectorAll('.info-note-tendencia').forEach(n => n.remove());
-  safeChart('chartCorreoTendencia', {
-    type: 'line',
-    data: {
-      labels: weeks.map(w => fmtFechaCorta(w.semana)),
-      datasets: [
-        { type: 'line', label: 'Escaladas', data: weeks.map(w => w.escaladas), borderColor: COLORS.red, backgroundColor: COLORS.red, tension: .3, pointRadius: 4, pointBackgroundColor: COLORS.red, datalabels: { display: false } },
-        { type: 'line', label: 'Gestionadas', data: weeks.map(w => w.gestionadas), borderColor: COLORS.teal, backgroundColor: COLORS.teal, tension: .3, pointRadius: 4, pointBackgroundColor: COLORS.teal,
-          datalabels: { display: true, align: 'top', color: COLORS.tealDk, font: { weight: '700', size: 10 },
-            formatter: (v, ctx) => { const p = pctPorSemana[ctx.dataIndex]; return p == null ? '' : p.toFixed(0) + '%'; } } },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 11 }, color: COLORS.slate } } },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: COLORS.slate, font: { size: 10 } } },
-        y: { beginAtZero: true, grid: { color: '#EDF2F7' } }
-      }
-    }
-  });
-  }
-
-  // Stage breakdown (top 8 como barras horizontales) — % sobre demanda total del
-  // periodo, con el número absoluto entre paréntesis (pedido de Lauren). Igual que la
-  // tendencia semanal, este desglose no existe en los snapshots mensuales (ver arriba).
-  if (!c.stageDisponible) {
-    document.getElementById('correoStageWrap').innerHTML = '<p class="info-note">No disponible: los snapshots mensuales no traen el desglose por stage, solo los totales de Gestionados/Escalados.</p>';
-  } else {
-    const stages = [...(c.por_stage || [])].sort((a,b) => b.count - a.count).slice(0, 8);
-    const maxStage = stages[0]?.count || 1;
-    document.getElementById('correoStageWrap').innerHTML = stages.map(s => `
-      <div class="st-row">
-        <div class="st-tema"><span>${s.stage}</span></div>
-        <div class="st-bar"><div style="width:${(s.count/maxStage*100).toFixed(0)}%;background:${COLORS.teal}"></div></div>
-        <span class="st-num">${k.demanda ? (s.count/k.demanda*100).toFixed(1) : '—'}% (${fmt(s.count)})</span>
-      </div>`).join('');
-  }
-
   // CSAT — Detractor/Neutro/Promoter (no hay puntaje 1-10 capturado en HubSpot
   // para Correo, ver INSTRUCTIVO.md sección 1.6). Totales calculados arriba, junto
   // a la 4ª tarjeta del KPI strip. Los snapshots mensuales solo traen positivas/total
@@ -1116,31 +1027,6 @@ function renderChat(c) {
     }
   });
 
-  // Motivos de solicitud por vertical (tabs)
-  const motivos = c.motivos_solicitud || {};
-  const verticales = Object.keys(motivos);
-  const tabsEl = document.getElementById('motivosTabs');
-  tabsEl.innerHTML = verticales.map((v, i) => `<button class="tab-btn ${i===0?'active':''}" data-vertical="${v}">${v.replace('_',' ')}</button>`).join('');
-  function renderMotivosTable(vertical) {
-    const items = motivos[vertical] || [];
-    const max = items[0]?.count || 1;
-    const total = items.reduce((a, m) => a + (m.count || 0), 0) || 1;
-    document.getElementById('motivosWrap').innerHTML = items.map(m => `
-      <div class="st-row">
-        <div class="st-tema"><span>${m.motivo}</span></div>
-        <div class="st-bar"><div style="width:${(m.count/max*100).toFixed(0)}%;background:${COLORS.purple}"></div></div>
-        <span class="st-num">${(m.count/total*100).toFixed(1)}% (${fmt(m.count)})</span>
-      </div>`).join('');
-  }
-  tabsEl.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      tabsEl.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderMotivosTable(btn.dataset.vertical);
-    });
-  });
-  if (verticales.length) renderMotivosTable(verticales[0]);
-
   document.getElementById('chatSubtitle').textContent = `Fuente: HubSpot — ${fmt(k.demanda)} conversaciones · tiempo promedio de solución: ${c.tiempo_promedio_solucion_min ?? '—'} min`;
 }
 
@@ -1159,7 +1045,6 @@ function renderLlamadas(c) {
     strip.innerHTML = '<p class="info-note">No hay datos de Llamadas para el periodo seleccionado.</p>';
     document.getElementById('llamadasVersionWrap').innerHTML = '';
     document.getElementById('llamadasMotivoWrap').innerHTML = '';
-    document.getElementById('llamadasElevenlabsWrap').innerHTML = '';
     document.getElementById('llamadasSubtitle').textContent = 'Fuente: HubSpot CRM (objeto CALL) + ElevenLabs Conversational AI API';
     return;
   }
@@ -1204,15 +1089,6 @@ function renderLlamadas(c) {
         <span class="st-num">${(m.count/totalM*100).toFixed(1)}% (${fmt(m.count)})</span>
       </div>`).join('')
       : '<p class="info-note">Sin llamadas escaladas en este periodo.</p>';
-  }
-
-  // Cruce técnico ElevenLabs
-  const el = c.elevenlabs;
-  if (el) {
-    document.getElementById('llamadasElevenlabsWrap').innerHTML = `
-      <div class="st-hero"><span class="st-hero-num">${fmtPct(el.pct_completadas_sin_error_tecnico)}</span><span class="st-hero-lbl">completadas sin error técnico</span></div>`;
-  } else {
-    document.getElementById('llamadasElevenlabsWrap').innerHTML = '<p class="info-note">Sin cruce de ElevenLabs para este periodo.</p>';
   }
 
   document.getElementById('llamadasSubtitle').textContent = `Fuente: HubSpot CALL + ElevenLabs — ${fmt(k.demanda)} llamadas · duración promedio: ${durMin(k.duracion_prom_seg)}`;
