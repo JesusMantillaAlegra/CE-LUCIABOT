@@ -185,15 +185,10 @@ tbody td { padding: 9px 14px; color: var(--slate); }
 /* Filter bar (versión + rango de fechas) */
 .filter-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: #FFFFFF; border: 1px solid #EDF1F5; border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(26,43,74,0.04); }
 .filter-label { font-size: 10.5px; font-weight: 700; color: var(--slate-lt); text-transform: uppercase; letter-spacing: 0.6px; margin-right: 2px; }
-.filter-group { display: flex; align-items: center; gap: 8px; }
-.filter-select { font-family: var(--font-body); font-size: 12.5px; font-weight: 600; color: var(--dark); border: 1px solid var(--border); border-radius: 20px; padding: 7px 14px; background: #fff; cursor: pointer; }
-.filter-select:disabled { color: var(--slate-lt); cursor: not-allowed; background: #F7F9FB; }
 .filter-date-group { display: flex; align-items: center; gap: 8px; }
-.filter-date-group input[type=date] { font-family: var(--font-body); font-size: 12.5px; font-weight: 600; color: var(--dark); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; background: #fff; }
+.filter-date-group input[type=month] { font-family: var(--font-body); font-size: 12.5px; font-weight: 600; color: var(--dark); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; background: #fff; }
 .filter-arrow { color: var(--slate-lt); font-size: 13px; }
-.filter-divider { width: 1px; height: 22px; background: var(--border); }
-.btn-apply { margin-left: auto; padding: 8px 20px; border-radius: 8px; border: none; background: var(--teal); color: #fff; font-family: var(--font-body); font-size: 12.5px; font-weight: 700; cursor: pointer; transition: background .15s; }
-.btn-apply:hover { background: var(--teal-dk); }
+.filter-badge-progress { font-size: 10.5px; font-weight: 700; color: var(--teal-dk); background: rgba(20,166,155,0.1); border-radius: 20px; padding: 4px 10px; text-transform: uppercase; letter-spacing: 0.4px; }
 .filter-note { flex-basis: 100%; font-size: 11px; color: var(--slate-lt); font-style: italic; }
 
 /* Fallback */
@@ -403,16 +398,16 @@ function runRender(historyData) {
     HISTORY = (historyData.snapshots || []).slice().sort((a, b) => a.semana_inicio.localeCompare(b.semana_inicio));
     if (!HISTORY.length) throw new Error('El histórico no tiene snapshots.');
     const last = HISTORY[HISTORY.length - 1];
-    setupFilterBar('correo', 'correo', null, (primary) => {
+    setupFilterBar('correo', 'correo', (primary) => {
       try { renderCorreo(aggregateCorreo(primary)); }
       catch (e) { console.error('Error en renderCorreo:', e); }
     });
-    setupFilterBar('chat', 'chat', collectVersions('chat', 'ingresados_por_version'), (primary, version) => {
-      try { renderChat(aggregateChat(primary, version)); }
+    setupFilterBar('chat', 'chat', (primary) => {
+      try { renderChat(aggregateChat(primary, null)); }
       catch (e) { console.error('Error en renderChat:', e); }
     });
-    setupFilterBar('llamadas', 'llamadas', collectVersions('llamadas', 'por_version'), (primary, version) => {
-      try { renderLlamadas(aggregateLlamadas(primary, version)); }
+    setupFilterBar('llamadas', 'llamadas', (primary) => {
+      try { renderLlamadas(aggregateLlamadas(primary, null)); }
       catch (e) { console.error('Error en renderLlamadas:', e); }
     });
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -444,29 +439,28 @@ if (typeof window.LUCIA_HISTORY !== 'undefined') {
     });
 }
 
-// ══════════ FILTROS: VERSIÓN + RANGO DE FECHAS ══════════
+// ══════════ FILTRO: MES ══════════
 // Cada snapshot representa una semana (o, el primero, un acumulado inicial — ver
-// meta.nota en el histórico). El filtro de fecha es un rango con calendario nativo
-// (Desde/Hasta); se incluye todo snapshot cuya semana se solape con el rango elegido.
-// No hay comparación entre periodos: se removió a pedido — una sola vista, limpia.
+// meta.nota en el histórico). El filtro es un selector de mes nativo (<input type=month>):
+// se incluye todo snapshot cuya semana se solape con el mes elegido. Se aplica solo con
+// elegir el mes — sin botón "Aplicar" — y si el mes elegido es el mes en curso, se acota
+// automáticamente hasta la fecha de hoy (no hasta el fin de mes, que todavía no pasó) y se
+// muestra una etiqueta corta junto al selector para que quede claro que ese mes no cerró.
+// No hay filtro de versión ni comparación entre periodos: se removieron a pedido — una
+// sola vista, limpia, por mes.
 
-// Recolecta las etiquetas de versión disponibles en el histórico para una sección,
-// leyendo el campo "version" de la lista indicada (p.ej. 'por_version' en Llamadas,
-// 'ingresados_por_version' en Chat). Se recalcula sobre HISTORY en vez de hardcodearse
-// para no quedar desactualizado si aparece una versión nueva (p.ej. un país nuevo).
-function collectVersions(dataKey, listKey) {
-  const set = new Set();
-  HISTORY.forEach(s => {
-    const d = s[dataKey];
-    if (d && Array.isArray(d[listKey])) d[listKey].forEach(v => { if (v.version) set.add(v.version); });
-  });
-  return Array.from(set);
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-// versions: array de versiones disponibles para el filtro, o null si la sección
-// todavía no tiene datos segmentados por versión (hoy: Correo). En ese caso el
-// selector queda deshabilitado en vez de simular un filtro que no hace nada.
-function setupFilterBar(prefix, dataKey, versions, applyFn) {
+function lastDayOfMonthStr(monthStr) {
+  const [y, m] = monthStr.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate(); // día 0 del mes siguiente = último día de este mes
+  return monthStr + '-' + String(lastDay).padStart(2, '0');
+}
+
+function setupFilterBar(prefix, dataKey, applyFn) {
   const container = document.getElementById(prefix + 'RangeBar');
   if (!container) return;
   container.className = 'filter-bar';
@@ -474,47 +468,46 @@ function setupFilterBar(prefix, dataKey, versions, applyFn) {
   const withData = HISTORY.filter(s => s[dataKey]);
   const minDate = withData.length ? withData.reduce((a, s) => s.semana_inicio < a ? s.semana_inicio : a, withData[0].semana_inicio) : '';
   const maxDate = withData.length ? withData.reduce((a, s) => s.semana_fin > a ? s.semana_fin : a, withData[0].semana_fin) : '';
-  // Por defecto se muestra TODO el rango disponible (min..max), no solo el último
-  // snapshot — así se ve el acumulado completo al entrar, igual que antes de agregar
-  // el filtro de fecha. El usuario puede acotar a la última semana manualmente.
-  const defaultFrom = minDate;
-  const defaultTo = maxDate;
-
-  const hasVersions = Array.isArray(versions) && versions.length > 0;
-  const versionOptions = hasVersions
-    ? `<option value="all">Todas las versiones</option>` + versions.map(v => `<option value="${v}">${v}</option>`).join('')
-    : `<option value="all">No disponible</option>`;
+  const minMonth = minDate ? minDate.slice(0, 7) : '';
+  const maxMonth = maxDate ? maxDate.slice(0, 7) : '';
+  const currentMonth = todayStr().slice(0, 7);
+  // Por defecto se muestra TODO el rango disponible (min..max mes), no solo el mes en
+  // curso — así se ve el acumulado completo al entrar, igual que con el filtro de fecha
+  // anterior. El usuario puede acotar a un mes o rango de meses manualmente.
+  const defaultFromMonth = minMonth;
+  const defaultToMonth = maxMonth;
 
   container.innerHTML = `
-    <span class="filter-label">Filtros</span>
-    <div class="filter-group">
-      <select id="${prefix}VersionFilter" class="filter-select" ${hasVersions ? '' : 'disabled'}>${versionOptions}</select>
-    </div>
-    <div class="filter-divider"></div>
-    <span class="filter-label">Fecha</span>
+    <span class="filter-label">Mes</span>
     <div class="filter-date-group">
-      <input type="date" id="${prefix}From" min="${minDate}" max="${maxDate}" value="${defaultFrom}">
+      <input type="month" id="${prefix}FromMonth" min="${minMonth}" max="${maxMonth}" value="${defaultFromMonth}">
       <span class="filter-arrow">→</span>
-      <input type="date" id="${prefix}To" min="${minDate}" max="${maxDate}" value="${defaultTo}">
-    </div>
-    <button type="button" class="btn-apply" id="${prefix}Apply">Aplicar</button>`;
+      <input type="month" id="${prefix}ToMonth" min="${minMonth}" max="${maxMonth}" value="${defaultToMonth}">
+      <span class="filter-badge-progress" id="${prefix}MonthBadge" style="display:none;">Mes en curso</span>
+    </div>`;
 
-  const fromInp = document.getElementById(prefix + 'From');
-  const toInp = document.getElementById(prefix + 'To');
-  const versionSel = document.getElementById(prefix + 'VersionFilter');
-  const applyBtn = document.getElementById(prefix + 'Apply');
+  const fromInp = document.getElementById(prefix + 'FromMonth');
+  const toInp = document.getElementById(prefix + 'ToMonth');
+  const badge = document.getElementById(prefix + 'MonthBadge');
 
   function trigger() {
-    const desde = fromInp.value || minDate;
-    const hasta = toInp.value || maxDate;
+    const fromMonth = fromInp.value || defaultFromMonth;
+    let toMonth = toInp.value || defaultToMonth;
+    // El mes final no puede ser anterior al inicial — si el usuario lo deja así, el
+    // navegador ya lo evita con min/max relativos, pero por si acaso se corrige aquí
+    // también antes de calcular el rango.
+    if (toMonth < fromMonth) toMonth = fromMonth;
+    const desde = fromMonth + '-01';
+    const isCurrent = toMonth === currentMonth;
+    const hasta = isCurrent ? todayStr() : lastDayOfMonthStr(toMonth);
+    badge.style.display = isCurrent ? '' : 'none';
     const primary = HISTORY.filter(s => s[dataKey] && s.semana_fin >= desde && s.semana_inicio <= hasta);
-    const version = hasVersions && versionSel.value !== 'all' ? versionSel.value : null;
-    applyFn(primary, version);
+    applyFn(primary);
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 
-  applyBtn.addEventListener('click', trigger);
-  versionSel.addEventListener('change', trigger);
+  fromInp.addEventListener('change', trigger);
+  toInp.addEventListener('change', trigger);
   trigger();
 }
 
