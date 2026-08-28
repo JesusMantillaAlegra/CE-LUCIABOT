@@ -160,7 +160,7 @@
       "llamadas": null,
       "chat": {
         "kpis": {
-          "demanda": 8860,
+          "demanda": 8465,
           "ingresados_bot": 185,
           "escalados": 104,
           "gestionados": 81,
@@ -197,7 +197,8 @@
         ],
         "tiempo_promedio_solucion_min": null,
         "motivos_solicitud": {},
-        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos').",
+        "_nota_demanda_corregida_28ago2026": "Demanda corregida el 28-ago-2026: la version anterior filtraba por una lista amplia de ~20 bandejas de chat de toda la empresa (incluia Payments chat, Nomina, POS, Contador, Fundaciones, Consultas API y bandejas archivadas de otros paises), lo que no era comparable con Ingresados/Escalados/Gestionados (que si estan limitados a los 5 flujos de produccion de Lucia). Un primer intento de corregir usando el mismo filtro de Flujo que Ingresados dio un numero identico a Ingresados al bot (circular: una conversacion no tiene Flujo asignado hasta que entra al bot). La correccion final filtra SOLO por las 5 bandejas relevantes de Lucia (COL-chat_sup, AC-chat_sup, Contador-chat_Sup, Nomina-chat_Sup, POS-chat_sup) sin filtro de Flujo -- captura todo lo que llego a esas bandejas, haya o no entrado al bot. Con esto el % de ingreso al bot muestra una curva de rollout creible: 2.2% feb -> 80.3% jul."
       }
     },
     {
@@ -211,7 +212,7 @@
       "llamadas": null,
       "chat": {
         "kpis": {
-          "demanda": 9805,
+          "demanda": 9377,
           "ingresados_bot": 553,
           "escalados": 350,
           "gestionados": 203,
@@ -248,7 +249,8 @@
         ],
         "tiempo_promedio_solucion_min": null,
         "motivos_solicitud": {},
-        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos').",
+        "_nota_demanda_corregida_28ago2026": "Demanda corregida el 28-ago-2026: la version anterior filtraba por una lista amplia de ~20 bandejas de chat de toda la empresa (incluia Payments chat, Nomina, POS, Contador, Fundaciones, Consultas API y bandejas archivadas de otros paises), lo que no era comparable con Ingresados/Escalados/Gestionados (que si estan limitados a los 5 flujos de produccion de Lucia). Un primer intento de corregir usando el mismo filtro de Flujo que Ingresados dio un numero identico a Ingresados al bot (circular: una conversacion no tiene Flujo asignado hasta que entra al bot). La correccion final filtra SOLO por las 5 bandejas relevantes de Lucia (COL-chat_sup, AC-chat_sup, Contador-chat_Sup, Nomina-chat_Sup, POS-chat_sup) sin filtro de Flujo -- captura todo lo que llego a esas bandejas, haya o no entrado al bot. Con esto el % de ingreso al bot muestra una curva de rollout creible: 2.2% feb -> 80.3% jul."
       }
     },
     {
@@ -262,7 +264,7 @@
       "llamadas": null,
       "chat": {
         "kpis": {
-          "demanda": 9276,
+          "demanda": 8867,
           "ingresados_bot": 1260,
           "escalados": 808,
           "gestionados": 452,
@@ -299,7 +301,8 @@
         ],
         "tiempo_promedio_solucion_min": 73.76,
         "motivos_solicitud": {},
-        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos').",
+        "_nota_demanda_corregida_28ago2026": "Demanda corregida el 28-ago-2026: la version anterior filtraba por una lista amplia de ~20 bandejas de chat de toda la empresa (incluia Payments chat, Nomina, POS, Contador, Fundaciones, Consultas API y bandejas archivadas de otros paises), lo que no era comparable con Ingresados/Escalados/Gestionados (que si estan limitados a los 5 flujos de produccion de Lucia). Un primer intento de corregir usando el mismo filtro de Flujo que Ingresados dio un numero identico a Ingresados al bot (circular: una conversacion no tiene Flujo asignado hasta que entra al bot). La correccion final filtra SOLO por las 5 bandejas relevantes de Lucia (COL-chat_sup, AC-chat_sup, Contador-chat_Sup, Nomina-chat_Sup, POS-chat_sup) sin filtro de Flujo -- captura todo lo que llego a esas bandejas, haya o no entrado al bot. Con esto el % de ingreso al bot muestra una curva de rollout creible: 2.2% feb -> 80.3% jul."
       }
     },
     {
@@ -313,7 +316,7 @@
       "llamadas": null,
       "chat": {
         "kpis": {
-          "demanda": 9549,
+          "demanda": 9147,
           "ingresados_bot": 1879,
           "escalados": 1115,
           "gestionados": 764,
@@ -350,7 +353,8 @@
         ],
         "tiempo_promedio_solucion_min": 216.22,
         "motivos_solicitud": {},
-        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos').",
+        "_nota_demanda_corregida_28ago2026": "Demanda corregida el 28-ago-2026: la version anterior filtraba por una lista amplia de ~20 bandejas de chat de toda la empresa (incluia Payments chat, Nomina, POS, Contador, Fundaciones, Consultas API y bandejas archivadas de otros paises), lo que no era comparable con Ingresados/Escalados/Gestionados (que si estan limitados a los 5 flujos de produccion de Lucia). Un primer intento de corregir usando el mismo filtro de Flujo que Ingresados dio un numero identico a Ingresados al bot (circular: una conversacion no tiene Flujo asignado hasta que entra al bot). La correccion final filtra SOLO por las 5 bandejas relevantes de Lucia (COL-chat_sup, AC-chat_sup, Contador-chat_Sup, Nomina-chat_Sup, POS-chat_sup) sin filtro de Flujo -- captura todo lo que llego a esas bandejas, haya o no entrado al bot. Con esto el % de ingreso al bot muestra una curva de rollout creible: 2.2% feb -> 80.3% jul."
       }
     },
     {
@@ -364,7 +368,7 @@
       "llamadas": null,
       "chat": {
         "kpis": {
-          "demanda": 8786,
+          "demanda": 8553,
           "ingresados_bot": 4443,
           "escalados": 1395,
           "gestionados": 3048,
@@ -401,7 +405,8 @@
         ],
         "tiempo_promedio_solucion_min": 120.71,
         "motivos_solicitud": {},
-        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos').",
+        "_nota_demanda_corregida_28ago2026": "Demanda corregida el 28-ago-2026: la version anterior filtraba por una lista amplia de ~20 bandejas de chat de toda la empresa (incluia Payments chat, Nomina, POS, Contador, Fundaciones, Consultas API y bandejas archivadas de otros paises), lo que no era comparable con Ingresados/Escalados/Gestionados (que si estan limitados a los 5 flujos de produccion de Lucia). Un primer intento de corregir usando el mismo filtro de Flujo que Ingresados dio un numero identico a Ingresados al bot (circular: una conversacion no tiene Flujo asignado hasta que entra al bot). La correccion final filtra SOLO por las 5 bandejas relevantes de Lucia (COL-chat_sup, AC-chat_sup, Contador-chat_Sup, Nomina-chat_Sup, POS-chat_sup) sin filtro de Flujo -- captura todo lo que llego a esas bandejas, haya o no entrado al bot. Con esto el % de ingreso al bot muestra una curva de rollout creible: 2.2% feb -> 80.3% jul."
       }
     },
     {
@@ -415,7 +420,7 @@
       "llamadas": null,
       "chat": {
         "kpis": {
-          "demanda": 9968,
+          "demanda": 9630,
           "ingresados_bot": 7733,
           "escalados": 2295,
           "gestionados": 5436,
@@ -452,7 +457,8 @@
         ],
         "tiempo_promedio_solucion_min": 107.24,
         "motivos_solicitud": {},
-        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos').",
+        "_nota_demanda_corregida_28ago2026": "Demanda corregida el 28-ago-2026: la version anterior filtraba por una lista amplia de ~20 bandejas de chat de toda la empresa (incluia Payments chat, Nomina, POS, Contador, Fundaciones, Consultas API y bandejas archivadas de otros paises), lo que no era comparable con Ingresados/Escalados/Gestionados (que si estan limitados a los 5 flujos de produccion de Lucia). Un primer intento de corregir usando el mismo filtro de Flujo que Ingresados dio un numero identico a Ingresados al bot (circular: una conversacion no tiene Flujo asignado hasta que entra al bot). La correccion final filtra SOLO por las 5 bandejas relevantes de Lucia (COL-chat_sup, AC-chat_sup, Contador-chat_Sup, Nomina-chat_Sup, POS-chat_sup) sin filtro de Flujo -- captura todo lo que llego a esas bandejas, haya o no entrado al bot. Con esto el % de ingreso al bot muestra una curva de rollout creible: 2.2% feb -> 80.3% jul."
       }
     },
     {
@@ -466,7 +472,7 @@
       "llamadas": null,
       "chat": {
         "kpis": {
-          "demanda": 7607,
+          "demanda": 7278,
           "ingresados_bot": 5792,
           "escalados": 1534,
           "gestionados": 4249,
@@ -503,7 +509,8 @@
         ],
         "tiempo_promedio_solucion_min": 115.96,
         "motivos_solicitud": {},
-        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos').",
+        "_nota_demanda_corregida_28ago2026": "Demanda corregida el 28-ago-2026: la version anterior filtraba por una lista amplia de ~20 bandejas de chat de toda la empresa (incluia Payments chat, Nomina, POS, Contador, Fundaciones, Consultas API y bandejas archivadas de otros paises), lo que no era comparable con Ingresados/Escalados/Gestionados (que si estan limitados a los 5 flujos de produccion de Lucia). Un primer intento de corregir usando el mismo filtro de Flujo que Ingresados dio un numero identico a Ingresados al bot (circular: una conversacion no tiene Flujo asignado hasta que entra al bot). La correccion final filtra SOLO por las 5 bandejas relevantes de Lucia (COL-chat_sup, AC-chat_sup, Contador-chat_Sup, Nomina-chat_Sup, POS-chat_sup) sin filtro de Flujo -- captura todo lo que llego a esas bandejas, haya o no entrado al bot. Con esto el % de ingreso al bot muestra una curva de rollout creible: 2.2% feb -> 80.3% jul."
       }
     },
     {

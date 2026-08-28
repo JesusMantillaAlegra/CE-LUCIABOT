@@ -854,32 +854,37 @@ function safeChart(canvasId, config) {
 }
 
 // ══════════ CORREO — diagrama de flujo del embudo de gestión ══════════
-// Mismo componente visual que renderChatFlow (mismo sistema de coordenadas 0-100,
-// mismas curvas SVG), pedido por Jesus (28-ago-2026) para tener el mismo tipo de
-// diagrama en Correo. La diferencia con Chat: acá no hay un paso intermedio
-// "ingresados al bot" -- Gestionados y Escalados salen directo de Demanda, y el resto
-// (tickets que Lucía ni gestionó ni escaló) se muestra como "Sin intervención de Lucía".
+// Mismo componente visual y misma estructura de 2 niveles que renderChatFlow, a pedido
+// de Jesus (28-ago-2026: "ponle No ingresaron al flujo y hazlo como el de Chat"). Correo
+// no tiene un dato de "ingresados al flujo" reportado directo por HubSpot como Chat, así
+// que se deriva como Gestionados + Escalados (= los tickets que Lucía sí tocó de algún
+// modo); el resto de la demanda que no aparece ni gestionado ni escalado se muestra como
+// "No Ingresaron al Flujo", igual que el nodo morado de Chat.
 function renderCorreoFlow(k) {
   const demanda = k.demanda || 0;
   const gestionados = k.gestionados || 0;
   const escalados = k.escalados || 0;
-  const sinIntervencion = Math.max(0, demanda - gestionados - escalados);
-  const pctGestionados = demanda ? (gestionados / demanda * 100) : 0;
-  const pctEscalados = demanda ? (escalados / demanda * 100) : 0;
-  const pctSin = demanda ? (sinIntervencion / demanda * 100) : 0;
+  const ingresados = gestionados + escalados;
+  const noIngresaron = Math.max(0, demanda - ingresados);
+  const pctIngresados = demanda ? (ingresados / demanda * 100) : 0;
+  const pctAbandono = demanda ? (noIngresaron / demanda * 100) : 0;
+  const pctGestion = ingresados ? (gestionados / ingresados * 100) : 0;
+  const pctEsc = ingresados ? (escalados / ingresados * 100) : 0;
 
   const nodes = {
-    demanda:         { x: 0,  y: 30, w: 17, h: 58, color: COLORS.dark,   title: 'Demanda Total', value: fmt(demanda), sub: '100% de la demanda' },
-    gestionados:     { x: 42, y: 2,  w: 25, h: 30, color: COLORS.teal,   title: 'Gestionados por Bot', value: fmt(gestionados), sub: `${pctGestionados.toFixed(1)}% de la demanda` },
-    escalados:       { x: 42, y: 36, w: 25, h: 30, color: COLORS.red,    title: 'Escalados a Agente', value: fmt(escalados), sub: `${pctEscalados.toFixed(1)}% de la demanda` },
-    sinIntervencion: { x: 42, y: 70, w: 25, h: 30, color: COLORS.slate,  title: 'Sin intervención de Lucía', value: fmt(sinIntervencion), sub: `${pctSin.toFixed(1)}% de la demanda` },
+    demanda:     { x: 0,  y: 30, w: 17, h: 58, color: COLORS.dark,   title: 'Demanda Total', value: fmt(demanda), sub: '100% de la demanda' },
+    ingresados:  { x: 37, y: 4,  w: 25, h: 34, color: COLORS.blue,   title: 'Ingresados al Flujo', value: fmt(ingresados), sub: `${pctIngresados.toFixed(0)}% de la demanda` },
+    abandono:    { x: 37, y: 62, w: 25, h: 34, color: COLORS.purple, title: 'No Ingresaron al Flujo', value: fmt(noIngresaron), sub: `${pctAbandono.toFixed(0)}% de la demanda` },
+    gestionados: { x: 76, y: 4,  w: 24, h: 34, color: COLORS.teal,   title: 'Gestionados por Bot', value: fmt(gestionados), sub: `${pctGestion.toFixed(0)}% de los ingresados` },
+    escalados:   { x: 76, y: 62, w: 24, h: 34, color: COLORS.red,    title: 'Escalados a Agente', value: fmt(escalados), sub: `${pctEsc.toFixed(0)}% de los ingresados` },
   };
   const edge = (n, side) => ({ x: side === 'right' ? n.x + n.w : n.x, y: n.y + n.h / 2 });
   const curve = (p1, p2) => { const mx = (p1.x + p2.x) / 2; return `M ${p1.x},${p1.y} C ${mx},${p1.y} ${mx},${p2.y} ${p2.x},${p2.y}`; };
   const links = [
-    { from: edge(nodes.demanda, 'right'), to: edge(nodes.gestionados, 'left'), color: COLORS.teal },
-    { from: edge(nodes.demanda, 'right'), to: edge(nodes.escalados, 'left'), color: COLORS.red },
-    { from: edge(nodes.demanda, 'right'), to: edge(nodes.sinIntervencion, 'left'), color: COLORS.slate },
+    { from: edge(nodes.demanda, 'right'), to: edge(nodes.ingresados, 'left'), color: COLORS.blue },
+    { from: edge(nodes.demanda, 'right'), to: edge(nodes.abandono, 'left'), color: COLORS.purple },
+    { from: edge(nodes.ingresados, 'right'), to: edge(nodes.gestionados, 'left'), color: COLORS.teal },
+    { from: edge(nodes.ingresados, 'right'), to: edge(nodes.escalados, 'left'), color: COLORS.red },
   ];
   const pathsSvg = links.map(l => `<path d="${curve(l.from, l.to)}" stroke="${l.color}" stroke-width="0.6" fill="none" opacity="0.55"/>`).join('');
   const nodesHtml = Object.values(nodes).map(n => `
@@ -892,9 +897,9 @@ function renderCorreoFlow(k) {
   return `
     <div class="flow-wrap">
       <div class="flow-hero">
-        <span class="flow-hero-num">${pctGestionados.toFixed(1)}%</span>
-        <span class="flow-hero-lbl">Tasa de Gestión del Bot</span>
-        <span class="flow-hero-sub">Gestionados / Demanda total</span>
+        <span class="flow-hero-num">${pctGestion.toFixed(0)}%</span>
+        <span class="flow-hero-lbl">Tasa de Contención del Bot</span>
+        <span class="flow-hero-sub">Gestionados / Ingresados al flujo</span>
       </div>
       <svg class="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">${pathsSvg}</svg>
       ${nodesHtml}
@@ -1131,7 +1136,7 @@ function renderLlamadas(c) {
       <div class="st-tema"><span>${v.version}</span></div>
       <div class="st-bar"><div style="width:${v.pct_gestion == null ? 0 : v.pct_gestion.toFixed(0)}%;background:${COLORS.teal}"></div></div>
       <span class="st-num">${v.pct_gestion == null
-        ? `<b>—</b> (${fmt(v.demanda)} llamadas, sin desglose de gestión este mes)`
+        ? `<b>${fmt(v.demanda)}</b>`
         : `<b>${fmtPct(v.pct_gestion)}</b> (${fmt(v.gestionadas)}/${fmt(v.demanda)})`}</span>
     </div>`).join('');
 
