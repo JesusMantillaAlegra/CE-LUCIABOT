@@ -3,7 +3,10 @@ window.LUCIA_HISTORY = {
     "fuente_correo": "HubSpot Reports Dashboard 6180490 · vista 20862583",
     "fuente_chat": "HubSpot Reports Dashboard 6180490 · vista 20257473",
     "fuente_llamadas": "HubSpot CRM objeto CALL (filtrado por bot_calificador) + ElevenLabs Conversational AI API",
-    "nota": "El primer snapshot de Correo/Chat (id boot-2026-07-01) es un acumulado inicial que cubre varias semanas juntas. El de Llamadas (id llamadas-boot-2026-08-10) arrancó después, por eso cubre solo la semana del 10-16 ago 2026 — es su propio punto de partida, no está desalineado por error. A partir de ahora cada snapshot nuevo debe cubrir exactamente una semana e idealmente traer correo, chat Y llamadas juntos. Ver INSTRUCTIVO.md secciones 4 y 7."
+    "nota": "El primer snapshot de Correo/Chat (id boot-2026-07-01) es un acumulado inicial que cubre varias semanas juntas. El de Llamadas (id llamadas-boot-2026-08-10) arrancó después, por eso cubre solo la semana del 10-16 ago 2026 — es su propio punto de partida, no está desalineado por error. A partir de ahora cada snapshot nuevo debe cubrir exactamente una semana e idealmente traer correo, chat Y llamadas juntos. Ver INSTRUCTIVO.md secciones 4 y 7.",
+    "nota_chat_mensual_28ago2026": "A partir del 28-ago-2026, Chat se actualiza con snapshots MENSUALES no solapados (chat-month-2026-01 a chat-month-2026-08) en lugar de semanales, porque la fuente real (HubSpot AI / Breeze, ante el bloqueo de la Conversations API) entrega los datos agrupados por mes calendario. Los snapshots viejos de chat en 'boot-2026-07-01' y 'chat-wk-2026-08-20' se vaciaron (chat: null) para no duplicar jul-ago. Correo y Llamadas siguen en cadencia semanal por ahora — su migración a mensual, si aplica, se hace por separado.",
+    "nota_correo_mensual_28ago2026": "A partir del 28-ago-2026, Correo tambien se actualiza con snapshots MENSUALES no solapados (correo-month-2026-01 a -08), mismo criterio que Chat. El campo 'correo' de 'boot-2026-07-01' se vacio para no duplicar jul-ago. IMPORTANTE: Demanda y %Gestion de Correo son solo Colombia (unico pipeline/HD-Version validado contra el panel real) -- si se agregan otros paises en el futuro, hay que replicar la misma consulta con su propio Pipeline/HD-Version y sumar, no asumir que el numero actual ya es el total de los 5 paises.",
+    "nota_llamadas_mensual_28ago2026": "A partir del 28-ago-2026, Llamadas tambien se actualiza con snapshots MENSUALES no solapados (llamadas-month-2026-07 y -08), mismo criterio que Correo y Chat. El campo 'llamadas' de 'llamadas-boot-2026-08-10' se vacio (queda respaldado en '_llamadas_original_10_16ago' de ese mismo snapshot solo como referencia, no se suma). A diferencia de Correo/Chat, Llamadas nunca dependio de la Conversations API bloqueada -- siempre fue 100% API directa sobre el objeto CALL filtrado por bot_calificador -- por eso estos snapshots mensuales no necesitaron el copiloto de HubSpot AI."
   },
   "snapshots": [
     {
@@ -13,348 +16,10 @@ window.LUCIA_HISTORY = {
       "generado": "2026-08-19",
       "bootstrap": true,
       "etiqueta": "01 jul – 19 ago 2026 (acumulado inicial)",
-      "correo": {
-        "kpis": {
-          "demanda": 689,
-          "gestionados": 218,
-          "escalados": 199,
-          "pct_gestion": 31.64
-        },
-        "_nota_correccion_25ago2026": "gestionados/escalados recalculados (25-ago-2026) con la definición REAL de los widgets de HubSpot, confirmada exacta contra el panel en vivo vía API: Gestionados = tickets con Propietario = 'Lucía Pérez' (no 'categoria_bot_lucia' como se asumió el 21-ago); Escalados = tickets con la propiedad 'escalamiento_lucia_email' conocida (no 'categoria_bot_lucia' tampoco). Ambas excluyen la pipeline 'Correos que no requieren respuesta' (mismo ruido de notificaciones automáticas de la corrección anterior) y se limitan a Fuente=Correo, creados entre 01-jul y 19-ago-2026 (mismo periodo que 'demanda'). 226/411 (definición anterior, basada en categoria_bot_lucia) quedan obsoletos. Ver INSTRUCTIVO.md sección 1.10 para el mapeo completo y las consultas SQL listas para la automatización por API.",
-        "por_stage": [
-          {
-            "stage": "Closed (COL_Sup)",
-            "count": 174
-          },
-          {
-            "stage": "Cerrados (Consultas API_Sup)",
-            "count": 19
-          },
-          {
-            "stage": "Closed (Nómina_Sup)",
-            "count": 10
-          },
-          {
-            "stage": "Closed (Payments Sup)",
-            "count": 9
-          },
-          {
-            "stage": "Verificación de cliente (Tickets Sales)",
-            "count": 3
-          },
-          {
-            "stage": "Waiting on contact (COL_Sup)",
-            "count": 3
-          },
-          {
-            "stage": "Follow up (COL_Sup)",
-            "count": 3
-          },
-          {
-            "stage": "Closed (POS_Sup)",
-            "count": 2
-          },
-          {
-            "stage": "Gestionados (Retention)",
-            "count": 1
-          },
-          {
-            "stage": "Waiting on us (COL_Sup)",
-            "count": 1
-          }
-        ],
-        "tendencia_semanal": [
-          {
-            "semana": "2026-06-29",
-            "escaladas": 9,
-            "gestionadas": 7
-          },
-          {
-            "semana": "2026-07-06",
-            "escaladas": 37,
-            "gestionadas": 51
-          },
-          {
-            "semana": "2026-07-13",
-            "escaladas": 30,
-            "gestionadas": 16
-          },
-          {
-            "semana": "2026-07-20",
-            "escaladas": 28,
-            "gestionadas": 12
-          },
-          {
-            "semana": "2026-07-27",
-            "escaladas": 29,
-            "gestionadas": 28
-          },
-          {
-            "semana": "2026-08-03",
-            "escaladas": 34,
-            "gestionadas": 21
-          },
-          {
-            "semana": "2026-08-10",
-            "escaladas": 28,
-            "gestionadas": 76
-          },
-          {
-            "semana": "2026-08-17",
-            "escaladas": 10,
-            "gestionadas": 20
-          },
-          {
-            "semana": "2026-08-24",
-            "escaladas": 8,
-            "gestionadas": 8
-          }
-        ],
-        "csat": {
-          "nota": "Fuente: propiedad de HubSpot 'clasificacion_encuesta_ces_csat' (Promoter/Neutro/Detractor), tickets de Correo. No hay puntaje individual 1-10 capturado en HubSpot para este pipeline, por eso se agrupa en las 3 categorías NPS en vez de un eje 1-10. No se pudo aislar solo lo gestionado por el bot Lucía vs. gestión humana dentro del pipeline (ver INSTRUCTIVO.md sección 1.6).",
-          "serie_semanal": [
-            {
-              "semana": "2026-06-29",
-              "promoter": 19,
-              "passive": 1,
-              "detractor": 3
-            },
-            {
-              "semana": "2026-07-06",
-              "promoter": 26,
-              "passive": 0,
-              "detractor": 5
-            },
-            {
-              "semana": "2026-07-13",
-              "promoter": 13,
-              "passive": 1,
-              "detractor": 6
-            },
-            {
-              "semana": "2026-07-20",
-              "promoter": 19,
-              "passive": 1,
-              "detractor": 4
-            },
-            {
-              "semana": "2026-07-27",
-              "promoter": 27,
-              "passive": 0,
-              "detractor": 5
-            },
-            {
-              "semana": "2026-08-03",
-              "promoter": 26,
-              "passive": 1,
-              "detractor": 2
-            },
-            {
-              "semana": "2026-08-10",
-              "promoter": 20,
-              "passive": 1,
-              "detractor": 1
-            },
-            {
-              "semana": "2026-08-17",
-              "promoter": 15,
-              "passive": 0,
-              "detractor": 2
-            }
-          ]
-        }
-      },
-      "chat": {
-        "kpis": {
-          "demanda": 4409,
-          "ingresados_bot": 3914,
-          "escalados": 1175,
-          "gestionados": 2735,
-          "pct_gestion": 69.88,
-          "csat_bot": 88.01
-        },
-        "ingresados_por_version": [
-          {
-            "version": "COL",
-            "count": 311
-          },
-          {
-            "version": "MEX",
-            "count": 278
-          },
-          {
-            "version": "DOM",
-            "count": 40
-          },
-          {
-            "version": "CRI",
-            "count": 80
-          },
-          {
-            "version": "PER",
-            "count": 301
-          },
-          {
-            "version": "VEN",
-            "count": 303
-          },
-          {
-            "version": "OTHER",
-            "count": 0
-          }
-        ],
-        "tiempo_promedio_solucion_min": 102.9,
-        "motivos_solicitud": {
-          "COL_AC": [
-            {
-              "motivo": "Configuración Numeración",
-              "count": 114
-            },
-            {
-              "motivo": "Traslado de cuenta",
-              "count": 71
-            },
-            {
-              "motivo": "Suscripción plan",
-              "count": 51
-            },
-            {
-              "motivo": "Conciliar bancos",
-              "count": 47
-            },
-            {
-              "motivo": "Saldos iniciales",
-              "count": 44
-            },
-            {
-              "motivo": "Pregunta por issue",
-              "count": 44
-            },
-            {
-              "motivo": "Reporte de impuestos",
-              "count": 41
-            },
-            {
-              "motivo": "Integraciones",
-              "count": 38
-            }
-          ],
-          "Payments": [
-            {
-              "motivo": "Cancelar suscripción",
-              "count": 38
-            },
-            {
-              "motivo": "Solicita descuento",
-              "count": 28
-            },
-            {
-              "motivo": "Cambio de producto",
-              "count": 23
-            },
-            {
-              "motivo": "Suspendido/bloqueado",
-              "count": 22
-            },
-            {
-              "motivo": "Retención factura",
-              "count": 21
-            },
-            {
-              "motivo": "Abono a la siguiente",
-              "count": 18
-            }
-          ],
-          "Countries_AC": [
-            {
-              "motivo": "Nota crédito electrónica",
-              "count": 8
-            },
-            {
-              "motivo": "Administrador XML",
-              "count": 8
-            },
-            {
-              "motivo": "Cambio de moneda",
-              "count": 7
-            },
-            {
-              "motivo": "Configuración datos",
-              "count": 7
-            },
-            {
-              "motivo": "Lentitud al generar",
-              "count": 6
-            }
-          ],
-          "Contador": [
-            {
-              "motivo": "Emisión Documento",
-              "count": 12
-            },
-            {
-              "motivo": "Asesoría",
-              "count": 9
-            },
-            {
-              "motivo": "Cambio de plan",
-              "count": 8
-            },
-            {
-              "motivo": "Facturación electrónica",
-              "count": 7
-            },
-            {
-              "motivo": "Pagos recibidos",
-              "count": 5
-            }
-          ],
-          "POS": [
-            {
-              "motivo": "Plantillas de impresión",
-              "count": 19
-            },
-            {
-              "motivo": "Listas de precios",
-              "count": 12
-            },
-            {
-              "motivo": "Usuario resolvió la duda",
-              "count": 12
-            },
-            {
-              "motivo": "Reporte de transacciones",
-              "count": 10
-            },
-            {
-              "motivo": "Configuración dispositivo",
-              "count": 10
-            }
-          ],
-          "NE": [
-            {
-              "motivo": "Terminación de contrato",
-              "count": 31
-            },
-            {
-              "motivo": "Configuración empleado",
-              "count": 24
-            },
-            {
-              "motivo": "Dudas botón liquidación",
-              "count": 21
-            },
-            {
-              "motivo": "Configurar deducción",
-              "count": 20
-            },
-            {
-              "motivo": "Configuración inicial",
-              "count": 15
-            }
-          ]
-        }
-      }
+      "correo": null,
+      "chat": null,
+      "_nota_chat_migrado_28ago2026": "El campo 'chat' de este snapshot se vació el 28-ago-2026: los datos de chat de jul-ago quedaron reemplazados por los snapshots mensuales 'chat-month-2026-07' y 'chat-month-2026-08', capturados con filtros exactos validados (ver DOCUMENTACION_METRICAS_LUCIA.md). El campo 'correo' de este snapshot NO se tocó todavía, sigue pendiente su propia migración a mensual.",
+      "_nota_correo_migrado_28ago2026": "El campo 'correo' de este snapshot se vació el 28-ago-2026: los datos de jul-ago quedaron reemplazados por los snapshots mensuales 'correo-month-2026-07' y 'correo-month-2026-08', capturados con la definicion validada (Demanda=informe nativo HubSpot 'Demanda', HD-Version=Colombia, Pipeline=1857341, Bandeja=Service Mail Inbox; Gestionados/Escalados=API directa TICKET; CSAT=objeto Respuestas a encuesta, validado cruzado contra TICKET). IMPORTANTE: la Demanda de esta migracion es SOLO Colombia -- el snapshot boot-2026-07-01 original no dejaba claro el alcance geografico exacto."
     },
     {
       "id": "llamadas-boot-2026-08-10",
@@ -365,7 +30,9 @@ window.LUCIA_HISTORY = {
       "etiqueta": "10 – 16 ago 2026 (primera semana de Llamadas)",
       "correo": null,
       "chat": null,
-      "llamadas": {
+      "_nota_llamadas_migrado_28ago2026": "El campo 'llamadas' de este snapshot se vació el 28-ago-2026: sus fechas (10-16 ago) quedaron reemplazadas por los snapshots mensuales 'llamadas-month-2026-07' y 'llamadas-month-2026-08' (via API directa CALL + bot_calificador, sin bloqueo de Conversations API), que a partir de ahora reemplazan la cadencia semanal de Llamadas, mismo criterio que Correo y Chat. Se conserva este bloque solo como referencia del detalle semanal original (no se debe reactivar 'llamadas' aquí para evitar doble conteo de agosto).",
+      "llamadas": null,
+      "_llamadas_original_10_16ago": {
         "kpis": {
           "demanda": 1351,
           "gestionadas": 251,
@@ -467,44 +134,699 @@ window.LUCIA_HISTORY = {
       "etiqueta": "20 – 23 ago 2026 (Chat)",
       "correo": null,
       "llamadas": null,
+      "chat": null,
+      "_nota_chat_migrado_28ago2026": "Reemplazado por el snapshot mensual 'chat-month-2026-08', que cubre todo agosto con filtros exactos validados vía informes de HubSpot AI + verificación cruzada (Escaladas+Gestionadas ≈ Ingresados al bot)."
+    },
+    {
+      "id": "chat-month-2026-01",
+      "semana_inicio": "2026-01-01",
+      "semana_fin": "2026-01-31",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Enero 2026 (Chat)",
+      "correo": null,
+      "llamadas": null,
       "chat": {
         "kpis": {
-          "demanda": 717,
-          "ingresados_bot": 653,
-          "escalados": 199,
-          "gestionados": 451,
-          "pct_gestion": 69.07,
-          "csat_bot": 89.8
+          "demanda": 7333,
+          "ingresados_bot": 0,
+          "escalados": 0,
+          "gestionados": 0,
+          "pct_escalados": null,
+          "pct_gestion": null,
+          "csat_bot": null
         },
+        "csat_bot_detalle": null,
         "ingresados_por_version": [
           {
-            "version": "COL",
-            "count": 497
+            "version": "MEX",
+            "count": 0
           },
           {
             "version": "DOM",
-            "count": 63
-          },
-          {
-            "version": "MEX",
-            "count": 31
-          },
-          {
-            "version": "PER",
-            "count": 30
+            "count": 0
           },
           {
             "version": "CRI",
-            "count": 29
+            "count": 0
+          },
+          {
+            "version": "VEN",
+            "count": 0
+          },
+          {
+            "version": "COL",
+            "count": 0
+          }
+        ],
+        "tiempo_promedio_solucion_min": null,
+        "motivos_solicitud": {},
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+      }
+    },
+    {
+      "id": "chat-month-2026-02",
+      "semana_inicio": "2026-02-01",
+      "semana_fin": "2026-02-28",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Febrero 2026 (Chat)",
+      "correo": null,
+      "llamadas": null,
+      "chat": {
+        "kpis": {
+          "demanda": 8860,
+          "ingresados_bot": 185,
+          "escalados": 104,
+          "gestionados": 81,
+          "pct_escalados": 56.22,
+          "pct_gestion": 43.78,
+          "csat_bot": 76.9
+        },
+        "csat_bot_detalle": {
+          "positivas": 10,
+          "total": 13,
+          "pct": 76.9
+        },
+        "ingresados_por_version": [
+          {
+            "version": "MEX",
+            "count": 0
+          },
+          {
+            "version": "DOM",
+            "count": 0
+          },
+          {
+            "version": "CRI",
+            "count": 0
+          },
+          {
+            "version": "VEN",
+            "count": 0
+          },
+          {
+            "version": "COL",
+            "count": 0
+          }
+        ],
+        "tiempo_promedio_solucion_min": null,
+        "motivos_solicitud": {},
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+      }
+    },
+    {
+      "id": "chat-month-2026-03",
+      "semana_inicio": "2026-03-01",
+      "semana_fin": "2026-03-31",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Marzo 2026 (Chat)",
+      "correo": null,
+      "llamadas": null,
+      "chat": {
+        "kpis": {
+          "demanda": 9805,
+          "ingresados_bot": 553,
+          "escalados": 350,
+          "gestionados": 203,
+          "pct_escalados": 63.29,
+          "pct_gestion": 36.71,
+          "csat_bot": 80.8
+        },
+        "csat_bot_detalle": {
+          "positivas": 21,
+          "total": 26,
+          "pct": 80.8
+        },
+        "ingresados_por_version": [
+          {
+            "version": "MEX",
+            "count": 0
+          },
+          {
+            "version": "DOM",
+            "count": 0
+          },
+          {
+            "version": "CRI",
+            "count": 0
+          },
+          {
+            "version": "VEN",
+            "count": 0
+          },
+          {
+            "version": "COL",
+            "count": 0
+          }
+        ],
+        "tiempo_promedio_solucion_min": null,
+        "motivos_solicitud": {},
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+      }
+    },
+    {
+      "id": "chat-month-2026-04",
+      "semana_inicio": "2026-04-01",
+      "semana_fin": "2026-04-30",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Abril 2026 (Chat)",
+      "correo": null,
+      "llamadas": null,
+      "chat": {
+        "kpis": {
+          "demanda": 9276,
+          "ingresados_bot": 1260,
+          "escalados": 808,
+          "gestionados": 452,
+          "pct_escalados": 64.13,
+          "pct_gestion": 35.87,
+          "csat_bot": 90.9
+        },
+        "csat_bot_detalle": {
+          "positivas": 20,
+          "total": 22,
+          "pct": 90.9
+        },
+        "ingresados_por_version": [
+          {
+            "version": "MEX",
+            "count": 0
+          },
+          {
+            "version": "DOM",
+            "count": 0
+          },
+          {
+            "version": "CRI",
+            "count": 0
+          },
+          {
+            "version": "VEN",
+            "count": 0
+          },
+          {
+            "version": "COL",
+            "count": 605
+          }
+        ],
+        "tiempo_promedio_solucion_min": 73.76,
+        "motivos_solicitud": {},
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+      }
+    },
+    {
+      "id": "chat-month-2026-05",
+      "semana_inicio": "2026-05-01",
+      "semana_fin": "2026-05-31",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Mayo 2026 (Chat)",
+      "correo": null,
+      "llamadas": null,
+      "chat": {
+        "kpis": {
+          "demanda": 9549,
+          "ingresados_bot": 1879,
+          "escalados": 1115,
+          "gestionados": 764,
+          "pct_escalados": 59.34,
+          "pct_gestion": 40.66,
+          "csat_bot": 94.7
+        },
+        "csat_bot_detalle": {
+          "positivas": 18,
+          "total": 19,
+          "pct": 94.7
+        },
+        "ingresados_por_version": [
+          {
+            "version": "MEX",
+            "count": 0
+          },
+          {
+            "version": "DOM",
+            "count": 0
+          },
+          {
+            "version": "CRI",
+            "count": 0
+          },
+          {
+            "version": "VEN",
+            "count": 0
+          },
+          {
+            "version": "COL",
+            "count": 1250
+          }
+        ],
+        "tiempo_promedio_solucion_min": 216.22,
+        "motivos_solicitud": {},
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+      }
+    },
+    {
+      "id": "chat-month-2026-06",
+      "semana_inicio": "2026-06-01",
+      "semana_fin": "2026-06-30",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Junio 2026 (Chat)",
+      "correo": null,
+      "llamadas": null,
+      "chat": {
+        "kpis": {
+          "demanda": 8786,
+          "ingresados_bot": 4443,
+          "escalados": 1395,
+          "gestionados": 3048,
+          "pct_escalados": 31.4,
+          "pct_gestion": 68.6,
+          "csat_bot": 88.9
+        },
+        "csat_bot_detalle": {
+          "positivas": 72,
+          "total": 81,
+          "pct": 88.9
+        },
+        "ingresados_por_version": [
+          {
+            "version": "MEX",
+            "count": 240
+          },
+          {
+            "version": "DOM",
+            "count": 307
+          },
+          {
+            "version": "CRI",
+            "count": 117
           },
           {
             "version": "VEN",
             "count": 3
+          },
+          {
+            "version": "COL",
+            "count": 2590
           }
         ],
-        "tiempo_promedio_solucion_min": 378,
+        "tiempo_promedio_solucion_min": 120.71,
         "motivos_solicitud": {},
-        "_nota_captura_manual_27ago2026": "Capturado manualmente vía Chrome desde el panel de HubSpot (Conversations API sigue bloqueada) para la ventana 20-23 ago 2026, alineada con la misma ventana no solapada usada para el reprocesamiento de Correo/Llamadas. 'motivos_solicitud' se dejó vacío esta vez porque las etiquetas de las categorías venían truncadas en el gráfico y no se quiso arriesgar una transcripción incorrecta; se puede completar en una futura captura con zoom por categoría si se necesita el detalle."
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+      }
+    },
+    {
+      "id": "chat-month-2026-07",
+      "semana_inicio": "2026-07-01",
+      "semana_fin": "2026-07-31",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Julio 2026 (Chat)",
+      "correo": null,
+      "llamadas": null,
+      "chat": {
+        "kpis": {
+          "demanda": 9968,
+          "ingresados_bot": 7733,
+          "escalados": 2295,
+          "gestionados": 5436,
+          "pct_escalados": 29.68,
+          "pct_gestion": 70.3,
+          "csat_bot": 81.3
+        },
+        "csat_bot_detalle": {
+          "positivas": 143,
+          "total": 176,
+          "pct": 81.3
+        },
+        "ingresados_por_version": [
+          {
+            "version": "MEX",
+            "count": 484
+          },
+          {
+            "version": "DOM",
+            "count": 596
+          },
+          {
+            "version": "CRI",
+            "count": 395
+          },
+          {
+            "version": "VEN",
+            "count": 10
+          },
+          {
+            "version": "COL",
+            "count": 4069
+          }
+        ],
+        "tiempo_promedio_solucion_min": 107.24,
+        "motivos_solicitud": {},
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+      }
+    },
+    {
+      "id": "chat-month-2026-08",
+      "semana_inicio": "2026-08-01",
+      "semana_fin": "2026-08-28",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Agosto 2026 (parcial, hasta el 28) (Chat)",
+      "correo": null,
+      "llamadas": null,
+      "chat": {
+        "kpis": {
+          "demanda": 7607,
+          "ingresados_bot": 5792,
+          "escalados": 1534,
+          "gestionados": 4249,
+          "pct_escalados": 26.48,
+          "pct_gestion": 73.36,
+          "csat_bot": 85.2
+        },
+        "csat_bot_detalle": {
+          "positivas": 109,
+          "total": 128,
+          "pct": 85.2
+        },
+        "ingresados_por_version": [
+          {
+            "version": "MEX",
+            "count": 320
+          },
+          {
+            "version": "DOM",
+            "count": 568
+          },
+          {
+            "version": "CRI",
+            "count": 336
+          },
+          {
+            "version": "VEN",
+            "count": 14
+          },
+          {
+            "version": "COL",
+            "count": 3127
+          }
+        ],
+        "tiempo_promedio_solucion_min": 115.96,
+        "motivos_solicitud": {},
+        "_nota_metodologia_28ago2026": "Generado vía HubSpot AI (Breeze) con filtros exactos y cerrados, validado con: (1) lista cerrada de 5 flujos de producción de Lucía (excluye Testing/Demo/Sales), (2) 5 bandejas de soporte sin Payments chat (Payments solo aporta a 'demanda', su gestión por bot queda pendiente de confirmar), (3) verificación cruzada Escaladas+Gestionadas ≈ Ingresados al bot (exacto feb-jun, margen normal jul-ago por conversaciones aún abiertas). CSAT cubre solo Contador/POS/Nómina — COL y AC/Countries no registran respuestas de encuesta en este canal, no reportar como CSAT total de Chat. Tiempo promedio de solución es solo propietario Lucía Pérez (excluye Isabel). País MEX/DOM/CRI/VEN cubre el flujo AC+SF; ene-may en 0 por rollout por fases (bot no activo aún en esos países); Colombia (COL) queda pendiente de una consulta separada. Motivos de solicitud queda pendiente del backfill manual (Backfill_Chat_Lucia.xlsx, pestaña 'Chat - Motivos')."
+      }
+    },
+    {
+      "id": "correo-month-2026-01",
+      "semana_inicio": "2026-01-01",
+      "semana_fin": "2026-01-31",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Enero 2026 (Correo)",
+      "chat": null,
+      "llamadas": null,
+      "correo": {
+        "kpis": {
+          "demanda": 1024,
+          "gestionados": 0,
+          "escalados": 0,
+          "pct_gestion": 0.0,
+          "csat_bot": null
+        },
+        "csat_detalle": null,
+        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
+      }
+    },
+    {
+      "id": "correo-month-2026-02",
+      "semana_inicio": "2026-02-01",
+      "semana_fin": "2026-02-28",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Febrero 2026 (Correo)",
+      "chat": null,
+      "llamadas": null,
+      "correo": {
+        "kpis": {
+          "demanda": 888,
+          "gestionados": 0,
+          "escalados": 0,
+          "pct_gestion": 0.0,
+          "csat_bot": null
+        },
+        "csat_detalle": null,
+        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
+      }
+    },
+    {
+      "id": "correo-month-2026-03",
+      "semana_inicio": "2026-03-01",
+      "semana_fin": "2026-03-31",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Marzo 2026 (Correo)",
+      "chat": null,
+      "llamadas": null,
+      "correo": {
+        "kpis": {
+          "demanda": 1098,
+          "gestionados": 0,
+          "escalados": 1,
+          "pct_gestion": 0.0,
+          "csat_bot": null
+        },
+        "csat_detalle": null,
+        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
+      }
+    },
+    {
+      "id": "correo-month-2026-04",
+      "semana_inicio": "2026-04-01",
+      "semana_fin": "2026-04-30",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Abril 2026 (Correo)",
+      "chat": null,
+      "llamadas": null,
+      "correo": {
+        "kpis": {
+          "demanda": 1146,
+          "gestionados": 0,
+          "escalados": 1,
+          "pct_gestion": 0.0,
+          "csat_bot": null
+        },
+        "csat_detalle": null,
+        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
+      }
+    },
+    {
+      "id": "correo-month-2026-05",
+      "semana_inicio": "2026-05-01",
+      "semana_fin": "2026-05-31",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Mayo 2026 (Correo)",
+      "chat": null,
+      "llamadas": null,
+      "correo": {
+        "kpis": {
+          "demanda": 1130,
+          "gestionados": 1,
+          "escalados": 1,
+          "pct_gestion": 0.09,
+          "csat_bot": null
+        },
+        "csat_detalle": null,
+        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
+      }
+    },
+    {
+      "id": "correo-month-2026-06",
+      "semana_inicio": "2026-06-01",
+      "semana_fin": "2026-06-30",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Junio 2026 (Correo)",
+      "chat": null,
+      "llamadas": null,
+      "correo": {
+        "kpis": {
+          "demanda": 955,
+          "gestionados": 9,
+          "escalados": 7,
+          "pct_gestion": 0.94,
+          "csat_bot": null
+        },
+        "csat_detalle": null,
+        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
+      }
+    },
+    {
+      "id": "correo-month-2026-07",
+      "semana_inicio": "2026-07-01",
+      "semana_fin": "2026-07-31",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Julio 2026 (Correo)",
+      "chat": null,
+      "llamadas": null,
+      "correo": {
+        "kpis": {
+          "demanda": 934,
+          "gestionados": 110,
+          "escalados": 130,
+          "pct_gestion": 11.78,
+          "csat_bot": 100.0
+        },
+        "csat_detalle": {
+          "positivas": 6,
+          "total": 6,
+          "pct": 100.0
+        },
+        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
+      }
+    },
+    {
+      "id": "correo-month-2026-08",
+      "semana_inicio": "2026-08-01",
+      "semana_fin": "2026-08-28",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Agosto 2026 (parcial, hasta el 28) (Correo)",
+      "chat": null,
+      "llamadas": null,
+      "correo": {
+        "kpis": {
+          "demanda": 604,
+          "gestionados": 122,
+          "escalados": 98,
+          "pct_gestion": 20.2,
+          "csat_bot": 100.0
+        },
+        "csat_detalle": {
+          "positivas": 1,
+          "total": 1,
+          "pct": 100.0
+        },
+        "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo."
+      }
+    },
+    {
+      "id": "llamadas-month-2026-07",
+      "semana_inicio": "2026-07-01",
+      "semana_fin": "2026-07-31",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Julio 2026 (Llamadas)",
+      "correo": null,
+      "chat": null,
+      "llamadas": {
+        "kpis": {
+          "demanda": 4463,
+          "gestionadas": 861,
+          "escaladas": 3250,
+          "no_contestadas": 352,
+          "pct_gestion": 19.29,
+          "duracion_prom_seg": 245.65
+        },
+        "por_version": [
+          {
+            "version": "COL",
+            "bot_calificador": "lucia-ivr",
+            "demanda": 4308
+          },
+          {
+            "version": "DOM",
+            "bot_calificador": "lucia-ivr-dom",
+            "demanda": 16
+          },
+          {
+            "version": "Fuera de horario",
+            "bot_calificador": "lucia ivr fuerahorario",
+            "demanda": 139
+          }
+        ],
+        "motivo_escalamiento": [
+          {
+            "motivo": "Desconocimiento",
+            "count": 1651
+          },
+          {
+            "motivo": "Petición del usuario",
+            "count": 1538
+          },
+          {
+            "motivo": "Falta de acceso",
+            "count": 31
+          },
+          {
+            "motivo": "Error de cobro",
+            "count": 30
+          }
+        ],
+        "_nota_metodologia_28ago2026": "Generado 100% vía API directa (HubSpot MCP, sin bloqueo de Conversations API porque Llamadas usa el objeto CALL): Demanda/Gestionadas/Escaladas/No contestadas = TICKET/CALL WHERE bot_calificador IN ('lucia-ivr','lucia-ivr-dom','lucia ivr fuerahorario'), agrupado por DATE_TRUNC(hs_createdate,'MONTH'). estado_llamada es texto libre (no enum) -- se enumeraron las variantes de mayúsculas/minúsculas reales encontradas vía GROUP BY antes de filtrar. 'por_version' en este snapshot mensual solo trae el desglose de Demanda por país (no se recalculó gestionadas/escaladas/duración por país para jul-ago, a diferencia del snapshot semanal de referencia 'llamadas-boot-2026-08-10' que sí traía el desglose completo). Motivo de escalamiento = property de CALL, filtrado dentro del mismo universo de bot_calificador. Duración promedio en segundos, todas las versiones juntas."
+      }
+    },
+    {
+      "id": "llamadas-month-2026-08",
+      "semana_inicio": "2026-08-01",
+      "semana_fin": "2026-08-28",
+      "generado": "2026-08-28",
+      "bootstrap": false,
+      "etiqueta": "Agosto 2026 (parcial, hasta el 28) (Llamadas)",
+      "correo": null,
+      "chat": null,
+      "llamadas": {
+        "kpis": {
+          "demanda": 5144,
+          "gestionadas": 995,
+          "escaladas": 3882,
+          "no_contestadas": 252,
+          "pct_gestion": 19.34,
+          "duracion_prom_seg": 214.62
+        },
+        "por_version": [
+          {
+            "version": "COL",
+            "bot_calificador": "lucia-ivr",
+            "demanda": 4131
+          },
+          {
+            "version": "DOM",
+            "bot_calificador": "lucia-ivr-dom",
+            "demanda": 628
+          },
+          {
+            "version": "Fuera de horario",
+            "bot_calificador": "lucia ivr fuerahorario",
+            "demanda": 385
+          }
+        ],
+        "motivo_escalamiento": [
+          {
+            "motivo": "Desconocimiento",
+            "count": 1937
+          },
+          {
+            "motivo": "Petición del usuario",
+            "count": 1901
+          },
+          {
+            "motivo": "Falta de acceso",
+            "count": 27
+          },
+          {
+            "motivo": "Error de cobro",
+            "count": 17
+          }
+        ],
+        "_nota_metodologia_28ago2026": "Generado 100% vía API directa (HubSpot MCP, sin bloqueo de Conversations API porque Llamadas usa el objeto CALL): Demanda/Gestionadas/Escaladas/No contestadas = TICKET/CALL WHERE bot_calificador IN ('lucia-ivr','lucia-ivr-dom','lucia ivr fuerahorario'), agrupado por DATE_TRUNC(hs_createdate,'MONTH'). estado_llamada es texto libre (no enum) -- se enumeraron las variantes de mayúsculas/minúsculas reales encontradas vía GROUP BY antes de filtrar. 'por_version' en este snapshot mensual solo trae el desglose de Demanda por país (no se recalculó gestionadas/escaladas/duración por país para jul-ago, a diferencia del snapshot semanal de referencia 'llamadas-boot-2026-08-10' que sí traía el desglose completo). Motivo de escalamiento = property de CALL, filtrado dentro del mismo universo de bot_calificador. Duración promedio en segundos, todas las versiones juntas. Corte parcial hasta el 28 de agosto (mes en curso)."
       }
     }
   ]

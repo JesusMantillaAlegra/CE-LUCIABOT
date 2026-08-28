@@ -190,6 +190,10 @@ tbody td { padding: 9px 14px; color: var(--slate); }
 .filter-arrow { color: var(--slate-lt); font-size: 13px; }
 .filter-badge-progress { font-size: 10.5px; font-weight: 700; color: var(--teal-dk); background: rgba(20,166,155,0.1); border-radius: 20px; padding: 4px 10px; text-transform: uppercase; letter-spacing: 0.4px; }
 .filter-note { flex-basis: 100%; font-size: 11px; color: var(--slate-lt); font-style: italic; }
+/* Selector de PERÍODO (copiado tal cual del dashboard de Soporte, mismo look) */
+.filter-bar-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; flex-basis: 100%; }
+.filter-date-input { font-family: var(--font-body); font-size: 12.5px; font-weight: 600; color: var(--dark); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; background: #fff; }
+.filter-status { font-size: 12px; font-weight: 600; color: var(--slate-lt); font-variant-numeric: tabular-nums; }
 
 /* Fallback */
 .fallback { text-align: center; padding: 60px 24px; color: var(--slate); }
@@ -439,25 +443,44 @@ if (typeof window.LUCIA_HISTORY !== 'undefined') {
     });
 }
 
-// ══════════ FILTRO: MES ══════════
-// Cada snapshot representa una semana (o, el primero, un acumulado inicial — ver
-// meta.nota en el histórico). El filtro es un selector de mes nativo (<input type=month>):
-// se incluye todo snapshot cuya semana se solape con el mes elegido. Se aplica solo con
-// elegir el mes — sin botón "Aplicar" — y si el mes elegido es el mes en curso, se acota
-// automáticamente hasta la fecha de hoy (no hasta el fin de mes, que todavía no pasó) y se
-// muestra una etiqueta corta junto al selector para que quede claro que ese mes no cerró.
-// No hay filtro de versión ni comparación entre periodos: se removieron a pedido — una
-// sola vista, limpia, por mes.
+// ══════════ FILTRO: PERÍODO ══════════
+// Mismo componente visual y misma lógica de cómputo de rango que el dashboard de
+// Soporte (ce-retention-soporte-ops/index.html: construirBarraFiltros / rangoDesdeSelector /
+// rangoEntreMeses), copiado tal cual a pedido — un selector "Año completo / mes por mes /
+// Entre dos meses… / Fecha personalizada". La única diferencia real es la fuente de datos:
+// Soporte pide cada rango a una API en vivo; acá no hay API, así que el mismo cálculo de
+// {desde, hasta} simplemente filtra y suma los snapshots ya cargados en HISTORY (igual que
+// hacía el filtro de mes anterior). El rango de meses disponibles sale de los propios
+// snapshots (minDate/maxDate por sección), no de "el año en curso", porque Correo/Chat/
+// Llamadas no necesariamente tienen la misma cobertura.
+// Se aplica solo al cambiar el selector — sin botón "Aplicar" — y si el mes elegido llega
+// hasta el último snapshot disponible sin cerrar el mes calendario completo, se muestra el
+// badge "Mes en curso" (igual criterio que antes, solo que ahora comparado contra el último
+// dato real en vez de contra la fecha de hoy — los snapshots pueden ir unos días detrás).
 
 function todayStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-function lastDayOfMonthStr(monthStr) {
-  const [y, m] = monthStr.split('-').map(Number);
-  const lastDay = new Date(y, m, 0).getDate(); // día 0 del mes siguiente = último día de este mes
-  return monthStr + '-' + String(lastDay).padStart(2, '0');
+const MESES_LARGO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function finDeMesStr(anio, mes) {
+  const d = new Date(anio, mes, 0); // día 0 del mes siguiente = último día de este mes
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// Lista {anio, mes, value:"YYYY-MM"} de cada mes entre minMonth y maxMonth, inclusive.
+function listaMeses(minMonth, maxMonth) {
+  const [anioMin, mesMin] = minMonth.split('-').map(Number);
+  const [anioMax, mesMax] = maxMonth.split('-').map(Number);
+  const out = [];
+  let anio = anioMin, mes = mesMin;
+  while (anio < anioMax || (anio === anioMax && mes <= mesMax)) {
+    out.push({ anio, mes, value: `${anio}-${String(mes).padStart(2, '0')}` });
+    mes++; if (mes > 12) { mes = 1; anio++; }
+  }
+  return out;
 }
 
 function setupFilterBar(prefix, dataKey, applyFn) {
@@ -466,49 +489,147 @@ function setupFilterBar(prefix, dataKey, applyFn) {
   container.className = 'filter-bar';
 
   const withData = HISTORY.filter(s => s[dataKey]);
-  const minDate = withData.length ? withData.reduce((a, s) => s.semana_inicio < a ? s.semana_inicio : a, withData[0].semana_inicio) : '';
-  const maxDate = withData.length ? withData.reduce((a, s) => s.semana_fin > a ? s.semana_fin : a, withData[0].semana_fin) : '';
-  const minMonth = minDate ? minDate.slice(0, 7) : '';
-  const maxMonth = maxDate ? maxDate.slice(0, 7) : '';
-  const currentMonth = todayStr().slice(0, 7);
-  // Por defecto se muestra TODO el rango disponible (min..max mes), no solo el mes en
-  // curso — así se ve el acumulado completo al entrar, igual que con el filtro de fecha
-  // anterior. El usuario puede acotar a un mes o rango de meses manualmente.
-  const defaultFromMonth = minMonth;
-  const defaultToMonth = maxMonth;
+  const hoy = todayStr();
+  const minDate = withData.length ? withData.reduce((a, s) => s.semana_inicio < a ? s.semana_inicio : a, withData[0].semana_inicio) : hoy;
+  const maxDate = withData.length ? withData.reduce((a, s) => s.semana_fin > a ? s.semana_fin : a, withData[0].semana_fin) : hoy;
+  const minMonth = minDate.slice(0, 7);
+  const maxMonth = maxDate.slice(0, 7);
+  const meses = listaMeses(minMonth, maxMonth);
+  const [anioMin] = minMonth.split('-').map(Number);
+  const [anioMax] = maxMonth.split('-').map(Number);
+  const soloUnAnio = anioMin === anioMax;
+
+  // Opciones "Año completo" por cada año presente en los datos (si hay más de uno),
+  // para poder mostrar por defecto el ÚLTIMO año en vez de todo el histórico junto.
+  const aniosOpciones = [];
+  for (let y = anioMin; y <= anioMax; y++) aniosOpciones.push(y);
+  const opcionesAnio = soloUnAnio
+    ? [`<option value="">Año completo (${anioMin})</option>`]
+    : aniosOpciones.map(y => `<option value="year:${y}">Año completo (${y})</option>`)
+        .concat([`<option value="">Todo el período (${anioMin}–${anioMax})</option>`]);
+
+  const opcionesMes = meses.map(x => `<option value="${x.value}">${MESES_LARGO[x.mes - 1]} ${x.anio}</option>`);
+  const opciones = opcionesAnio
+    .concat(opcionesMes)
+    .concat([`<option value="rango">Entre dos meses…</option>`, `<option value="custom">Fecha personalizada</option>`]);
 
   container.innerHTML = `
-    <span class="filter-label">Mes</span>
-    <div class="filter-date-group">
-      <input type="month" id="${prefix}FromMonth" min="${minMonth}" max="${maxMonth}" value="${defaultFromMonth}">
-      <span class="filter-arrow">→</span>
-      <input type="month" id="${prefix}ToMonth" min="${minMonth}" max="${maxMonth}" value="${defaultToMonth}">
+    <div class="filter-bar-row">
+      <span class="filter-label">Período</span>
+      <select class="filter-date-input" id="${prefix}PeriodoSel">${opciones.join('')}</select>
+      <span class="filter-status" id="${prefix}FiltroEstado"></span>
       <span class="filter-badge-progress" id="${prefix}MonthBadge" style="display:none;">Mes en curso</span>
-    </div>`;
+    </div>
+    <div class="filter-bar-row" id="${prefix}FilaRango" style="display:none">
+      <span class="filter-label">Desde</span>
+      <select class="filter-date-input" id="${prefix}MesDesde">${opcionesMes.join('')}</select>
+      <span class="filter-label">Hasta</span>
+      <select class="filter-date-input" id="${prefix}MesHasta">${opcionesMes.join('')}</select>
+    </div>
+    <div class="filter-bar-row" id="${prefix}FilaCustom" style="display:none">
+      <span class="filter-label">Desde</span>
+      <input type="date" class="filter-date-input" id="${prefix}DateDesde" min="${minDate}" max="${maxDate}" value="${minDate}">
+      <span class="filter-label">Hasta</span>
+      <input type="date" class="filter-date-input" id="${prefix}DateHasta" min="${minDate}" max="${maxDate}" value="${maxDate}">
+    </div>
+    <div class="filter-note">Los indicadores se recalculan solos al cambiar el período, sumando los snapshots que caen en ese rango.</div>`;
 
-  const fromInp = document.getElementById(prefix + 'FromMonth');
-  const toInp = document.getElementById(prefix + 'ToMonth');
+  const sel = document.getElementById(prefix + 'PeriodoSel');
+  const filaRango = document.getElementById(prefix + 'FilaRango');
+  const filaCustom = document.getElementById(prefix + 'FilaCustom');
+  const mesDesdeInp = document.getElementById(prefix + 'MesDesde');
+  const mesHastaInp = document.getElementById(prefix + 'MesHasta');
+  const dateDesdeInp = document.getElementById(prefix + 'DateDesde');
+  const dateHastaInp = document.getElementById(prefix + 'DateHasta');
   const badge = document.getElementById(prefix + 'MonthBadge');
+  const estado = document.getElementById(prefix + 'FiltroEstado');
 
-  function trigger() {
-    const fromMonth = fromInp.value || defaultFromMonth;
-    let toMonth = toInp.value || defaultToMonth;
-    // El mes final no puede ser anterior al inicial — si el usuario lo deja así, el
-    // navegador ya lo evita con min/max relativos, pero por si acaso se corrige aquí
-    // también antes de calcular el rango.
-    if (toMonth < fromMonth) toMonth = fromMonth;
-    const desde = fromMonth + '-01';
-    const isCurrent = toMonth === currentMonth;
-    const hasta = isCurrent ? todayStr() : lastDayOfMonthStr(toMonth);
-    badge.style.display = isCurrent ? '' : 'none';
+  function ocultarFilasExtra() {
+    filaRango.style.display = 'none';
+    filaCustom.style.display = 'none';
+  }
+
+  function aplicar(desde, hasta, esMesActual) {
+    if (hasta < desde) hasta = desde; // por si el usuario deja un rango invertido
+    badge.style.display = esMesActual ? '' : 'none';
+    if (estado) estado.textContent = `${desde} → ${hasta}`;
     const primary = HISTORY.filter(s => s[dataKey] && s.semana_fin >= desde && s.semana_inicio <= hasta);
     applyFn(primary);
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 
-  fromInp.addEventListener('change', trigger);
-  toInp.addEventListener('change', trigger);
-  trigger();
+  function rangoDeMes(valorMes) {
+    const [anio, mes] = valorMes.split('-').map(Number);
+    const desde = `${anio}-${String(mes).padStart(2, '0')}-01`;
+    const finCalculado = finDeMesStr(anio, mes);
+    const hasta = finCalculado > maxDate ? maxDate : finCalculado;
+    return { desde, hasta, esMesActual: finCalculado > maxDate };
+  }
+
+  function rangoDeAnio(anio) {
+    const desdeCalc = `${anio}-01-01`;
+    const desde = desdeCalc < minDate ? minDate : desdeCalc;
+    const finCalculado = `${anio}-12-31`;
+    const hasta = finCalculado > maxDate ? maxDate : finCalculado;
+    return { desde, hasta, esMesActual: finCalculado > maxDate };
+  }
+
+  function onCambioRango() {
+    let vDesde = mesDesdeInp.value, vHasta = mesHastaInp.value;
+    if (vDesde > vHasta) { const t = vDesde; vDesde = vHasta; vHasta = t; }
+    const desde = rangoDeMes(vDesde).desde;
+    const r = rangoDeMes(vHasta);
+    aplicar(desde, r.hasta, r.esMesActual);
+  }
+
+  function onCambioCustom() {
+    const desde = dateDesdeInp.value || minDate;
+    const hasta = dateHastaInp.value || maxDate;
+    if (desde > hasta) { if (estado) estado.textContent = 'La fecha inicial es posterior a la final'; return; }
+    aplicar(desde, hasta, false);
+  }
+
+  sel.addEventListener('change', () => {
+    if (sel.value === 'custom') {
+      ocultarFilasExtra();
+      filaCustom.style.display = '';
+      onCambioCustom();
+      return;
+    }
+    if (sel.value === 'rango') {
+      ocultarFilasExtra();
+      filaRango.style.display = '';
+      mesHastaInp.selectedIndex = opcionesMes.length - 1;
+      mesDesdeInp.selectedIndex = Math.max(0, opcionesMes.length - 2);
+      onCambioRango();
+      return;
+    }
+    ocultarFilasExtra();
+    if (sel.value.startsWith('year:')) {
+      const y = Number(sel.value.slice(5));
+      const r = rangoDeAnio(y);
+      aplicar(r.desde, r.hasta, r.esMesActual);
+      return;
+    }
+    if (sel.value === '') { aplicar(minDate, maxDate, false); return; }
+    const r = rangoDeMes(sel.value);
+    aplicar(r.desde, r.hasta, r.esMesActual);
+  });
+  mesDesdeInp.addEventListener('change', onCambioRango);
+  mesHastaInp.addEventListener('change', onCambioRango);
+  dateDesdeInp.addEventListener('change', onCambioCustom);
+  dateHastaInp.addEventListener('change', onCambioCustom);
+
+  // Por defecto: mostrar siempre el ÚLTIMO año disponible en los datos (no todo el
+  // histórico junto). Si solo hay un año cargado, esto coincide con "Año completo".
+  if (soloUnAnio) {
+    sel.value = '';
+    aplicar(minDate, maxDate, false);
+  } else {
+    sel.value = `year:${anioMax}`;
+    const r = rangoDeAnio(anioMax);
+    aplicar(r.desde, r.hasta, r.esMesActual);
+  }
 }
 
 // ══════════ AGREGACIÓN DE SNAPSHOTS ══════════
