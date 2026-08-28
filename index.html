@@ -213,7 +213,7 @@ tbody td { padding: 9px 14px; color: var(--slate); }
   <div class="logo-wrap">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32" height="22"><text x="0" y="24" font-family="Lexend, sans-serif" font-size="24" font-weight="700" fill="#1A2B4A">alegra</text></svg>
     <div class="logo-divider"></div>
-    <span class="header-module" id="headerModule">Lucía · Correo</span>
+    <span class="header-module" id="headerModule">Lucía · Chat</span>
   </div>
   <div style="display:flex;align-items:center;gap:14px">
     <span class="header-time" id="lastUpdated">Actualizado: 27-ago-2026</span>
@@ -228,8 +228,8 @@ tbody td { padding: 9px 14px; color: var(--slate); }
       <button class="sidebar-collapse" id="sidebarCollapse">«</button>
     </div>
     <nav class="sidebar-nav">
-      <a class="nav-item active" data-view="correo"><i data-lucide="mail"></i><span>Lucía Correo<small>Tickets · HubSpot</small></span></a>
-      <a class="nav-item" data-view="chat"><i data-lucide="message-circle"></i><span>Lucía Chat<small>Conversaciones · HubSpot</small></span></a>
+      <a class="nav-item active" data-view="chat"><i data-lucide="message-circle"></i><span>Lucía Chat<small>Conversaciones · HubSpot</small></span></a>
+      <a class="nav-item" data-view="correo"><i data-lucide="mail"></i><span>Lucía Correo<small>Tickets · HubSpot</small></span></a>
       <a class="nav-item" data-view="llamadas"><i data-lucide="phone"></i><span>Lucía Llamadas<small>HubSpot + ElevenLabs</small></span></a>
     </nav>
   </aside>
@@ -237,13 +237,19 @@ tbody td { padding: 9px 14px; color: var(--slate); }
 <main class="main" id="lucia-main">
 
   <!-- ══════════ VISTA: CORREO ══════════ -->
-  <div class="view active" id="view-correo">
+  <div class="view" id="view-correo">
     <div class="section-label">Resumen de demanda</div>
     <div class="section-title">¿Cuántos correos gestionó Lucía y cómo le fue?</div>
     <div class="section-sub" id="correoSubtitle">Fuente: HubSpot — Reports Dashboard 6180490 · vista 20862583 (tickets)</div>
 
     <div id="correoRangeBar"></div>
     <div class="kpi-strip" id="correoKpiStrip"></div>
+
+    <div class="chart-card">
+      <div class="chart-card-title">Embudo de gestión</div>
+      <div class="chart-card-sub">Demanda → Gestionados por Lucía / Escalados a un agente / Sin intervención de Lucía</div>
+      <div id="correoEmbudoWrap"></div>
+    </div>
 
     <div class="chart-card">
       <div class="chart-card-title">CSAT — Lucía Correo</div>
@@ -254,7 +260,7 @@ tbody td { padding: 9px 14px; color: var(--slate); }
   </div>
 
   <!-- ══════════ VISTA: CHAT ══════════ -->
-  <div class="view" id="view-chat">
+  <div class="view active" id="view-chat">
     <div class="section-label">Resumen de demanda</div>
     <div class="section-title">¿Cuántos chats gestionó Lucía y cómo le fue?</div>
     <div class="section-sub" id="chatSubtitle">Fuente: HubSpot — Reports Dashboard 6180490 · vista 20257473 (conversaciones)</div>
@@ -847,6 +853,54 @@ function safeChart(canvasId, config) {
   }
 }
 
+// ══════════ CORREO — diagrama de flujo del embudo de gestión ══════════
+// Mismo componente visual que renderChatFlow (mismo sistema de coordenadas 0-100,
+// mismas curvas SVG), pedido por Jesus (28-ago-2026) para tener el mismo tipo de
+// diagrama en Correo. La diferencia con Chat: acá no hay un paso intermedio
+// "ingresados al bot" -- Gestionados y Escalados salen directo de Demanda, y el resto
+// (tickets que Lucía ni gestionó ni escaló) se muestra como "Sin intervención de Lucía".
+function renderCorreoFlow(k) {
+  const demanda = k.demanda || 0;
+  const gestionados = k.gestionados || 0;
+  const escalados = k.escalados || 0;
+  const sinIntervencion = Math.max(0, demanda - gestionados - escalados);
+  const pctGestionados = demanda ? (gestionados / demanda * 100) : 0;
+  const pctEscalados = demanda ? (escalados / demanda * 100) : 0;
+  const pctSin = demanda ? (sinIntervencion / demanda * 100) : 0;
+
+  const nodes = {
+    demanda:         { x: 0,  y: 30, w: 17, h: 58, color: COLORS.dark,   title: 'Demanda Total', value: fmt(demanda), sub: '100% de la demanda' },
+    gestionados:     { x: 42, y: 2,  w: 25, h: 30, color: COLORS.teal,   title: 'Gestionados por Bot', value: fmt(gestionados), sub: `${pctGestionados.toFixed(1)}% de la demanda` },
+    escalados:       { x: 42, y: 36, w: 25, h: 30, color: COLORS.red,    title: 'Escalados a Agente', value: fmt(escalados), sub: `${pctEscalados.toFixed(1)}% de la demanda` },
+    sinIntervencion: { x: 42, y: 70, w: 25, h: 30, color: COLORS.slate,  title: 'Sin intervención de Lucía', value: fmt(sinIntervencion), sub: `${pctSin.toFixed(1)}% de la demanda` },
+  };
+  const edge = (n, side) => ({ x: side === 'right' ? n.x + n.w : n.x, y: n.y + n.h / 2 });
+  const curve = (p1, p2) => { const mx = (p1.x + p2.x) / 2; return `M ${p1.x},${p1.y} C ${mx},${p1.y} ${mx},${p2.y} ${p2.x},${p2.y}`; };
+  const links = [
+    { from: edge(nodes.demanda, 'right'), to: edge(nodes.gestionados, 'left'), color: COLORS.teal },
+    { from: edge(nodes.demanda, 'right'), to: edge(nodes.escalados, 'left'), color: COLORS.red },
+    { from: edge(nodes.demanda, 'right'), to: edge(nodes.sinIntervencion, 'left'), color: COLORS.slate },
+  ];
+  const pathsSvg = links.map(l => `<path d="${curve(l.from, l.to)}" stroke="${l.color}" stroke-width="0.6" fill="none" opacity="0.55"/>`).join('');
+  const nodesHtml = Object.values(nodes).map(n => `
+    <div class="flow-node" style="left:${n.x}%;top:${n.y}%;width:${n.w}%;height:${n.h}%;border-color:${n.color};background:${n.color}14">
+      <div class="flow-node-title" style="color:${n.color}">${n.title}</div>
+      <div class="flow-node-value" style="color:${n.color}">${n.value}</div>
+      <div class="flow-node-sub">${n.sub}</div>
+    </div>`).join('');
+
+  return `
+    <div class="flow-wrap">
+      <div class="flow-hero">
+        <span class="flow-hero-num">${pctGestionados.toFixed(1)}%</span>
+        <span class="flow-hero-lbl">Tasa de Gestión del Bot</span>
+        <span class="flow-hero-sub">Gestionados / Demanda total</span>
+      </div>
+      <svg class="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">${pathsSvg}</svg>
+      ${nodesHtml}
+    </div>`;
+}
+
 // ══════════ CORREO ══════════
 function renderCorreo(c) {
   const strip = document.getElementById('correoKpiStrip');
@@ -881,6 +935,13 @@ function renderCorreo(c) {
   strip.innerHTML = cardDefs.map(cd =>
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
   ).join('');
+
+  // Embudo — mismo diagrama visual que Chat (pedido de Jesus 28-ago-2026: "no se puede
+  // hacer un embudo con correo como con chat?"). La diferencia es que Correo no tiene un
+  // paso intermedio "ingresados al bot" como Chat -- Gestionados y Escalados salen
+  // directo de Demanda, y lo que no cae en ninguna de las dos categorías queda como
+  // "Sin intervención de Lucía" (tickets de correo que ni gestionó ni escaló el bot).
+  document.getElementById('correoEmbudoWrap').innerHTML = renderCorreoFlow(k);
 
   // CSAT — Detractor/Neutro/Promoter (no hay puntaje 1-10 capturado en HubSpot
   // para Correo, ver INSTRUCTIVO.md sección 1.6). Totales calculados arriba, junto
