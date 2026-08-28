@@ -625,16 +625,13 @@ function setupFilterBar(prefix, dataKey, applyFn) {
   dateDesdeInp.addEventListener('change', onCambioCustom);
   dateHastaInp.addEventListener('change', onCambioCustom);
 
-  // Por defecto: mostrar siempre el ÚLTIMO año disponible en los datos (no todo el
-  // histórico junto). Si solo hay un año cargado, esto coincide con "Año completo".
-  if (soloUnAnio) {
-    sel.value = '';
-    aplicar(minDate, maxDate, false);
-  } else {
-    sel.value = `year:${anioMax}`;
-    const r = rangoDeAnio(anioMax);
-    aplicar(r.desde, r.hasta, r.esMesActual);
-  }
+  // Por defecto: mostrar siempre el ÚLTIMO MES disponible en los datos (no el año
+  // completo ni todo el histórico), para que el dashboard abra mostrando el corte más
+  // reciente. maxMonth ya es "el mes del último snapshot cargado" (calculado arriba a
+  // partir de maxDate), y siempre existe como <option> en el dropdown de meses.
+  sel.value = maxMonth;
+  const rDefault = rangoDeMes(maxMonth);
+  aplicar(rDefault.desde, rDefault.hasta, rDefault.esMesActual);
 }
 
 // ══════════ AGREGACIÓN DE SNAPSHOTS ══════════
@@ -663,25 +660,41 @@ function aggregateCorreo(snaps) {
   const kpis = { demanda: 0, gestionados: 0, escalados: 0 };
   const stageMap = new Map();
   let tendencia = [], csatWeeks = [];
+  // CSAT vía el nuevo formato mensual (csat_detalle: {positivas, total, pct}), que es el
+  // que realmente traen los snapshots correo-month-2026-*. El formato viejo semanal
+  // (csat.serie_semanal, con Detractor/Passive/Promoter por semana) solo existe en
+  // snapshots pre-migración -- se sigue sumando si aparece, para no romper histórico viejo.
+  let csatPositivasMensual = 0, csatTotalMensual = 0, huboCsatMensual = false;
+  let huboStage = false, huboTendencia = false;
   snaps.forEach(s => {
     const c = s.correo; if (!c) return;
     kpis.demanda += c.kpis?.demanda || 0;
     kpis.gestionados += c.kpis?.gestionados || 0;
     kpis.escalados += c.kpis?.escalados || 0;
+    if ((c.por_stage || []).length) huboStage = true;
     (c.por_stage || []).forEach(st => {
       if (st.stage.includes('correos que no requieren respuesta')) return;
       stageMap.set(st.stage, (stageMap.get(st.stage) || 0) + st.count);
     });
+    if ((c.tendencia_semanal || []).length) huboTendencia = true;
     tendencia = tendencia.concat(c.tendencia_semanal || []);
     csatWeeks = csatWeeks.concat((c.csat?.serie_semanal || []).map(w => ({ semana: w.semana, promoter: w.promoter || 0, passive: w.passive || 0, detractor: w.detractor || 0 })));
+    if (c.csat_detalle) {
+      huboCsatMensual = true;
+      csatPositivasMensual += c.csat_detalle.positivas || 0;
+      csatTotalMensual += c.csat_detalle.total || 0;
+    }
   });
   kpis.pct_gestion = kpis.demanda ? (kpis.gestionados / kpis.demanda * 100) : 0;
   kpis.pct_escalados = kpis.demanda ? (kpis.escalados / kpis.demanda * 100) : 0;
   return {
     kpis,
     por_stage: Array.from(stageMap.entries()).map(([stage, count]) => ({ stage, count })),
+    stageDisponible: huboStage,
     tendencia_semanal: mergeWeeklySeries(tendencia, ['escaladas', 'gestionadas']),
-    csat: { nota: snaps[snaps.length - 1].correo?.csat?.nota, serie_semanal: mergeWeeklySeries(csatWeeks, ['promoter', 'passive', 'detractor']) }
+    tendenciaDisponible: huboTendencia,
+    csat: { nota: snaps[snaps.length - 1].correo?.csat?.nota, serie_semanal: mergeWeeklySeries(csatWeeks, ['promoter', 'passive', 'detractor']) },
+    csatMensual: huboCsatMensual ? { positivas: csatPositivasMensual, total: csatTotalMensual } : null
   };
 }
 
@@ -753,23 +766,49 @@ function aggregateLlamadas(snaps, version) {
     const l = s.llamadas; if (!l) return;
     any = true;
 
+    // Totales del KPI strip: SIEMPRE se toman de l.kpis (agregado real del snapshot,
+    // sacado directo de HubSpot), no de la suma de 'por_version'. Antes se sumaban desde
+    // por_version, y como los snapshots mensuales (llamadas-month-2026-07/-08) solo traen
+    // 'demanda' desglosada por país -- no gestionadas/escaladas/no_contestadas, ver su
+    // _nota_metodologia -- el resto quedaba en 0 aunque el dato sí existiera a nivel total.
+    if (!version) {
+      const kk = l.kpis || {};
+      kpis.demanda += kk.demanda || 0;
+      kpis.gestionadas += kk.gestionadas || 0;
+      kpis.escaladas += kk.escaladas || 0;
+      kpis.no_contestadas += kk.no_contestadas || 0;
+      kpis.sin_clasificar += kk.sin_clasificar || 0;
+      const wTot = kk.demanda || 0;
+      if (typeof kk.duracion_prom_seg === 'number') { durWeighted += kk.duracion_prom_seg * wTot; durWeight += wTot; }
+    }
+
     const versionesSemana = version ? (l.por_version || []).filter(v => v.version === version) : (l.por_version || []);
     versionesSemana.forEach(v => {
-      kpis.demanda += v.demanda || 0;
-      kpis.gestionadas += v.gestionadas || 0;
-      kpis.escaladas += v.escaladas || 0;
-      kpis.no_contestadas += v.no_contestadas || 0;
-      kpis.sin_clasificar += v.sin_clasificar || 0;
-      const w = v.demanda || 0;
-      if (typeof v.duracion_prom_seg === 'number') { durWeighted += v.duracion_prom_seg * w; durWeight += w; }
+      // Cuando SÍ hay filtro de versión activo, los totales del strip deben salir de esta
+      // misma versión (no hay otra fuente desglosada por país para eso).
+      if (version) {
+        kpis.demanda += v.demanda || 0;
+        kpis.gestionadas += v.gestionadas || 0;
+        kpis.escaladas += v.escaladas || 0;
+        kpis.no_contestadas += v.no_contestadas || 0;
+        kpis.sin_clasificar += v.sin_clasificar || 0;
+        const w = v.demanda || 0;
+        if (typeof v.duracion_prom_seg === 'number') { durWeighted += v.duracion_prom_seg * w; durWeight += w; }
+      }
 
-      if (!versionMap.has(v.version)) versionMap.set(v.version, { version: v.version, demanda: 0, gestionadas: 0, escaladas: 0, no_contestadas: 0, sin_clasificar: 0 });
+      // 'completo' = este país, en este snapshot, trae gestionadas/escaladas desglosadas
+      // (no solo demanda). Si algún mes que cae en el rango no lo trae, la fila de ese país
+      // en "Llamadas por versión" se marca incompleta y el render muestra "—" en vez de un
+      // 0.00% engañoso.
+      const completo = v.gestionadas !== undefined && v.escaladas !== undefined;
+      if (!versionMap.has(v.version)) versionMap.set(v.version, { version: v.version, demanda: 0, gestionadas: 0, escaladas: 0, no_contestadas: 0, sin_clasificar: 0, completo: true });
       const acc = versionMap.get(v.version);
       acc.demanda += v.demanda || 0;
       acc.gestionadas += v.gestionadas || 0;
       acc.escaladas += v.escaladas || 0;
       acc.no_contestadas += v.no_contestadas || 0;
       acc.sin_clasificar += v.sin_clasificar || 0;
+      if (!completo) acc.completo = false;
     });
 
     if (version) {
@@ -799,7 +838,7 @@ function aggregateLlamadas(snaps, version) {
   kpis.pct_no_contestadas = kpis.demanda ? (kpis.no_contestadas / kpis.demanda * 100) : 0;
   kpis.duracion_prom_seg = durWeight ? (durWeighted / durWeight) : null;
 
-  const por_version = Array.from(versionMap.values()).map(v => ({ ...v, pct_gestion: v.demanda ? (v.gestionadas / v.demanda * 100) : 0 }));
+  const por_version = Array.from(versionMap.values()).map(v => ({ ...v, pct_gestion: (v.completo && v.demanda) ? (v.gestionadas / v.demanda * 100) : null }));
   const motivo_escalamiento = Array.from(motivoMap.entries()).map(([motivo, count]) => ({ motivo, count })).sort((a, b) => b.count - a.count);
   const elevenlabs = elLlamadas ? {
     llamadas: elLlamadas,
@@ -845,8 +884,16 @@ function renderCorreo(c) {
     passive: a.passive + (w.passive || 0),
     detractor: a.detractor + (w.detractor || 0)
   }), { promoter: 0, passive: 0, detractor: 0 });
-  const csatTotal = csatTotals.promoter + csatTotals.passive + csatTotals.detractor;
-  const pctPromoter = csatTotal ? (csatTotals.promoter / csatTotal * 100) : null;
+  // Los snapshots mensuales (correo-month-2026-*) no traen el desglose semanal
+  // Detractor/Neutro/Promoter (c.csat.serie_semanal) -- solo total + positivas
+  // (c.csatMensual, ver aggregateCorreo). Si no hay desglose semanal pero sí hay dato
+  // mensual, se usa ese para no mostrar "sin encuestas" habiendo datos reales.
+  const csatTotal = csatTotals.promoter + csatTotals.passive + csatTotals.detractor || (c.csatMensual?.total || 0);
+  const pctPromoter = csatTotal
+    ? ((csatTotals.promoter + csatTotals.passive + csatTotals.detractor)
+        ? (csatTotals.promoter / csatTotal * 100)
+        : (c.csatMensual.positivas / c.csatMensual.total * 100))
+    : null;
   // Formato pedido por Lauren (reunión 21-ago-2026): el número grande es el %, y el
   // conteo absoluto va chiquito debajo, en vez de al revés como estaba antes.
   const cardDefs = [
@@ -874,6 +921,18 @@ function renderCorreo(c) {
     const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     return `${d} ${meses[m - 1]}`;
   };
+  // Si el rango solo cruza snapshots mensuales (correo-month-2026-*), esta serie
+  // semanal no existe -- ese detalle no se captura mes a mes, solo el total. En vez de
+  // dejar el gráfico vacío (se ve como si algo estuviera roto), se avisa por qué.
+  if (!c.tendenciaDisponible) {
+    document.getElementById('chartCorreoTendencia').style.display = 'none';
+    const wrapT = document.getElementById('chartCorreoTendencia').parentElement;
+    if (!wrapT.querySelector('.info-note-tendencia')) {
+      wrapT.insertAdjacentHTML('beforeend', '<p class="info-note info-note-tendencia">No disponible: los snapshots mensuales no traen el desglose semana a semana, solo el total del mes.</p>');
+    }
+  } else {
+    document.getElementById('chartCorreoTendencia').style.display = '';
+    document.querySelectorAll('.info-note-tendencia').forEach(n => n.remove());
   safeChart('chartCorreoTendencia', {
     type: 'line',
     data: {
@@ -894,23 +953,42 @@ function renderCorreo(c) {
       }
     }
   });
+  }
 
   // Stage breakdown (top 8 como barras horizontales) — % sobre demanda total del
-  // periodo, con el número absoluto entre paréntesis (pedido de Lauren).
-  const stages = [...(c.por_stage || [])].sort((a,b) => b.count - a.count).slice(0, 8);
-  const maxStage = stages[0]?.count || 1;
-  document.getElementById('correoStageWrap').innerHTML = stages.map(s => `
-    <div class="st-row">
-      <div class="st-tema"><span>${s.stage}</span></div>
-      <div class="st-bar"><div style="width:${(s.count/maxStage*100).toFixed(0)}%;background:${COLORS.teal}"></div></div>
-      <span class="st-num">${k.demanda ? (s.count/k.demanda*100).toFixed(1) : '—'}% (${fmt(s.count)})</span>
-    </div>`).join('');
+  // periodo, con el número absoluto entre paréntesis (pedido de Lauren). Igual que la
+  // tendencia semanal, este desglose no existe en los snapshots mensuales (ver arriba).
+  if (!c.stageDisponible) {
+    document.getElementById('correoStageWrap').innerHTML = '<p class="info-note">No disponible: los snapshots mensuales no traen el desglose por stage, solo los totales de Gestionados/Escalados.</p>';
+  } else {
+    const stages = [...(c.por_stage || [])].sort((a,b) => b.count - a.count).slice(0, 8);
+    const maxStage = stages[0]?.count || 1;
+    document.getElementById('correoStageWrap').innerHTML = stages.map(s => `
+      <div class="st-row">
+        <div class="st-tema"><span>${s.stage}</span></div>
+        <div class="st-bar"><div style="width:${(s.count/maxStage*100).toFixed(0)}%;background:${COLORS.teal}"></div></div>
+        <span class="st-num">${k.demanda ? (s.count/k.demanda*100).toFixed(1) : '—'}% (${fmt(s.count)})</span>
+      </div>`).join('');
+  }
 
   // CSAT — Detractor/Neutro/Promoter (no hay puntaje 1-10 capturado en HubSpot
   // para Correo, ver INSTRUCTIVO.md sección 1.6). Totales calculados arriba, junto
-  // a la 4ª tarjeta del KPI strip.
+  // a la 4ª tarjeta del KPI strip. Los snapshots mensuales solo traen positivas/total
+  // (sin desglose Detractor/Neutro), así que el gráfico de barras por categoría solo se
+  // dibuja cuando SÍ hay ese desglose semanal viejo -- si no, se muestra nada más el hero
+  // con el total y el % positivo, que es el dato real disponible.
+  const csatDetalleDisponible = (csatTotals.promoter + csatTotals.passive + csatTotals.detractor) > 0;
   document.getElementById('correoCsatHeroWrap').innerHTML = `
-    <div class="st-hero"><span class="st-hero-num">${fmt(csatTotal)}</span><span class="st-hero-lbl">respuestas totales en el periodo</span></div>`;
+    <div class="st-hero"><span class="st-hero-num">${fmt(csatTotal)}</span><span class="st-hero-lbl">respuestas totales en el periodo${csatDetalleDisponible ? '' : (pctPromoter == null ? '' : ` · ${pctPromoter.toFixed(0)}% positivas`)}</span></div>`;
+  if (!csatDetalleDisponible) {
+    document.getElementById('chartCorreoCsat').style.display = 'none';
+    const wrapC = document.getElementById('chartCorreoCsat').parentElement;
+    if (!wrapC.querySelector('.info-note-csat')) {
+      wrapC.insertAdjacentHTML('beforeend', '<p class="info-note info-note-csat">No disponible: los snapshots mensuales solo traen el total de respuestas y el % positivo, no el desglose Detractor/Neutro/Promoter.</p>');
+    }
+  } else {
+    document.getElementById('chartCorreoCsat').style.display = '';
+    document.querySelectorAll('.info-note-csat').forEach(n => n.remove());
   safeChart('chartCorreoCsat', {
     type: 'bar',
     data: {
@@ -931,6 +1009,7 @@ function renderCorreo(c) {
       }
     }
   });
+  }
 }
 
 // ══════════ CHAT — diagrama de flujo del embudo de gestión ══════════
@@ -1100,12 +1179,14 @@ function renderLlamadas(c) {
   // Por versión (COL / DOM / Fuera de horario) — ordenado dinámicamente por % de
   // gestión (mayor a menor), barra proporcional al % de gestión (no al volumen), y
   // detalle "18.80% (200/1.064)" — pedido por Lauren (reunión 25-ago-2026).
-  const versiones = [...(c.por_version || [])].sort((a, b) => (b.pct_gestion || 0) - (a.pct_gestion || 0));
+  const versiones = [...(c.por_version || [])].sort((a, b) => (b.pct_gestion ?? -1) - (a.pct_gestion ?? -1));
   document.getElementById('llamadasVersionWrap').innerHTML = versiones.map(v => `
     <div class="st-row">
       <div class="st-tema"><span>${v.version}</span></div>
-      <div class="st-bar"><div style="width:${(v.pct_gestion || 0).toFixed(0)}%;background:${COLORS.teal}"></div></div>
-      <span class="st-num"><b>${fmtPct(v.pct_gestion)}</b> (${fmt(v.gestionadas)}/${fmt(v.demanda)})</span>
+      <div class="st-bar"><div style="width:${v.pct_gestion == null ? 0 : v.pct_gestion.toFixed(0)}%;background:${COLORS.teal}"></div></div>
+      <span class="st-num">${v.pct_gestion == null
+        ? `<b>—</b> (${fmt(v.demanda)} llamadas, sin desglose de gestión este mes)`
+        : `<b>${fmtPct(v.pct_gestion)}</b> (${fmt(v.gestionadas)}/${fmt(v.demanda)})`}</span>
     </div>`).join('');
 
   // Motivo de escalamiento — no disponible desglosado por versión (ver aggregateLlamadas)
