@@ -1032,25 +1032,19 @@ function renderCorreo(c) {
     const [y, m] = iso.split('-');
     return `${MESES_CORTO_CORREO[Number(m) - 1]} ${y}`;
   };
-  // Con un solo mes en el filtro no hay tendencia que trazar -- un chart de 1 punto se ve
-  // roto (Chart.js intenta centrar la línea y los ticks se pisan con el número). Mejor
-  // mostrar una nota corta que ocupe el mismo espacio, y solo dibujar la línea real cuando
-  // hay 2+ meses con dato.
+  // Con menos de 2 meses en el filtro no hay tendencia que trazar (un chart de 1 punto
+  // se ve roto). En vez de una nota de texto -- que antes se insertaba de nuevo en cada
+  // re-render sin quitar la anterior y se iba acumulando (bug reportado 29-ago-2026) --
+  // simplemente se oculta el canvas, dejando el mismo espacio reservado en ambas cards
+  // para que el layout no salte entre vistas.
   const sparklineOMensaje = (canvasId, campo, color) => {
     const conDato = serieMediana.filter(s => typeof s[campo] === 'number');
     const el = document.getElementById(canvasId);
     if (conDato.length < 2) {
-      el.style.display = 'none';
-      const nota = document.createElement('p');
-      nota.className = 'info-note';
-      nota.style.cssText = 'font-size:11px;color:var(--slate-lt);margin:0;padding:8px 0';
-      nota.textContent = conDato.length === 1
-        ? `Solo hay ${etiquetaMesCorto(conDato[0].mes)} en el rango elegido -- se necesitan 2+ meses para ver tendencia.`
-        : 'Sin datos suficientes para mostrar tendencia.';
-      el.parentElement.appendChild(nota);
+      el.style.visibility = 'hidden';
       return;
     }
-    el.style.display = '';
+    el.style.visibility = 'visible';
     safeChart(canvasId, {
       type: 'line',
       data: {
