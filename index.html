@@ -1103,6 +1103,7 @@ function renderCorreo(c) {
         scales: { x: { grid: { color: '#F0F4F8' } }, y: { grid: { display: false } } },
         plugins: {
           legend: { display: false },
+          datalabels: { display: false },
           tooltip: { callbacks: { label: (ctx) => `${fmt(ctx.parsed.x)} tickets (${pctDist(ctx.parsed.x)})` } },
         },
       },
