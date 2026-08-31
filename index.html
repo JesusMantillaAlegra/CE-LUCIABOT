@@ -1004,7 +1004,10 @@ function renderCorreo(c) {
     { key: 'demanda_real', label: 'Demanda real (bot)', value: fmt(ingresadosFlujo), icon: 'git-branch', cls: 'kc-blue', vcls: 'v-blue', staticText: `${k.demanda ? (ingresadosFlujo / k.demanda * 100).toFixed(0) : 0}% de la demanda ingresó al flujo` },
     { key: 'gestionados', label: 'Gestionados', value: fmtPct(pctGestionIngresados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionados)} de los ingresados` },
     { key: 'escalados', label: 'Escalados', value: fmtPct(pctEscaladosIngresados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escalados)} de los ingresados` },
-    { key: 'tiempo', label: 'Tiempo prom. de gestión', value: fmtDuracionMin(c.tiempo_promedio_gestion_min), icon: 'clock', cls: 'kc-blue', vcls: 'v-blue', staticText: (typeof c.tiempo_promedio_gestion_min === 'number' ? 'por ticket gestionado' : 'dato pendiente') },
+    // Reemplaza el promedio simple (tiempo_promedio_gestion_min) por la MEDIANA de
+    // tiempo de cierre en días -- mismo dato que la card "Tiempo de cierre" de abajo,
+    // para no mostrar dos números distintos (promedio vs mediana) para lo mismo.
+    { key: 'tiempo', label: 'Tiempo de cierre (mediana)', value: typeof c.tiempo_cierre_mediana_dias === 'number' ? c.tiempo_cierre_mediana_dias.toFixed(1) + ' días' : '—', icon: 'clock', cls: 'kc-blue', vcls: 'v-blue', staticText: (typeof c.tiempo_cierre_mediana_dias === 'number' ? 'por ticket gestionado' : 'dato pendiente') },
   ];
   strip.innerHTML = cardDefs.map(cd =>
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
