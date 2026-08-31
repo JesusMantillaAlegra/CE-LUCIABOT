@@ -449,7 +449,18 @@ window.LUCIA_HISTORY = {
         },
         "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo.",
         "tiempo_promedio_gestion_min": 9484.26,
-        "_nota_tiempo_gestion_28ago2026": "Tiempo promedio de gestión agregado el 28-ago-2026 via HubSpot AI: AVG(TIME_TO_CLOSE)/60000 (ms->min), objeto Tickets, Propietario=Lucia Perez, Fuente=Email, tiempo de cierre informado, agrupado mensual. Ene-abr sin registros con tiempo de cierre; may no se usa por limite de rango de correo desde junio."
+        "_nota_tiempo_gestion_28ago2026": "Tiempo promedio de gestión agregado el 28-ago-2026 via HubSpot AI: AVG(TIME_TO_CLOSE)/60000 (ms->min), objeto Tickets, Propietario=Lucia Perez, Fuente=Email, tiempo de cierre informado, agrupado mensual. Ene-abr sin registros con tiempo de cierre; may no se usa por limite de rango de correo desde junio.",
+        "tiempo_primera_respuesta_mediana_min": 5.8,
+        "tiempo_cierre_mediana_dias": 7.03,
+        "distribucion_cierre": {
+          "menos_1d": 15,
+          "d1_2": 1,
+          "d2_7": 11,
+          "d7_14": 69,
+          "d14_30": 3,
+          "mas_30": 0
+        },
+        "_nota_mediana_29ago2026": "Agregado 29-ago-2026 via HubSpot MCP (query_crm_data), TICKET WHERE hs_pipeline=1857341 (COL_Sup) AND hubspot_owner_id=89503870 (Lucia Perez): MEDIAN(time_to_first_agent_reply) y MEDIAN(time_to_close), agrupado por mes. Reemplaza el promedio simple por la mediana a pedido de Lauren (28-ago-2026), menos sensible a outliers. distribucion_cierre = conteo de tickets cerrados por rango de dias (time_to_close), mismo filtro."
       }
     },
     {
@@ -476,7 +487,18 @@ window.LUCIA_HISTORY = {
         },
         "_nota_metodologia_28ago2026": "Demanda = informe nativo de HubSpot 'Demanda' (clonado y validado contra el panel real, 702 tickets en su ventana original) con filtros: Fuente=Correo, HD-Version=Colombia, Pipeline=1857341 (COL_Sup), Bandeja de entrada=Service Mail Inbox (Conversations). OJO: esta Demanda es SOLO COLOMBIA, no los 5 paises -- coincide con el alcance real de la tarjeta del dashboard. Gestionados = TICKET WHERE hubspot_owner_id=Lucia Perez (89503870) AND source_type=EMAIL AND hs_pipeline<>1860940 AND excluye bounces mailer-daemon, via API directa (HubSpot MCP), no via IA. Escalados = TICKET WHERE escalamiento_lucia_email IS NOT NULL, mismas exclusiones, via API directa. CSAT = objeto Respuestas a encuesta (Feedback Submissions), encuesta 'encuesta encendida para tickets cs - sales', propietario del ticket asociado = Lucia Perez -- validado cruzado: coincide exacto con una consulta independiente sobre TICKET (Promoter=7 en ambos metodos). CSAT solo tiene datos jul-ago (muestra muy pequena, 6 y 1 respuesta) -- no reportar como definitivo, es indicativo.",
         "tiempo_promedio_gestion_min": 2067.81,
-        "_nota_tiempo_gestion_28ago2026": "Tiempo promedio de gestión agregado el 28-ago-2026 via HubSpot AI: AVG(TIME_TO_CLOSE)/60000 (ms->min), objeto Tickets, Propietario=Lucia Perez, Fuente=Email, tiempo de cierre informado, agrupado mensual. Ene-abr sin registros con tiempo de cierre; may no se usa por limite de rango de correo desde junio."
+        "_nota_tiempo_gestion_28ago2026": "Tiempo promedio de gestión agregado el 28-ago-2026 via HubSpot AI: AVG(TIME_TO_CLOSE)/60000 (ms->min), objeto Tickets, Propietario=Lucia Perez, Fuente=Email, tiempo de cierre informado, agrupado mensual. Ene-abr sin registros con tiempo de cierre; may no se usa por limite de rango de correo desde junio.",
+        "tiempo_primera_respuesta_mediana_min": 5.7,
+        "tiempo_cierre_mediana_dias": 2.53,
+        "distribucion_cierre": {
+          "menos_1d": 34,
+          "d1_2": 1,
+          "d2_7": 31,
+          "d7_14": 33,
+          "d14_30": 3,
+          "mas_30": 0
+        },
+        "_nota_mediana_29ago2026": "Agregado 29-ago-2026 via HubSpot MCP (query_crm_data), TICKET WHERE hs_pipeline=1857341 (COL_Sup) AND hubspot_owner_id=89503870 (Lucia Perez): MEDIAN(time_to_first_agent_reply) y MEDIAN(time_to_close), agrupado por mes. Reemplaza el promedio simple por la mediana a pedido de Lauren (28-ago-2026), menos sensible a outliers. distribucion_cierre = conteo de tickets cerrados por rango de dias (time_to_close), mismo filtro."
       }
     },
     {

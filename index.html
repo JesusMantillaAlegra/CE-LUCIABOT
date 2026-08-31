@@ -251,6 +251,27 @@ tbody td { padding: 9px 14px; color: var(--slate); }
       <div id="correoEmbudoWrap"></div>
     </div>
 
+    <div class="chart-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="chart-card">
+        <div class="chart-card-title">Tiempo a 1ª respuesta</div>
+        <div class="chart-card-sub">Mediana, minutos</div>
+        <div id="correoTfaHeroWrap"></div>
+        <div class="chart-wrap" style="height:120px"><canvas id="chartCorreoTfa"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Tiempo de cierre</div>
+        <div class="chart-card-sub">Mediana, días</div>
+        <div id="correoTtcHeroWrap"></div>
+        <div class="chart-wrap" style="height:120px"><canvas id="chartCorreoTtc"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-title">Distribución del tiempo de cierre</div>
+      <div class="chart-card-sub">Cuántos tickets se cierran en cada rango de días — la cola larga que el promedio esconde</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="chartCorreoDistCierre"></canvas></div>
+    </div>
+
   </div>
 
   <!-- ══════════ VISTA: CHAT ══════════ -->
@@ -645,6 +666,9 @@ function aggregateCorreo(snaps) {
   let huboStage = false, huboTendencia = false;
   const versionMap = new Map();
   let tiempoWeighted = 0, tiempoWeight = 0;
+  let tfaWeighted = 0, tfaWeight = 0, ttcMedWeighted = 0, ttcMedWeight = 0;
+  const distCierre = { menos_1d: 0, d1_2: 0, d2_7: 0, d7_14: 0, d14_30: 0, mas_30: 0 };
+  let huboDistCierre = false;
   snaps.forEach(s => {
     const c = s.correo; if (!c) return;
     kpis.demanda += c.kpis?.demanda || 0;
@@ -668,6 +692,12 @@ function aggregateCorreo(snaps) {
     (c.gestionados_por_version || []).forEach(v => versionMap.set(v.version, (versionMap.get(v.version) || 0) + (v.count || 0)));
     const wTiempo = c.kpis?.gestionados || 0;
     if (typeof c.tiempo_promedio_gestion_min === 'number') { tiempoWeighted += c.tiempo_promedio_gestion_min * wTiempo; tiempoWeight += wTiempo; }
+    if (typeof c.tiempo_primera_respuesta_mediana_min === 'number') { tfaWeighted += c.tiempo_primera_respuesta_mediana_min * wTiempo; tfaWeight += wTiempo; }
+    if (typeof c.tiempo_cierre_mediana_dias === 'number') { ttcMedWeighted += c.tiempo_cierre_mediana_dias * wTiempo; ttcMedWeight += wTiempo; }
+    if (c.distribucion_cierre) {
+      huboDistCierre = true;
+      Object.keys(distCierre).forEach(k => distCierre[k] += c.distribucion_cierre[k] || 0);
+    }
   });
   kpis.pct_gestion = kpis.demanda ? (kpis.gestionados / kpis.demanda * 100) : 0;
   kpis.pct_escalados = kpis.demanda ? (kpis.escalados / kpis.demanda * 100) : 0;
@@ -680,7 +710,17 @@ function aggregateCorreo(snaps) {
     csat: { nota: snaps[snaps.length - 1].correo?.csat?.nota, serie_semanal: mergeWeeklySeries(csatWeeks, ['promoter', 'passive', 'detractor']) },
     csatMensual: huboCsatMensual ? { positivas: csatPositivasMensual, total: csatTotalMensual } : null,
     gestionados_por_version: Array.from(versionMap.entries()).map(([version, count]) => ({ version, count })),
-    tiempo_promedio_gestion_min: tiempoWeight ? +(tiempoWeighted / tiempoWeight).toFixed(1) : null
+    tiempo_promedio_gestion_min: tiempoWeight ? +(tiempoWeighted / tiempoWeight).toFixed(1) : null,
+    tiempo_primera_respuesta_mediana_min: tfaWeight ? +(tfaWeighted / tfaWeight).toFixed(1) : null,
+    tiempo_cierre_mediana_dias: ttcMedWeight ? +(ttcMedWeighted / ttcMedWeight).toFixed(2) : null,
+    distribucion_cierre: huboDistCierre ? distCierre : null,
+    // Serie mensual (no agregada) para las líneas de tendencia de las 2 cards
+    // nuevas de Tiempo a 1ª respuesta / Tiempo de cierre (mediana).
+    serie_mediana_correo: snaps.filter(s => s.correo).map(s => ({
+      mes: s.semana_inicio,
+      tfa_min: s.correo.tiempo_primera_respuesta_mediana_min ?? null,
+      ttc_dias: s.correo.tiempo_cierre_mediana_dias ?? null,
+    })),
   };
 }
 
@@ -954,6 +994,91 @@ function renderCorreo(c) {
   // hacer un embudo con correo como con chat?"). Correo no tiene un dato de "ingresados al
   // flujo" reportado directo como Chat, así que se deriva como Gestionados + Escalados.
   document.getElementById('correoEmbudoWrap').innerHTML = renderCorreoFlow(k);
+
+  // Cards de Tiempo a 1ª respuesta / Tiempo de cierre — con MEDIANA en vez de promedio
+  // (pedido de Lauren 28-ago-2026: la mediana es menos sensible a outliers que el promedio
+  // simple que se usaba en tiempo_promedio_gestion_min). Sacado vía HubSpot MCP
+  // (query_crm_data, MEDIAN(time_to_first_agent_reply) / MEDIAN(time_to_close)),
+  // TICKET WHERE hs_pipeline=1857341 (COL_Sup) AND hubspot_owner_id=89503870 (Lucía Pérez).
+  const serieMediana = c.serie_mediana_correo || [];
+  const deltaPct = (serie, campo) => {
+    const conDato = serie.filter(s => typeof s[campo] === 'number');
+    if (conDato.length < 2) return null;
+    const actual = conDato[conDato.length - 1][campo];
+    const anterior = conDato[conDato.length - 2][campo];
+    if (!anterior) return null;
+    return ((actual - anterior) / anterior) * 100;
+  };
+  const heroCard = (valor, unidad, delta) => {
+    const deltaHtml = delta == null ? ''
+      : `<span class="kpi-delta ${delta <= 0 ? 'up' : 'down'}">${delta <= 0 ? '▼' : '▲'} ${Math.abs(delta).toFixed(0)}% vs mes anterior</span>`;
+    return `<div class="st-hero"><span class="st-hero-num">${typeof valor === 'number' ? valor : '—'}</span><span class="st-hero-lbl">${unidad}</span></div>${deltaHtml}`;
+  };
+  document.getElementById('correoTfaHeroWrap').innerHTML = heroCard(c.tiempo_primera_respuesta_mediana_min, 'min (mediana)', deltaPct(serieMediana, 'tfa_min'));
+  document.getElementById('correoTtcHeroWrap').innerHTML = heroCard(c.tiempo_cierre_mediana_dias, 'días (mediana)', deltaPct(serieMediana, 'ttc_dias'));
+
+  const MESES_CORTO_CORREO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const etiquetaMesCorto = (iso) => {
+    const [y, m] = iso.split('-');
+    return `${MESES_CORTO_CORREO[Number(m) - 1]} ${y}`;
+  };
+  const sparkline = (canvasId, campo, color) => {
+    safeChart(canvasId, {
+      type: 'line',
+      data: {
+        labels: serieMediana.map(s => etiquetaMesCorto(s.mes)),
+        datasets: [{ data: serieMediana.map(s => s[campo]), borderColor: color, backgroundColor: color + '22', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: color }],
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+        scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { size: 10 } } } },
+      },
+    });
+  };
+  sparkline('chartCorreoTfa', 'tfa_min', COLORS.blue);
+  sparkline('chartCorreoTtc', 'ttc_dias', COLORS.teal);
+
+  // Distribución del tiempo de cierre por rango de días, con % de cada barra (pedido de
+  // Lauren 28-ago-2026: "ayudame aqui poniendole porcentaje también"). Mismo objeto
+  // TICKET/filtro que las cards de arriba.
+  const dist = c.distribucion_cierre;
+  if (dist) {
+    const etiquetasDist = ['< 1 día', '1-2 días', '2-7 días', '7-14 días', '14-30 días', '30+ días'];
+    const valoresDist = [dist.menos_1d, dist.d1_2, dist.d2_7, dist.d7_14, dist.d14_30, dist.mas_30];
+    const totalDist = valoresDist.reduce((a, b) => a + b, 0);
+    const pctDist = (v) => totalDist ? ((v / totalDist) * 100).toFixed(1) + '%' : '—';
+    const etiquetaPctDist = {
+      id: 'etiquetaPctDist',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        const meta = chart.getDatasetMeta(0);
+        ctx.save();
+        ctx.font = '600 11px system-ui, sans-serif';
+        ctx.fillStyle = '#1A2B4A';
+        ctx.textAlign = 'left';
+        meta.data.forEach((bar, i) => {
+          ctx.fillText(pctDist(valoresDist[i]), bar.x + 6, bar.y + 4);
+        });
+        ctx.restore();
+      },
+    };
+    safeChart('chartCorreoDistCierre', {
+      type: 'bar',
+      data: {
+        labels: etiquetasDist,
+        datasets: [{ label: 'Tickets', data: valoresDist, backgroundColor: COLORS.teal, borderRadius: 4, maxBarThickness: 26 }],
+      },
+      options: {
+        indexAxis: 'y',
+        maintainAspectRatio: false,
+        layout: { padding: { right: 40 } },
+        scales: { x: { grid: { color: '#F0F4F8' } }, y: { grid: { display: false } } },
+        plugins: { legend: { display: false } },
+      },
+      plugins: [etiquetaPctDist],
+    });
+  }
 }
 
 // ══════════ CHAT — diagrama de flujo del embudo de gestión ══════════
