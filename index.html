@@ -1260,10 +1260,14 @@ function renderLlamadas(c) {
   const todasVersiones = c.por_version || [];
   const versiones = todasVersiones.filter(v => v.version !== 'Fuera de horario')
     .sort((a, b) => (b.pct_gestion ?? -1) - (a.pct_gestion ?? -1));
+  // Cuando no hay pct_gestion (jul-ago solo traen demanda por país, sin desglose de
+  // gestión), la barra salía vacía en 0% -- se rellena en su lugar proporcional al
+  // volumen (demanda) del país frente al máximo, para que siga habiendo color.
+  const maxDemandaVersion = Math.max(1, ...versiones.map(v => v.demanda || 0));
   document.getElementById('llamadasVersionWrap').innerHTML = versiones.map(v => `
     <div class="st-row">
       <div class="st-tema"><span>${v.version}</span></div>
-      <div class="st-bar"><div style="width:${v.pct_gestion == null ? 0 : v.pct_gestion.toFixed(0)}%;background:${COLORS.teal}"></div></div>
+      <div class="st-bar"><div style="width:${v.pct_gestion == null ? (v.demanda / maxDemandaVersion * 100).toFixed(0) : v.pct_gestion.toFixed(0)}%;background:${COLORS.teal}"></div></div>
       <span class="st-num">${v.pct_gestion == null
         ? `<b>${fmt(v.demanda)}</b>`
         : `<b>${fmtPct(v.pct_gestion)}</b> (${fmt(v.gestionadas)}/${fmt(v.demanda)})`}</span>
