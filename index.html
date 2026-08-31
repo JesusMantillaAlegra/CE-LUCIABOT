@@ -1266,12 +1266,13 @@ function renderLlamadas(c) {
   // gestión), la barra salía vacía en 0% -- se rellena en su lugar proporcional al
   // volumen (demanda) del país frente al máximo, para que siga habiendo color.
   const maxDemandaVersion = Math.max(1, ...versiones.map(v => v.demanda || 0));
+  const totalDemandaVersion = versiones.reduce((a, v) => a + (v.demanda || 0), 0) || 1;
   document.getElementById('llamadasVersionWrap').innerHTML = versiones.map(v => `
     <div class="st-row">
       <div class="st-tema"><span>${v.version}</span></div>
       <div class="st-bar"><div style="width:${v.pct_gestion == null ? (v.demanda / maxDemandaVersion * 100).toFixed(0) : v.pct_gestion.toFixed(0)}%;background:${COLORS.teal}"></div></div>
       <span class="st-num">${v.pct_gestion == null
-        ? `<b>${fmt(v.demanda)}</b>`
+        ? `<b>${(v.demanda / totalDemandaVersion * 100).toFixed(1)}%</b> (${fmt(v.demanda)})`
         : `<b>${fmtPct(v.pct_gestion)}</b> (${fmt(v.gestionadas)}/${fmt(v.demanda)})`}</span>
     </div>`).join('');
 
