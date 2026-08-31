@@ -1082,30 +1082,15 @@ function renderCorreo(c) {
   sparklineOMensaje('chartCorreoTfa', 'tfa_min', COLORS.blue);
   sparklineOMensaje('chartCorreoTtc', 'ttc_dias', COLORS.teal);
 
-  // Distribución del tiempo de cierre por rango de días, con % de cada barra (pedido de
-  // Lauren 28-ago-2026: "ayudame aqui poniendole porcentaje también"). Mismo objeto
-  // TICKET/filtro que las cards de arriba.
+  // Distribución del tiempo de cierre por rango de días. El % se mostraba siempre
+  // encima de la barra con un plugin -- Lauren pidió (30-ago-2026) que esos números no
+  // se vean fijos, solo al pasar el mouse (tooltip), igual que el resto de gráficos.
   const dist = c.distribucion_cierre;
   if (dist) {
     const etiquetasDist = ['< 1 día', '1-2 días', '2-7 días', '7-14 días', '14-30 días', '30+ días'];
     const valoresDist = [dist.menos_1d, dist.d1_2, dist.d2_7, dist.d7_14, dist.d14_30, dist.mas_30];
     const totalDist = valoresDist.reduce((a, b) => a + b, 0);
     const pctDist = (v) => totalDist ? ((v / totalDist) * 100).toFixed(1) + '%' : '—';
-    const etiquetaPctDist = {
-      id: 'etiquetaPctDist',
-      afterDatasetsDraw(chart) {
-        const { ctx } = chart;
-        const meta = chart.getDatasetMeta(0);
-        ctx.save();
-        ctx.font = '600 11px system-ui, sans-serif';
-        ctx.fillStyle = '#1A2B4A';
-        ctx.textAlign = 'left';
-        meta.data.forEach((bar, i) => {
-          ctx.fillText(pctDist(valoresDist[i]), bar.x + 6, bar.y + 4);
-        });
-        ctx.restore();
-      },
-    };
     safeChart('chartCorreoDistCierre', {
       type: 'bar',
       data: {
@@ -1115,11 +1100,12 @@ function renderCorreo(c) {
       options: {
         indexAxis: 'y',
         maintainAspectRatio: false,
-        layout: { padding: { right: 40 } },
         scales: { x: { grid: { color: '#F0F4F8' } }, y: { grid: { display: false } } },
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (ctx) => `${fmt(ctx.parsed.x)} tickets (${pctDist(ctx.parsed.x)})` } },
+        },
       },
-      plugins: [etiquetaPctDist],
     });
   }
 }
@@ -1294,13 +1280,15 @@ function renderLlamadas(c) {
     document.getElementById('llamadasMotivoWrap').innerHTML = '';
   } else {
     const motivos = c.motivo_escalamiento || [];
-    const maxM = motivos[0]?.count || 1;
+    // La barra se llena según el % REAL sobre el total (antes se normalizaba contra el
+    // motivo más alto, así que ese motivo siempre salía al 100% aunque fuera, por ejemplo,
+    // solo el 50% del total -- Lauren lo marcó como "no realista", 30-ago-2026).
     const totalM = motivos.reduce((a, m) => a + (m.count || 0), 0) || 1;
     document.getElementById('llamadasMotivoWrap').innerHTML = motivos.length
       ? motivos.map(m => `
       <div class="st-row">
         <div class="st-tema"><span>${m.motivo}</span></div>
-        <div class="st-bar"><div style="width:${(m.count / maxM * 100).toFixed(0)}%;background:${COLORS.purple}"></div></div>
+        <div class="st-bar"><div style="width:${(m.count / totalM * 100).toFixed(1)}%;background:${COLORS.purple}"></div></div>
         <span class="st-num">${(m.count/totalM*100).toFixed(1)}% (${fmt(m.count)})</span>
       </div>`).join('')
       : '<p class="info-note">Sin llamadas escaladas en este periodo.</p>';
