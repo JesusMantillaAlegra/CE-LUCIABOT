@@ -476,12 +476,13 @@ window.LUCIA_HISTORY = {
       "llamadas": null,
       "correo": {
         "kpis": {
-          "demanda": 1316,
-          "gestionados": 122,
-          "escalados": 98,
-          "pct_gestion": 9.27,
+          "demanda": 1299,
+          "gestionados": 108,
+          "escalados": 106,
+          "pct_gestion": 8.31,
           "csat_bot": 100.0,
-          "pct_escalados": 7.45
+          "pct_escalados": 8.16,
+          "ingresados_flujo": 214
         },
         "csat_detalle": {
           "positivas": 1,
@@ -502,7 +503,8 @@ window.LUCIA_HISTORY = {
           "mas_30": 0
         },
         "_nota_mediana_29ago2026": "Agregado 29-ago-2026 via HubSpot MCP (query_crm_data), TICKET WHERE hs_pipeline=1857341 (COL_Sup) AND hubspot_owner_id=89503870 (Lucia Perez): MEDIAN(time_to_first_agent_reply) y MEDIAN(time_to_close), agrupado por mes. Reemplaza el promedio simple por la mediana a pedido de Lauren (28-ago-2026), menos sensible a outliers. distribucion_cierre = conteo de tickets cerrados por rango de dias (time_to_close), mismo filtro.",
-        "_nota_demanda_corregida_29ago2026": "Demanda CORREGIDA el 29-ago-2026 a pedido de Jesus: la definicion anterior usaba el informe nativo de HubSpot Demanda (con filtros de Bandeja de entrada, HD-Version, etc.) que no cuadraba con lo que el propio Jesus validaba en HubSpot. La nueva Demanda es simplemente COUNT(*) de TICKET WHERE hs_pipeline=1857341 (COL_Sup) AND createdate en el mes -- todo lo que se creo en esa pipeline ese mes, sin mas filtros. Sacado via HubSpot MCP (query_crm_data) el 29-ago-2026; el numero de agosto puede seguir subiendo porque el mes esta en curso."
+        "_nota_demanda_corregida_29ago2026": "Demanda CORREGIDA el 29-ago-2026 a pedido de Jesus: la definicion anterior usaba el informe nativo de HubSpot Demanda (con filtros de Bandeja de entrada, HD-Version, etc.) que no cuadraba con lo que el propio Jesus validaba en HubSpot. La nueva Demanda es simplemente COUNT(*) de TICKET WHERE hs_pipeline=1857341 (COL_Sup) AND createdate en el mes -- todo lo que se creo en esa pipeline ese mes, sin mas filtros. Sacado via HubSpot MCP (query_crm_data) el 29-ago-2026; el numero de agosto puede seguir subiendo porque el mes esta en curso.",
+        "_nota_embudo_ownerhistory_29ago2026": "Embudo pasado a logica owner-history (\"paso por Lucia\") el 29-ago-2026, a pedido de Lauren: Ingresados al Flujo = Lucia fue owner en ALGUN momento del historial del ticket (214, sacado vía property-history de HubSpot); de esos, Gestionados = owner ACTUAL sigue siendo Lucia (108); Escalados = pasaron por Lucia pero hoy tienen otro owner (106); No Ingresaron al Flujo = Lucia nunca fue owner (1085). Demanda de esta corrida = 1299 (COUNT(*) tickets creados en COL_Sup en agosto, ligeramente distinto de otra corrida en tiempo real porque el mes sigue en curso). Reemplaza el proxy anterior (Gestionados+Escalados=Ingresados), que subestimaba el alcance real de Lucia."
       }
     },
     {

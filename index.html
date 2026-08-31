@@ -669,8 +669,16 @@ function aggregateCorreo(snaps) {
   let tfaWeighted = 0, tfaWeight = 0, ttcMedWeighted = 0, ttcMedWeight = 0;
   const distCierre = { menos_1d: 0, d1_2: 0, d2_7: 0, d7_14: 0, d14_30: 0, mas_30: 0 };
   let huboDistCierre = false;
+  // Ingresados al Flujo con lógica "pasó por Lucía" (owner-history) -- solo se usa el
+  // total sumado si TODOS los snapshots del rango elegido traen ese dato; si falta en
+  // alguno, no se mezcla con el proxy viejo (Gestionados+Escalados) para no combinar dos
+  // metodologías distintas en un mismo número -- renderCorreoFlow cae solo al proxy.
+  let ingresadosFlujoSum = 0, huboIngresadosFlujoEnTodos = true, algunSnapConCorreo = false;
   snaps.forEach(s => {
     const c = s.correo; if (!c) return;
+    algunSnapConCorreo = true;
+    if (typeof c.kpis?.ingresados_flujo === 'number') ingresadosFlujoSum += c.kpis.ingresados_flujo;
+    else huboIngresadosFlujoEnTodos = false;
     kpis.demanda += c.kpis?.demanda || 0;
     kpis.gestionados += c.kpis?.gestionados || 0;
     kpis.escalados += c.kpis?.escalados || 0;
@@ -701,6 +709,7 @@ function aggregateCorreo(snaps) {
   });
   kpis.pct_gestion = kpis.demanda ? (kpis.gestionados / kpis.demanda * 100) : 0;
   kpis.pct_escalados = kpis.demanda ? (kpis.escalados / kpis.demanda * 100) : 0;
+  if (algunSnapConCorreo && huboIngresadosFlujoEnTodos) kpis.ingresados_flujo = ingresadosFlujoSum;
   return {
     kpis,
     por_stage: Array.from(stageMap.entries()).map(([stage, count]) => ({ stage, count })),
@@ -898,17 +907,18 @@ function safeChart(canvasId, config) {
 }
 
 // ══════════ CORREO — diagrama de flujo del embudo de gestión ══════════
-// Mismo componente visual y misma estructura de 2 niveles que renderChatFlow, a pedido
-// de Jesus (28-ago-2026: "ponle No ingresaron al flujo y hazlo como el de Chat"). Correo
-// no tiene un dato de "ingresados al flujo" reportado directo por HubSpot como Chat, así
-// que se deriva como Gestionados + Escalados (= los tickets que Lucía sí tocó de algún
-// modo); el resto de la demanda que no aparece ni gestionado ni escalado se muestra como
-// "No Ingresaron al Flujo", igual que el nodo morado de Chat.
+// Mismo componente visual y misma estructura de 2 niveles que renderChatFlow. Lógica
+// "pasó por Lucía" (pedido de Lauren, 29-ago-2026, vía owner-history de HubSpot):
+// Ingresados al Flujo = Lucía fue owner del ticket EN ALGÚN MOMENTO de su historial
+// (k.ingresados_flujo). De esos, Gestionados = owner ACTUAL sigue siendo Lucía;
+// Escalados = pasaron por Lucía pero hoy tienen otro owner. No Ingresaron al Flujo =
+// Lucía nunca fue owner. Cuando el snapshot no trae ingresados_flujo (no se sacó el
+// owner-history para ese mes todavía) se usa el proxy viejo Gestionados+Escalados.
 function renderCorreoFlow(k) {
   const demanda = k.demanda || 0;
   const gestionados = k.gestionados || 0;
   const escalados = k.escalados || 0;
-  const ingresados = gestionados + escalados;
+  const ingresados = typeof k.ingresados_flujo === 'number' ? k.ingresados_flujo : (gestionados + escalados);
   const noIngresaron = Math.max(0, demanda - ingresados);
   const pctIngresados = demanda ? (ingresados / demanda * 100) : 0;
   const pctAbandono = demanda ? (noIngresaron / demanda * 100) : 0;
