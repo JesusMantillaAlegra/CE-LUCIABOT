@@ -436,11 +436,12 @@ window.LUCIA_HISTORY = {
       "llamadas": null,
       "correo": {
         "kpis": {
-          "demanda": 934,
+          "demanda": 1357,
           "gestionados": 110,
           "escalados": 130,
-          "pct_gestion": 11.78,
-          "csat_bot": 100.0
+          "pct_gestion": 8.11,
+          "csat_bot": 100.0,
+          "pct_escalados": 9.58
         },
         "csat_detalle": {
           "positivas": 6,
@@ -460,7 +461,8 @@ window.LUCIA_HISTORY = {
           "d14_30": 3,
           "mas_30": 0
         },
-        "_nota_mediana_29ago2026": "Agregado 29-ago-2026 via HubSpot MCP (query_crm_data), TICKET WHERE hs_pipeline=1857341 (COL_Sup) AND hubspot_owner_id=89503870 (Lucia Perez): MEDIAN(time_to_first_agent_reply) y MEDIAN(time_to_close), agrupado por mes. Reemplaza el promedio simple por la mediana a pedido de Lauren (28-ago-2026), menos sensible a outliers. distribucion_cierre = conteo de tickets cerrados por rango de dias (time_to_close), mismo filtro."
+        "_nota_mediana_29ago2026": "Agregado 29-ago-2026 via HubSpot MCP (query_crm_data), TICKET WHERE hs_pipeline=1857341 (COL_Sup) AND hubspot_owner_id=89503870 (Lucia Perez): MEDIAN(time_to_first_agent_reply) y MEDIAN(time_to_close), agrupado por mes. Reemplaza el promedio simple por la mediana a pedido de Lauren (28-ago-2026), menos sensible a outliers. distribucion_cierre = conteo de tickets cerrados por rango de dias (time_to_close), mismo filtro.",
+        "_nota_demanda_corregida_29ago2026": "Demanda CORREGIDA el 29-ago-2026 a pedido de Jesus: la definicion anterior usaba el informe nativo de HubSpot Demanda (con filtros de Bandeja de entrada, HD-Version, etc.) que no cuadraba con lo que el propio Jesus validaba en HubSpot. La nueva Demanda es simplemente COUNT(*) de TICKET WHERE hs_pipeline=1857341 (COL_Sup) AND createdate en el mes -- todo lo que se creo en esa pipeline ese mes, sin mas filtros. Sacado via HubSpot MCP (query_crm_data) el 29-ago-2026; el numero de agosto puede seguir subiendo porque el mes esta en curso."
       }
     },
     {
@@ -474,11 +476,12 @@ window.LUCIA_HISTORY = {
       "llamadas": null,
       "correo": {
         "kpis": {
-          "demanda": 604,
+          "demanda": 1316,
           "gestionados": 122,
           "escalados": 98,
-          "pct_gestion": 20.2,
-          "csat_bot": 100.0
+          "pct_gestion": 9.27,
+          "csat_bot": 100.0,
+          "pct_escalados": 7.45
         },
         "csat_detalle": {
           "positivas": 1,
@@ -498,7 +501,8 @@ window.LUCIA_HISTORY = {
           "d14_30": 3,
           "mas_30": 0
         },
-        "_nota_mediana_29ago2026": "Agregado 29-ago-2026 via HubSpot MCP (query_crm_data), TICKET WHERE hs_pipeline=1857341 (COL_Sup) AND hubspot_owner_id=89503870 (Lucia Perez): MEDIAN(time_to_first_agent_reply) y MEDIAN(time_to_close), agrupado por mes. Reemplaza el promedio simple por la mediana a pedido de Lauren (28-ago-2026), menos sensible a outliers. distribucion_cierre = conteo de tickets cerrados por rango de dias (time_to_close), mismo filtro."
+        "_nota_mediana_29ago2026": "Agregado 29-ago-2026 via HubSpot MCP (query_crm_data), TICKET WHERE hs_pipeline=1857341 (COL_Sup) AND hubspot_owner_id=89503870 (Lucia Perez): MEDIAN(time_to_first_agent_reply) y MEDIAN(time_to_close), agrupado por mes. Reemplaza el promedio simple por la mediana a pedido de Lauren (28-ago-2026), menos sensible a outliers. distribucion_cierre = conteo de tickets cerrados por rango de dias (time_to_close), mismo filtro.",
+        "_nota_demanda_corregida_29ago2026": "Demanda CORREGIDA el 29-ago-2026 a pedido de Jesus: la definicion anterior usaba el informe nativo de HubSpot Demanda (con filtros de Bandeja de entrada, HD-Version, etc.) que no cuadraba con lo que el propio Jesus validaba en HubSpot. La nueva Demanda es simplemente COUNT(*) de TICKET WHERE hs_pipeline=1857341 (COL_Sup) AND createdate en el mes -- todo lo que se creo en esa pipeline ese mes, sin mas filtros. Sacado via HubSpot MCP (query_crm_data) el 29-ago-2026; el numero de agosto puede seguir subiendo porque el mes esta en curso."
       }
     },
     {
