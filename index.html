@@ -1082,9 +1082,10 @@ function renderCorreo(c) {
   sparklineOMensaje('chartCorreoTfa', 'tfa_min', COLORS.blue);
   sparklineOMensaje('chartCorreoTtc', 'ttc_dias', COLORS.teal);
 
-  // Distribución del tiempo de cierre por rango de días. El % se mostraba siempre
-  // encima de la barra con un plugin -- Lauren pidió (30-ago-2026) que esos números no
-  // se vean fijos, solo al pasar el mouse (tooltip), igual que el resto de gráficos.
+  // Distribución del tiempo de cierre por rango de días. El % se muestra siempre al
+  // final de la barra (pedido original); lo que se quitó fue el CONTEO en crudo que el
+  // plugin global de datalabels dibujaba encima de la barra -- ese solo se ve en el
+  // tooltip al pasar el mouse (pedido de Lauren 30-ago-2026).
   const dist = c.distribucion_cierre;
   if (dist) {
     const etiquetasDist = ['< 1 día', '1-2 días', '2-7 días', '7-14 días', '14-30 días', '30+ días'];
@@ -1100,10 +1101,11 @@ function renderCorreo(c) {
       options: {
         indexAxis: 'y',
         maintainAspectRatio: false,
+        layout: { padding: { right: 40 } },
         scales: { x: { grid: { color: '#F0F4F8' } }, y: { grid: { display: false } } },
         plugins: {
           legend: { display: false },
-          datalabels: { display: false },
+          datalabels: { display: true, color: COLORS.dark, font: { weight: '700', size: 11 }, anchor: 'end', align: 'right', formatter: (v) => pctDist(v) },
           tooltip: { callbacks: { label: (ctx) => `${fmt(ctx.parsed.x)} tickets (${pctDist(ctx.parsed.x)})` } },
         },
       },
