@@ -623,13 +623,18 @@ function setupFilterBar(prefix, dataKey, applyFn) {
   dateDesdeInp.addEventListener('change', onCambioCustom);
   dateHastaInp.addEventListener('change', onCambioCustom);
 
-  // Por defecto: mostrar siempre el ÚLTIMO MES disponible en los datos (no el año
-  // completo ni todo el histórico), para que el dashboard abra mostrando el corte más
-  // reciente. maxMonth ya es "el mes del último snapshot cargado" (calculado arriba a
-  // partir de maxDate), y siempre existe como <option> en el dropdown de meses.
-  sel.value = maxMonth;
-  const rDefault = rangoDeMes(maxMonth);
-  aplicar(rDefault.desde, rDefault.hasta, rDefault.esMesActual);
+  // Por defecto: Año completo del ÚLTIMO año con datos (pedido de Jesus 29-ago-2026,
+  // reemplaza el default anterior de "solo el último mes"). Si el rango de fechas es de
+  // un solo año, la opción "Año completo" tiene value="" (ver opcionesAnio arriba); si
+  // hay más de un año, se usa "year:<anioMax>" para no mezclar años distintos por defecto.
+  if (soloUnAnio) {
+    sel.value = '';
+    aplicar(minDate, maxDate, false);
+  } else {
+    sel.value = `year:${anioMax}`;
+    const rDefault = rangoDeAnio(anioMax);
+    aplicar(rDefault.desde, rDefault.hasta, rDefault.esMesActual);
+  }
 }
 
 // ══════════ AGREGACIÓN DE SNAPSHOTS ══════════
