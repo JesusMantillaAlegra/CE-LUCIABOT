@@ -1,0 +1,274 @@
+// api/cron/actualizar-semanal.js
+//
+// Job semanal (Vercel Cron, ver vercel.json — corre los miércoles) que:
+//   1. Calcula la última semana completa (lunes a domingo) ya cerrada.
+//   2. Trae Correo y Llamadas directo de la API de HubSpot con los filtros REALES
+//      verificados en INSTRUCTIVO.md (secciones 1.10, 1.6 y 7).
+//   3. Trae Llamadas (lado técnico) de la API de ElevenLabs.
+//   4. Arma un snapshot nuevo con la MISMA forma que ya usa lucia_dashboard_history.json
+//      y lo agrega (nunca reemplaza) al array `snapshots`, vía la API de GitHub.
+//   5. Regenera lucia_dashboard_history.js a partir del JSON actualizado.
+//
+// ✅ ACTUALIZADO 05-sep-2026: se consiguió el scope de Conversations (REVSYS-573) y se
+// validó que el token nuevo lee /conversations/v3/conversations/{inboxes,threads} (HTTP
+// 200). Correo (Demanda/Gestionados/Escalados/Tiempo prom.) ya está 100% por API, sin
+// Breeze ni MCP. Chat ya trae Demanda por API (chatDemandaCount, ver lib/hubspot.js, con
+// el fix de paginación/orden del 05-sep-2026) -- Ingresados/Gestionados/Escalados/CSAT/
+// Tiempo de Chat siguen bloqueados porque aún no se identifica qué propiedad de la
+// Conversations API marca "atendido por bot" (ver chatIngresadosGestionadosEscalados() en
+// lib/hubspot.js, que lanza error a propósito en vez de adivinar un número). Esos campos
+// se dejan en null en el snapshot hasta resolver eso -- ver METRICAS_TABLERO_LUCIA.md.
+//
+// ⚠️ El token HUBSPOT_TOKEN de este cron necesita el scope de Conversations agregado
+// (mismo Private App que ya usa tickets.read/calls.read) -- confirmar en Vercel que la
+// variable de entorno ya tiene el token actualizado con ese scope antes de correr esto en
+// producción, o chatDemandaCount fallará con 403/401 y se perderá todo el snapshot (ver
+// el try/catch de la sección de Chat abajo -- si falla, el snapshot se guarda igual con
+// chat.kpis.demanda = null en vez de tumbar toda la corrida).
+//
+// Variables de entorno requeridas (configurarlas en Vercel → Project → Settings →
+// Environment Variables, nunca hardcodeadas — ver INSTRUCTIVO.md 1.13):
+//   HUBSPOT_TOKEN   Private App token de HubSpot (scopes: tickets.read, calls.read,
+//                   conversations.read + Conversation/Conversation session -- REVSYS-573)
+//   XI_API_KEY      API key de ElevenLabs
+//   GITHUB_TOKEN    Fine-grained PAT con "Contents: Read and write" sobre este repo
+//   GITHUB_REPO     "owner/nombre-repo"
+//   GITHUB_BRANCH   opcional, default "main"
+//   CRON_SECRET     string secreta cualquiera — protege el endpoint (ver abajo)
+
+import {
+  correoGestionadosCount,
+  correoEscaladosCount,
+  correoDemandaCount,
+  correoTiempoPromedioGestionMin,
+  correoPorStage,
+  correoCsatSemana,
+  resolvePipelineStageLabels,
+  llamadasPorVersion,
+  chatDemandaCount,
+} from "../../lib/hubspot.js";
+import { fetchElevenlabsLlamadas } from "../../lib/elevenlabs.js";
+import { getFile, putFile } from "../../lib/github.js";
+
+const HISTORY_JSON_PATH = "lucia_dashboard_history.json";
+const HISTORY_JS_PATH = "lucia_dashboard_history.js";
+const ELEVENLABS_CONFIG_PATH = "elevenlabs_config.json";
+
+// ---------- semana a capturar: última semana completa (lunes-domingo) ya cerrada ----------
+function lastCompleteWeek(today = new Date()) {
+  const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+  const day = d.getUTCDay();
+  const diffToMonday = (day + 6) % 7;
+  const thisMonday = new Date(d);
+  thisMonday.setUTCDate(d.getUTCDate() - diffToMonday);
+  const lastMonday = new Date(thisMonday);
+  lastMonday.setUTCDate(thisMonday.getUTCDate() - 7);
+  return [fmt(lastMonday), fmt(thisMonday)]; // [inicio inclusive, fin EXCLUSIVO = este lunes]
+}
+function fmt(d) { return d.toISOString().slice(0, 10); }
+
+function etiquetaSemana(inicioISO, finExclusivoISO) {
+  const meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  const [y1, m1, d1] = inicioISO.split("-").map(Number);
+  const finInclusive = new Date(Date.parse(`${finExclusivoISO}T00:00:00Z`) - 86400000);
+  const d2 = finInclusive.getUTCDate(), m2 = finInclusive.getUTCMonth() + 1;
+  return `${d1} – ${d2} ${meses[m2 - 1]} ${y1}`;
+}
+
+export default async function handler(req, res) {
+  // ---------- seguridad: exige el secreto compartido ----------
+  const secret = process.env.CRON_SECRET;
+  const auth = req.headers.authorization || "";
+  const providedSecret = auth.replace(/^Bearer\s+/i, "") || req.query?.secret;
+  if (secret && providedSecret !== secret) {
+    return res.status(401).json({ error: "No autorizado." });
+  }
+
+  const log = [];
+  try {
+    // Por default calcula la última semana completa (lunes-domingo) ya cerrada. Se puede
+    // forzar una ventana específica con ?semanaInicio=YYYY-MM-DD&semanaFin=YYYY-MM-DD
+    // (ambas inclusive) — usado para reprocesar/corregir una semana puntual.
+    const overrideInicio = req.query?.semanaInicio;
+    const overrideFin = req.query?.semanaFin;
+    let semanaInicio, semanaFinExclusive;
+    if (overrideInicio && overrideFin) {
+      semanaInicio = overrideInicio;
+      semanaFinExclusive = fmt(new Date(Date.parse(`${overrideFin}T00:00:00Z`) + 86400000));
+      log.push(`Semana forzada manualmente vía query params: ${semanaInicio} a ${overrideFin}`);
+    } else {
+      [semanaInicio, semanaFinExclusive] = lastCompleteWeek();
+    }
+    const semanaFinInclusive = fmt(new Date(Date.parse(`${semanaFinExclusive}T00:00:00Z`) - 86400000));
+    log.push(`Semana a capturar: ${semanaInicio} a ${semanaFinInclusive}`);
+
+    // ---------- 1. leer historial actual de GitHub ----------
+    const { content: historyRaw, sha: historySha } = await getFile(HISTORY_JSON_PATH);
+    const history = JSON.parse(historyRaw);
+
+    const force = req.query?.force === "true" || req.headers["x-force-reprocess"] === "true";
+
+    // Guarda contra traslapes: si la semana a capturar empieza antes o el mismo día en que
+    // termina la cobertura más reciente que ya existe en el histórico (de OTRO snapshot),
+    // los mismos tickets quedarían contados dos veces en los KPIs acumulados. Esto pasó una
+    // vez (25/27-ago-2026, ver INSTRUCTIVO 8) porque el snapshot inicial cubría hasta el
+    // 19-ago y la primera semana automática arrancó en 17-ago, traslapando 3 días.
+    const coberturaMax = (history.snapshots || [])
+      .filter((s) => s.correo && s.semana_fin && s.semana_inicio !== semanaInicio)
+      .reduce((max, s) => (s.semana_fin > max ? s.semana_fin : max), "0000-00-00");
+    if (coberturaMax !== "0000-00-00" && semanaInicio <= coberturaMax && !overrideInicio) {
+      const msg = `La semana calculada (${semanaInicio}) se traslapa con cobertura que ya existe hasta ${coberturaMax} — se aborta para no duplicar tickets. Si esto pasa en una corrida normal del cron, hay que revisar por qué (¿se saltó una semana? ¿cambió el huso horario?).`;
+      log.push(`ERROR: ${msg}`);
+      return res.status(409).json({ ok: false, error: msg, log });
+    }
+
+    // idempotencia: no duplicar si ya existe un snapshot para esta semana — salvo que se
+    // pase ?force=true (o header X-Force-Reprocess: true), que REEMPLAZA ese snapshot en
+    // vez de agregar uno nuevo. Útil para reprocesar una semana si se corrige un bug.
+    const yaExiste = (history.snapshots || []).some((s) => s.semana_inicio === semanaInicio && s.correo);
+    if (yaExiste && !force) {
+      log.push(`Ya existe un snapshot de Correo/Llamadas para ${semanaInicio} — no se agrega otro (usa ?force=true para reemplazarlo).`);
+      return res.status(200).json({ ok: true, skipped: true, log });
+    }
+
+    // ---------- 2. Correo (HubSpot) ----------
+    log.push("Trayendo Correo de HubSpot...");
+    const [demanda, gestionados, escalados, porStageCounts, csatSemana, tiempoPromedioGestionMin] = await Promise.all([
+      correoDemandaCount(semanaInicio, semanaFinExclusive),
+      correoGestionadosCount(semanaInicio, semanaFinExclusive),
+      correoEscaladosCount(semanaInicio, semanaFinExclusive),
+      correoPorStage(semanaInicio, semanaFinExclusive),
+      correoCsatSemana(semanaInicio, semanaFinExclusive),
+      correoTiempoPromedioGestionMin(semanaInicio, semanaFinExclusive),
+    ]);
+    const porStage = await resolvePipelineStageLabels(porStageCounts);
+    const correo = {
+      kpis: {
+        // Corregido 03-sep-2026: demanda ya sale por API directa (correoDemandaCount) --
+        // antes se pensaba que dependía de Conversations, pero solo necesita
+        // source_type=EMAIL + Pipeline=COL_Sup (mismo alcance ya validado de
+        // Gestionados/Escalados, ver lib/hubspot.js).
+        demanda,
+        gestionados,
+        escalados,
+        pct_gestion: demanda ? +((100 * gestionados) / demanda).toFixed(2) : 0,
+        pct_escalados: demanda ? +((100 * escalados) / demanda).toFixed(2) : 0,
+      },
+      tiempo_promedio_gestion_min: tiempoPromedioGestionMin,
+      por_stage: porStage,
+      tendencia_semanal: [{ semana: semanaInicio, escaladas: escalados, gestionadas: gestionados }],
+      csat: {
+        nota: "Ver INSTRUCTIVO.md sección 1.6 — no hay puntaje 1-10, solo Promoter/Passive/Detractor. Scope: pipelines de Correo en general, sin filtro de owner.",
+        serie_semanal: [{ semana: semanaInicio, ...csatSemana }],
+      },
+    };
+    log.push(`Correo: demanda=${demanda}, gestionados=${gestionados}, escalados=${escalados}, tiempo_prom_min=${tiempoPromedioGestionMin}, csat_respuestas=${csatSemana.promoter + csatSemana.passive + csatSemana.detractor}`);
+
+    // ---------- 3. Llamadas (HubSpot + ElevenLabs) ----------
+    log.push("Trayendo Llamadas de HubSpot...");
+    const { porVersion, motivo_escalamiento, otros_raw_debug } = await llamadasPorVersion(semanaInicio, semanaFinExclusive);
+    const kpisLlamadas = porVersion.reduce(
+      (acc, v) => ({
+        demanda: acc.demanda + v.demanda,
+        gestionadas: acc.gestionadas + v.gestionadas,
+        escaladas: acc.escaladas + v.escaladas,
+        no_contestadas: acc.no_contestadas + v.no_contestadas,
+        sin_clasificar: acc.sin_clasificar + v.sin_clasificar,
+      }),
+      { demanda: 0, gestionadas: 0, escaladas: 0, no_contestadas: 0, sin_clasificar: 0 }
+    );
+    const durPonderada = porVersion.reduce((a, v) => a + (v.duracion_prom_seg || 0) * v.demanda, 0);
+    kpisLlamadas.pct_gestion = kpisLlamadas.demanda ? +((100 * kpisLlamadas.gestionadas) / kpisLlamadas.demanda).toFixed(2) : 0;
+    kpisLlamadas.duracion_prom_seg = kpisLlamadas.demanda ? +(durPonderada / kpisLlamadas.demanda).toFixed(1) : null;
+    log.push(`Llamadas: demanda=${kpisLlamadas.demanda}, gestionadas=${kpisLlamadas.gestionadas}, escaladas=${kpisLlamadas.escaladas}`);
+    if (otros_raw_debug.length) {
+      log.push(`⚠️ ${otros_raw_debug.reduce((a, o) => a + o.count, 0)} llamadas escaladas cayeron en "Otro" — textos crudos no reconocidos: ${JSON.stringify(otros_raw_debug)}`);
+    }
+
+    // ElevenLabs es solo un cruce técnico de control de calidad (duración, % sin error
+    // técnico) — las métricas de negocio (gestionadas/escaladas/demanda) ya están
+    // completas con lo de HubSpot arriba. Si ElevenLabs falla (token vencido, rate
+    // limit, etc.) el snapshot se guarda igual, sin ese bloque, en vez de perder toda
+    // la corrida por un dato que es secundario.
+    log.push("Trayendo Llamadas de ElevenLabs...");
+    let elevenlabs = null;
+    try {
+      const { content: elevenlabsConfigRaw } = await getFile(ELEVENLABS_CONFIG_PATH);
+      const elevenlabsConfig = JSON.parse(elevenlabsConfigRaw);
+      elevenlabs = await fetchElevenlabsLlamadas(elevenlabsConfig, semanaInicio, semanaFinExclusive);
+    } catch (err) {
+      log.push(`ElevenLabs falló (no crítico, se sigue sin ese bloque): ${err.message}`);
+    }
+
+    const llamadas = {
+      kpis: kpisLlamadas,
+      por_version: porVersion,
+      motivo_escalamiento,
+      elevenlabs,
+    };
+
+    // ---------- 3b. Chat (HubSpot Conversations API) — solo de monitoreo por ahora ----------
+    // chatDemandaCount ya funciona por API (fix de paginación/orden del 05-sep-2026), pero
+    // NO se guarda todavía dentro de `chat` en el snapshot: renderChat() en index.html solo
+    // sabe pintar el objeto `chat` completo (Demanda + Ingresados + Gestionados + Escalados
+    // + CSAT) o nada (`chat: null` → "No hay datos"). No sabe pintar un Chat parcial, así
+    // que guardar aquí un objeto con Ingresados/Gestionados/Escalados en null rompería las
+    // tarjetas del tablero (mostrarían cosas como "0.0% de la demanda", que es falso, no
+    // "sin dato"). Por eso Demanda de Chat se calcula y se deja en el log del cron para
+    // monitoreo/confirmación, y `chat` se sigue guardando como null hasta que también estén
+    // Ingresados/Gestionados/Escalados (ver chatIngresadosGestionadosEscalados() en
+    // lib/hubspot.js) Y renderChat() en index.html sepa pintar un Chat parcial -- ahí se
+    // arma el objeto `chat` real y se activa esta sección.
+    log.push("Trayendo Chat (Demanda) de HubSpot Conversations — solo para monitoreo, no se guarda en el snapshot todavía...");
+    try {
+      const demandaChat = await chatDemandaCount(semanaInicio, semanaFinExclusive);
+      log.push(`Chat (Demanda, no guardado): ${demandaChat}`);
+    } catch (err) {
+      log.push(`⚠️ Chat (Demanda) falló (no crítico, no se guarda en el snapshot todavía): ${err.message}`);
+    }
+
+    // ---------- 4. armar y agregar el snapshot nuevo ----------
+    const nuevoSnapshot = {
+      id: `wk-${semanaInicio}`,
+      semana_inicio: semanaInicio,
+      semana_fin: semanaFinInclusive,
+      generado: fmt(new Date()),
+      bootstrap: false,
+      automatico: true,
+      etiqueta: etiquetaSemana(semanaInicio, semanaFinExclusive),
+      correo,
+      chat: null, // ver nota arriba — Demanda ya sale por API pero no se guarda hasta tener el objeto completo
+      llamadas,
+    };
+    if (force && yaExiste) {
+      history.snapshots = (history.snapshots || []).filter((s) => s.semana_inicio !== semanaInicio);
+      log.push(`Reemplazando snapshot existente de ${semanaInicio} (force=true).`);
+    }
+    history.snapshots = [...(history.snapshots || []), nuevoSnapshot];
+
+    // ---------- 5. escribir de vuelta a GitHub (JSON + JS regenerado) ----------
+    const historyJsonStr = JSON.stringify(history, null, 2) + "\n";
+    await putFile(
+      HISTORY_JSON_PATH,
+      historyJsonStr,
+      `Snapshot automático semana ${semanaInicio} (Correo + Llamadas)`,
+      historySha
+    );
+
+    const { sha: historyJsSha } = await getFile(HISTORY_JS_PATH).catch(() => ({ sha: undefined }));
+    const historyJsStr = `window.LUCIA_HISTORY = ${JSON.stringify(history, null, 2)};\n`;
+    await putFile(
+      HISTORY_JS_PATH,
+      historyJsStr,
+      `Regenera lucia_dashboard_history.js (snapshot automático ${semanaInicio})`,
+      historyJsSha
+    );
+
+    log.push(`Snapshot ${nuevoSnapshot.id} agregado y pusheado a GitHub.`);
+    return res.status(200).json({ ok: true, snapshot: nuevoSnapshot, log });
+  } catch (err) {
+    log.push(`ERROR: ${err.message}`);
+    console.error(err);
+    return res.status(500).json({ ok: false, error: err.message, log });
+  }
+}

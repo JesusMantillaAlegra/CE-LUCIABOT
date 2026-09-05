@@ -108,22 +108,14 @@ async function correoEscaladosCount(semanaInicio, semanaFinExclusive) {
 
 // ---------- Correo: Demanda ----------
 // Réplica por API del informe nativo "Demanda" (fuente=Correo, HD-Version=Colombia,
-// Pipeline=COL_Sup, Bandeja=Service Mail Inbox).
-//
-// La propiedad real de "HD - Versión" es `version` (confirmado contra
-// /crm/v3/properties/tickets). Es de tipo enumeración -- el filtro EQ necesita el VALUE
-// interno de la opción, no su label. Primer intento (`version EQ "Colombia"`, el label) dio
-// 0 resultados -- confirmado 05-sep-2026 contra /crm/v3/properties/tickets que el value
-// interno real es "colombia" (minúscula, sin tilde). Se usa `version` en vez de pipeline
-// porque el pipeline-only daba MENOS tickets que el informe nativo guardado (538 vs 604),
-// no más -- indicio de que el alcance real es por país, no por pipeline (hay tickets de
-// Colombia que en algún momento quedan en otro pipeline). FALTA VALIDAR que el número se
-// acerque a 604 (correr validar_agosto_todo.mjs). Si no cierra, el filtro pendiente es
-// Bandeja=Service Mail Inbox (falta buscar su id en /conversations/v3/conversations/inboxes).
+// Pipeline=COL_Sup, Bandeja=Service Mail Inbox). hd_version_ es la propiedad interna de
+// "HD - Versión" en Tickets (confirmar el nombre exacto contra /crm/v3/properties/tickets
+// antes de activar esto en producción -- se dejó el pipeline como filtro principal porque
+// ya está 100% validado, y hd_version_ como filtro adicional a confirmar).
 async function correoDemandaCount(semanaInicio, semanaFinExclusive) {
   const filters = [
     { propertyName: "source_type", operator: "EQ", value: "EMAIL" },
-    { propertyName: "version", operator: "EQ", value: "colombia" },
+    { propertyName: "hs_pipeline", operator: "EQ", value: COL_SUP_PIPELINE_ID },
     ...dateRangeFilters("createdate", semanaInicio, semanaFinExclusive),
   ];
   return countTickets([{ filters }]);
@@ -177,24 +169,13 @@ async function correoCsatSemana(semanaInicio, semanaFinExclusive) {
 // Réplica de lo que antes salía solo vía HubSpot AI (Breeze): AVG(TIME_TO_CLOSE) sobre
 // el mismo universo de Gestionados, en minutos. La Search API no tiene un AVG nativo por
 // endpoint de conteo, así que se trae la propiedad y se promedia acá.
-//
-// CORREGIDO 05-sep-2026: el filtro de fecha estaba sobre `createdate` en vez de la fecha
-// real de cierre (`closed_date`, confirmado contra /crm/v3/properties/tickets) -- eso
-// mezclaba tickets CREADOS en el mes pero CERRADOS mucho después, y el promedio subía cada
-// vez más mientras más tiempo pasaba desde el corte (se vio subir de 6145 a 6450 min entre
-// dos corridas de la misma validación sin tocar el código). Con `closed_date` el universo es
-// "tickets que se CERRARON en el período" (7598 min ≈ 5.3 días), que sí es razonable para
-// tiempo de gestión real de Correo -- validado con Jesús 05-sep-2026. Se probó también
-// medir con `hs_time_to_close_in_operating_hours` (solo horas laborales) pensando que el
-// 2067.81 guardado podía ser esa métrica, pero se descartó: el número con `time_to_close` +
-// `closed_date` ya es el correcto para esta definición de la métrica.
 async function correoTiempoPromedioGestionMin(semanaInicio, semanaFinExclusive) {
   const filters = [
     { propertyName: "hubspot_owner_id", operator: "EQ", value: "89503870" },
     { propertyName: "source_type", operator: "EQ", value: "EMAIL" },
     { propertyName: "hs_pipeline", operator: "EQ", value: COL_SUP_PIPELINE_ID },
     { propertyName: "time_to_close", operator: "HAS_PROPERTY" },
-    ...dateRangeFilters("closed_date", semanaInicio, semanaFinExclusive),
+    ...dateRangeFilters("createdate", semanaInicio, semanaFinExclusive),
   ];
   const tickets = await searchTicketsAll({ filterGroups: [{ filters }], properties: ["time_to_close"] });
   const valores = tickets.map((t) => Number(t.properties.time_to_close)).filter((v) => !Number.isNaN(v) && v > 0);

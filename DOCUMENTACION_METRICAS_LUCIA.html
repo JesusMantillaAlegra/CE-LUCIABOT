@@ -1,0 +1,608 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Métricas del tablero de Lucía</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fafbfc;--panel:#fff;--hair:#e7ecf1;--tx:#333d4a;--txs:#0d131b;--txm:#5e6976;--txf:#8a95a4;
+--t7:#1f5f57;--t6:#1f7a6f;--t5:#2b8b7f;--t3:#7cc0b4;--t50:#eef6f4;--r6:#bb3a4e;--r5:#d24d61;
+--sh:0 1px 3px rgba(13,19,27,.07);--rad:13px}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--tx);font:15px/1.6 "Inter",system-ui,sans-serif}
+h1,h2,h3{font-family:"Lexend","Inter",sans-serif;color:var(--txs);letter-spacing:-.02em}
+.wrap{max-width:1040px;margin:0 auto;padding:34px 36px 60vh}
+.sidebar{position:fixed;inset:0 auto 0 0;width:258px;z-index:40;display:flex;flex-direction:column;background:#fff;border-right:1px solid var(--hair);padding:20px 14px 16px}
+.sb-scroll{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-right:2px}
+.sb-brand{display:flex;align-items:center;gap:11px;padding:2px 8px 10px;cursor:pointer;border-radius:11px}
+.sb-brand:hover{background:var(--bg)}
+.sb-brand .ic{width:36px;height:36px;border-radius:10px;border:1px solid var(--hair);background:#fff;display:grid;place-items:center;flex:none}
+.sb-brand .tt{font-family:"Lexend";font-weight:700;font-size:15px;color:var(--txs);line-height:1.15}
+.sb-brand .sbst{font-size:11px;color:var(--txf);line-height:1.2}
+.sb-lbl{padding:13px 8px 5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--txf)}
+.chips-icp{display:flex;flex-direction:column;gap:5px;margin-bottom:16px}
+.chip-icp{font:600 12.5px/1.2 "Inter",sans-serif;text-align:left;padding:9px 11px;border-radius:10px;
+  border:1px solid var(--hair);background:var(--bg);color:var(--txm);cursor:pointer;transition:all .12s}
+.chip-icp:hover{border-color:var(--t3);color:var(--txs)}
+.chip-icp.on{background:var(--t6);border-color:var(--t6);color:#fff}
+/* El cambio de perfil se hace con el atributo `hidden`, y `hidden` trae su display:none de la
+   hoja del navegador, que pierde contra cualquier regla de clase con `display`. Sin esta linea,
+   .navlinks{display:flex} gana y el nav del perfil oculto se sigue viendo: los chips de las
+   secciones aparecian duplicados. El panel no se duplicaba porque .pane no fija display. */
+[hidden]{display:none!important}
+.navlinks{display:flex;flex-direction:column;gap:2px}
+.navlinks a{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:10px;color:var(--txm);text-decoration:none;cursor:pointer;transition:background .12s,color .12s}
+.navlinks a:hover{background:var(--bg);color:var(--txs)}
+.navlinks a.active{background:var(--t50);color:var(--t7)}
+.navlinks a .num{flex:none;width:25px;height:25px;border-radius:7px;display:grid;place-items:center;font-family:"Lexend";font-weight:700;font-size:11px;border:1px solid var(--hair);background:var(--bg);color:var(--txm)}
+.navlinks a.active .num{border-color:var(--t3);background:#fff;color:var(--t6)}
+.navlinks a .nl{line-height:1.2}
+.navlinks a .nl b{display:block;font-size:12.5px;font-weight:600;color:inherit}
+.navlinks a .nl span{display:block;font-size:10px;color:var(--txf)}
+.main{margin-left:258px}
+@media(max-width:940px){.sidebar{position:static;width:auto;border-right:0;border-bottom:1px solid var(--hair);padding:12px 14px}.sb-scroll{overflow:visible}.navlinks{flex-direction:row;flex-wrap:wrap}.navlinks a .nl span{display:none}.main{margin-left:0}.wrap{padding:24px 18px 60vh}}
+.eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--t6);margin-bottom:10px}
+h1{font-size:clamp(23px,4vw,31px);font-weight:800;line-height:1.14;max-width:26ch}
+.lead{margin-top:12px;color:var(--txm);max-width:66ch}
+.ctx{margin-top:20px;border:1px solid var(--hair);border-radius:var(--rad);background:var(--panel);padding:18px 20px;box-shadow:var(--sh)}
+.ctx-t{font-family:"Lexend";font-weight:700;font-size:13px;color:var(--t7);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.ctx p{font-size:13.5px;color:var(--tx);max-width:80ch}.ctx p+p{margin-top:10px}
+.ctx ul{margin:8px 0;padding-left:20px;display:grid;gap:6px}.ctx li{font-size:13.5px}.ctx b{color:var(--txs)}
+.step{margin-top:44px;scroll-margin-top:14px}
+.sh{display:flex;align-items:baseline;gap:11px;margin-bottom:2px}
+.sn{font-family:"Lexend";font-weight:800;color:var(--t5);font-size:12px;flex:none}
+.sh h2{font-size:18px;font-weight:700}
+.sq{font-size:13px;color:var(--txm);margin:2px 0 16px}
+.card{background:var(--panel);border:1px solid var(--hair);border-radius:var(--rad);padding:22px 24px;box-shadow:var(--sh)}
+.card+.card{margin-top:14px}
+.card p{max-width:82ch}
+.card.crit{border-left:3px solid var(--t5)}
+.acts{margin:0;padding-left:20px;display:grid;gap:12px}
+.acts li{font-size:14px;line-height:1.55}.acts li b{color:var(--txs)}
+.read{font-size:14px}.read b{color:var(--txs)}
+.comun{font-size:11.5px;color:var(--t7);background:var(--t50);border:1px solid var(--t3);
+  border-radius:9px;padding:8px 11px;line-height:1.5}
+.note{font-size:11.5px;color:var(--txf);line-height:1.55;padding-top:14px;border-top:1px solid var(--hair)}
+code{background:var(--bg);border:1px solid var(--hair);border-radius:4px;padding:1px 5px;font-size:11px}
+.dt{width:100%;border-collapse:collapse;font-size:12.5px;margin:0}
+.dt th{text-align:center;color:var(--txf);font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;padding:2px 9px 9px;line-height:1.4;vertical-align:bottom}
+.dt th:first-child,.dt td:first-child{text-align:left}
+.dt td{text-align:center;padding:7px 9px;border-top:1px solid var(--hair)}
+.dt th.lft,.dt td.lft{text-align:left}
+.dt tr.hl td{background:var(--t50);font-weight:600}
+.mini{font-size:10px;color:var(--txf)}
+.pt{display:inline-block;width:13px;height:13px;border-radius:50%;margin-right:7px;vertical-align:-2px}
+.pt.on{background:var(--t5)}
+.pt.off{background:#fff;border:1.5px solid var(--hair)}
+.scrollx{overflow:auto;max-height:430px;border:1px solid var(--hair);border-radius:10px;margin:0}
+.scrollx .dt{margin:0}
+.scrollx thead th{position:sticky;top:0;background:var(--panel);box-shadow:0 1px 0 var(--hair);z-index:2;padding:12px 9px 9px}
+.scrollx .dt tbody tr:first-child td{border-top:0}
+.scrollx .dt td:first-child,.scrollx .dt th:first-child{padding-left:14px}
+.scrollx .dt td:last-child,.scrollx .dt th:last-child{padding-right:14px}
+.chartwrap svg{display:block;width:100%;height:auto}
+.chartwrap svg text{font-family:"Inter",sans-serif}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+.legend .c{font-size:11px;font-weight:600;color:var(--txm);display:inline-flex;align-items:center;gap:5px}
+.legend .sw{width:9px;height:9px;border-radius:2px}
+.pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:5px;white-space:nowrap}
+.pill.v{background:var(--t50);color:var(--t6)}.pill.s{background:#eef3fb;color:#3a6ea8}
+.pill.n{background:#eef1f5;color:var(--txm)}.pill.p{background:#f4eefb;color:#6b4c9a}
+.chip{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:5px;margin:1px 3px 1px 0}
+.chip.off{background:#eef1f5;color:var(--txf)}
+.prio{display:inline-block;font-size:10px;font-weight:700;padding:2px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em}
+.prio.baja{background:var(--t50);color:var(--t6)}.prio.media{background:#fdf6ec;color:#a86a1f}
+.prio.alta{background:#fbeef0;color:var(--r6)}
+.tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;background:var(--panel);border:1px solid var(--hair);border-radius:8px;box-shadow:0 10px 28px -12px rgba(13,19,27,.28);padding:7px 11px;font-size:11.5px;color:var(--tx);z-index:120;white-space:nowrap}
+svg rect[onmousemove],svg circle[onmousemove]{cursor:pointer}
+/* Ritmo vertical de la tarjeta. Va al final a propósito: los componentes (.dt, .scrollx, .acts,
+   pre.code) traen margin:0 y si esta regla fuera antes la pisarían por orden de cascada. */
+.card>*{margin-top:20px}
+.card>*:first-child{margin-top:0}
+.card>p+p{margin-top:12px}
+.card>ul+p,.card>p+ul{margin-top:14px}
+.hb{display:inline-block;min-width:26px;padding:2px 6px;border-radius:4px;font-weight:600;
+background:linear-gradient(to right,var(--t50) var(--v),transparent var(--v))}
+.modgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.modc{border:1px solid var(--hair);border-left:3px solid var(--t5);border-radius:10px;padding:14px 16px;background:var(--bg)}
+.modh{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:7px}
+.modn{margin-left:auto;font-size:11px;font-weight:600;color:var(--t6);background:var(--t50);padding:2px 9px;border-radius:99px;white-space:nowrap}
+.modn.baja{color:var(--txf);background:var(--bg);border:1px solid var(--hair);font-weight:500}
+.modh b{font-family:"Lexend";font-weight:700;font-size:14px}
+.modh span{font-size:11.5px;color:var(--txm);font-weight:600}
+.modc p{font-size:12.5px;color:var(--tx);margin-bottom:10px}
+.modr{display:grid;grid-template-columns:52px 1fr;gap:9px;font-size:11.5px;color:var(--txm);padding:4px 0;border-top:1px solid var(--hair)}
+.modk{font-weight:700;color:var(--t6);font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding-top:2px}
+.sqlbox{border:1px solid var(--hair);border-radius:11px;overflow:hidden}
+.sqlh{background:#0d131b;color:#cfe6e1;padding:9px 15px;font-family:ui-monospace,Menlo,monospace;font-size:12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sqlh span{color:#7f9a95;font-size:10.5px;font-family:"Inter",sans-serif}
+.sqlh+.sqlh{border-top:1px solid #263038}
+.sqlb{padding:10px 15px;font-size:12.5px;color:var(--txm);background:var(--panel);border-bottom:1px solid var(--hair)}
+.sqlbox .sqlb:last-child{border-bottom:0}
+.scrollx.sql .dt{font-family:ui-monospace,Menlo,monospace;font-size:11px}
+.scrollx.sql .dt th{font-family:"Inter",sans-serif}
+.scrollx.sql .dt td{white-space:nowrap}
+pre.code{background:#0d131b;color:#cfe6e1;border-radius:11px;padding:16px 18px;overflow-x:auto;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.7;margin:0}
+
+/* TOKENS DE LA PLANTILLA, no inventados. La primera version usaba --bd y --cd, que no existen en
+   .shell_modulo.html, y todo lo que dependia de ellos (tarjetas, cajas, notas) quedo sin borde ni
+   fondo: se veia como texto suelto. Los que existen son --panel, --hair, --t6, --t50, --txf, --r5. */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:20px 0 4px}
+.kpi{border:1px solid var(--hair);border-radius:12px;padding:16px 18px;background:var(--panel);
+     box-shadow:var(--sh);display:flex;flex-direction:column}
+.kv{font-size:30px;font-weight:700;line-height:1.05;letter-spacing:-.6px;color:var(--t6)}
+.kl{font-size:11px;font-weight:700;margin-top:9px;text-transform:uppercase;letter-spacing:.5px;
+    line-height:1.35;color:var(--txs)}
+.kn{font-size:12px;color:var(--txm);margin-top:7px;line-height:1.5}
+.dice{margin:4px 0 20px;padding:14px 18px;background:var(--t6);color:#fff;border-radius:12px;
+      font-size:15px;line-height:1.6}
+.dice > span.et{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1.1px;
+      opacity:.75;margin-bottom:7px;font-weight:800}
+.dice b{font-weight:700;color:#fff}
+.dice code{background:rgba(255,255,255,.16);color:#fff;padding:1px 5px;border-radius:4px}
+.flujo{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr) auto;align-items:stretch;
+       gap:10px;margin:18px 0 10px}
+.flujo .fl-c{border:1px solid var(--hair);border-radius:12px;padding:14px 12px;background:var(--panel);
+       box-shadow:var(--sh);font-size:12.5px;line-height:1.45;color:var(--txm);text-align:center;
+       display:flex;flex-direction:column;justify-content:center;min-height:78px}
+.flujo .fl-c b{display:block;font-size:13.5px;color:var(--txs);margin-bottom:4px}
+.flujo .fl-c.mal{border-color:var(--r5);background:#fdf3f4}
+.flujo .fl-c.mal b{color:var(--r6)}
+.flujo .fl-c.bien{border-color:var(--t5);background:var(--t50)}
+.flujo .fl-ar{align-self:center;font-size:18px;color:var(--txf);padding:0 2px}
+@media (max-width:760px){.flujo{grid-auto-flow:row;grid-auto-columns:auto}.flujo .fl-ar{transform:rotate(90deg);justify-self:center}}
+.puente{margin:22px 0 4px;padding:14px 18px;border-left:3px solid var(--t6);background:var(--t50);
+        border-radius:0 12px 12px 0;font-size:14.5px;line-height:1.65;color:var(--tx)}
+.guion{margin:18px 0 0;padding:13px 16px;border:1px dashed var(--t3);border-radius:10px;font-size:13.5px;
+       line-height:1.65;color:var(--txm);font-style:italic;background:var(--panel)}
+.guion .et{display:block;font-style:normal;font-size:10px;text-transform:uppercase;letter-spacing:1px;
+       color:var(--t6);margin-bottom:6px;font-weight:800}
+.qa{border:1px solid var(--hair);border-radius:12px;padding:15px 18px;margin:12px 0;background:var(--panel);
+    box-shadow:var(--sh)}
+.qq{font-weight:700;font-size:14.5px;margin-bottom:7px;line-height:1.45;color:var(--txs)}
+.qr{font-size:14px;line-height:1.7;color:var(--tx)}
+th .q{display:inline-block;width:13px;height:13px;line-height:13px;border-radius:50%;font-size:9px;
+      text-align:center;background:var(--t6);color:#fff;margin-left:4px;vertical-align:1px;cursor:help}
+.defs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 26px;margin:14px 0 18px;
+      padding:13px 2px 0;border-top:1px dashed var(--hair);font-size:12px;line-height:1.6;color:var(--txm)}
+.scrollx + .defs{margin-top:12px;border-top:0;padding-top:2px}
+.defs > div{display:grid;grid-template-columns:auto 1fr;gap:0 10px;align-items:start}
+.defs dt{font-weight:700;color:var(--tx);white-space:nowrap}
+.defs dt::before{content:'?';display:inline-block;width:13px;height:13px;line-height:13px;border-radius:50%;
+      font-size:9px;text-align:center;background:var(--t6);color:#fff;margin-right:6px;vertical-align:1px;font-weight:800}
+.defs dd{margin:0}
+.defs + .read{margin-top:14px}
+.chart{margin:6px 0 10px}
+.chart svg{width:100%;height:auto;display:block}
+.note{font-size:12px;color:var(--txm);line-height:1.6;margin:8px 0 0}
+.chips-icp{display:none}
+.lado{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin:12px 0 6px}
+.lado .l{border:1px solid var(--hair);border-radius:12px;padding:14px 16px;background:var(--panel);box-shadow:var(--sh)}
+.lado .l.nuevo{border-color:var(--t5);background:var(--t50)}
+.lado .lt{font-weight:700;font-size:13px;color:var(--txs);margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed var(--hair)}
+.kv{margin:0}
+.kv > div{display:grid;grid-template-columns:minmax(150px,42%) 1fr;gap:0 12px;padding:5px 0;border-bottom:1px solid var(--hair);font-size:12.5px;line-height:1.5}
+.kv > div:last-child{border-bottom:0}
+.kv dt{color:var(--txm);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;word-break:break-all}
+.kv dd{margin:0;color:var(--tx)}
+.mira{margin:14px 0 6px;padding:10px 14px;background:var(--t50);border-radius:10px;font-size:13.5px;
+      line-height:1.55;color:var(--t7);border-left:3px solid var(--t5)}
+.mira .et{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.9px;font-weight:800;
+      color:var(--t6);margin-right:8px;vertical-align:1px}
+.mira b{color:var(--t7)}
+.hd{margin-bottom:22px}
+.meta{margin:0 0 26px;line-height:1.7;font-size:13px;color:var(--txm)}
+.step{margin-bottom:52px}
+.step .card,.step .ctx{margin:16px 0}
+.card > .read:first-child{margin-top:0}
+.card > .read:last-child{margin-bottom:0}
+table.dt td:first-child{font-weight:600}
+table.dt td,table.dt th{vertical-align:top}
+.scrollx{margin:14px 0}
+ol.read,ul.read{margin:12px 0 0;padding-left:22px}
+ol.read li,ul.read li{margin-bottom:9px;line-height:1.7}
+ol.read li:last-child,ul.read li:last-child{margin-bottom:0}
+h3{margin:26px 0 10px}
+.jugada{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:14px 0}
+.jugada .j{border:1px solid var(--hair);border-radius:12px;padding:14px 16px;background:var(--panel);box-shadow:var(--sh)}
+.jugada .j b{display:block;color:var(--txs);margin-bottom:6px;font-size:13.5px}
+.jugada .j p{margin:0;font-size:13px;line-height:1.6;color:var(--tx)}
+.jugada .j .n{font-size:11px;color:var(--txm);margin-top:8px}
+</style></head><body>
+<aside class="sidebar">
+  <div class="sb-brand" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+    <span class="ic"><svg viewBox="0 0 40 40" width="21" height="21" fill="none"><path d="M30.04 30.53c-.9.46-8.74 2.04-14.69.42-4.45-1.21-10.38-4.68-12.35-5.87a.6.6 0 0 1-.18-.83l7.31-9.3a.6.6 0 0 1 .99.07c1.18 1.89 4.18 6.36 7.75 9.4 4.79 4.08 8.66 5.23 10.99 5.49.28.03.87.36-.03.82Z" fill="#00D6BC"/><path d="M27.93 27.29c-.74-.16-6.03-2.99-8.71-6.78-1.93-2.73-3.66-7.33-4.3-9.12a.5.5 0 0 1 .42-.65l8.21-1.79a.5.5 0 0 1 .59.6c-.21 1.79-.53 5.59.06 8.89.84 4.66 2.54 7.17 3.76 8.44.15.15.33.63-.41.47Z" fill="#00D6BC"/><path d="M28.77 25.14c-.34-.4-2.07-4.17-1.96-7.38.07-2.17.93-5.19 1.36-6.57a.5.5 0 0 1 .69-.42l4.74 2.22a.5.5 0 0 1 .15.75c-.92.97-2.48 2.78-3.45 4.67-1.48 2.91-1.59 5-1.45 6.21.02.15-.08.48-.42.08Z" fill="#00D6BC"/></svg></span>
+    <div><div class="tt">Lucía</div><div class="sbst">Documentación de métricas</div></div>
+  </div>
+  <div class="sb-scroll">
+    <div class="chips-icp"><button class="chip-icp on" data-icp="doc">Métricas</button></div>
+    <div class="sb-lbl">Secciones</div>
+    <nav class="navlinks" data-icp="doc"><a data-sec="resumen"><span class="num">01</span><span class="nl"><b>Resumen</b><span>fuentes y alcance</span></span></a><a data-sec="correo"><span class="num">02</span><span class="nl"><b>Correo</b><span>7 métricas del panel de HubSpot</span></span></a><a data-sec="chat"><span class="num">03</span><span class="nl"><b>Chat</b><span>demanda, contención y motivos</span></span></a><a data-sec="llamadas"><span class="num">04</span><span class="nl"><b>Llamadas</b><span>IVR + cruce ElevenLabs</span></span></a><a data-sec="sql"><span class="num">05</span><span class="nl"><b>SQL y fórmulas</b><span>cómo se calcula cada número</span></span></a><a data-sec="notas"><span class="num">06</span><span class="nl"><b>Notas de construcción</b><span>supuestos y pendientes</span></span></a></nav>
+  </div>
+</aside>
+<main class="main"><div class="wrap">
+<div class="pane" data-icp="doc">
+<header class="hd"><div><h1>Métricas del tablero de Lucía</h1><p class="sub">Cómo se calcula cada número y de qué fuente sale — CE-luciaBot</p></div></header>
+<p class="meta">Correo y Chat: HubSpot Reports Dashboard <code>6180490</code> — vistas <code>20862583</code> (Correo) y <code>20257473</code> (Chat). Llamadas: ElevenLabs Conversational AI API, cruzada con HubSpot CRM (objeto <code>CALL</code>) solo para verificación.</p>
+
+<div class="card crit" style="margin-bottom:18px">
+<p class="read"><b>Sin filtro base único.</b> A diferencia del tablero de Soporte, aquí cada canal tiene su propia lógica de filtrado — e incluso dentro de Correo cada tarjeta tiene su filtro real propio, verificado directamente sobre el panel de HubSpot. Los filtros quedan documentados métrica por métrica.</p>
+</div>
+
+<section class="step" id="doc--resumen">
+<div class="sh"><span class="sn">01</span><h2>Alcance y fuentes</h2></div>
+<p class="sq">Tres canales, tres orígenes de datos distintos.</p>
+<div class="card">
+<p class="read">Este documento es la referencia de cómo se construye cada número del tablero de Lucía (asistente automatizada). Se divide en los tres canales que atiende — <b>Correo</b>, <b>Chat</b> y <b>Llamadas</b> — porque cada uno se alimenta de un objeto y una API diferentes, y por lo tanto tiene definiciones de "gestionado" y "escalado" que no son intercambiables entre sí.</p>
+<div class="lado">
+<div class="l"><div class="lt">Correo</div><p class="read">Objeto <code>TICKET</code> de HubSpot. 7 métricas de dashboard, cada una con filtro propio. Depende parcialmente del filtro nativo "Bandeja de entrada" del objeto Conversaciones, que no tiene equivalente en Tickets.</p></div>
+<div class="l"><div class="lt">Chat</div><p class="read">Conversations API (<code>threads</code>) + tickets asociados para los motivos de solicitud. 14 de los 21 widgets del panel están confirmados y cubren el 100% del tablero actual.</p></div>
+<div class="l"><div class="lt">Llamadas</div><p class="read">ElevenLabs Conversational AI API como fuente de la verdad (<code>agent_id</code> por bot en <code>elevenlabs_config.json</code>), cruzada con el objeto <code>CALL</code> de HubSpot para verificación. Ya automatizado en producción.</p></div>
+</div>
+<div class="mira"><span class="et">Owner IDs</span>Lucía Pérez = <code>89503870</code> · Isabel = <code>76066940</code>. Se usan en Correo (propietario del ticket) y en Chat (propietario del hilo).</div>
+</div>
+</section>
+
+<section class="step" id="doc--correo">
+<div class="sh"><span class="sn">02</span><h2>Correo</h2></div>
+<p class="sq">No hay un único filtro que se repita igual en las 7 tarjetas — cada widget tiene su filtro real verificado sobre el panel.</p>
+<div class="card">
+<div class="scrollx"><table class="dt">
+<thead><tr><th class="lft">Métrica</th><th class="lft">Propiedad(es) de HubSpot</th><th class="lft">Filtros específicos</th></tr></thead>
+<tbody>
+<tr><td class="lft">Demanda</td><td class="lft"><code>source_type</code>, <code>createdate</code>, <code>hd_version</code>, <code>hs_pipeline</code>, Bandeja de entrada (Conversaciones)</td><td class="lft">Fuente=Correo AND Fecha de creación &gt; fecha AND HD-Versión=[país] AND Pipeline=[pipeline del país] AND Bandeja de entrada=Service Mail Inbox</td></tr>
+<tr><td class="lft">Gestionados</td><td class="lft"><code>hubspot_owner_id</code>, <code>source_type</code>, <code>createdate</code></td><td class="lft">Propietario del ticket = Lucía Pérez (<code>89503870</code>) AND Fuente=Correo AND Fecha de creación &gt; fecha</td></tr>
+<tr><td class="lft">Escalados</td><td class="lft"><code>escalamiento_lucia_email</code>, <code>createdate</code></td><td class="lft">El valor "Escalamiento Lucia Email" es conocido AND Fecha de creación &gt; fecha</td></tr>
+<tr class="hl"><td class="lft">% Gestión</td><td class="lft"><code>source_type</code>, <code>createdate</code>, <code>hs_pipeline</code>, <code>hd_version</code>, Bandeja de entrada</td><td class="lft">Mismo filtro que Demanda, sin Propietario</td></tr>
+<tr><td class="lft">Gestión de Lucía por stage</td><td class="lft"><code>hubspot_owner_id</code>, <code>source_type</code>, <code>hs_pipeline_stage</code></td><td class="lft">Propietario del ticket = Lucía Pérez AND Fuente = Correo</td></tr>
+<tr><td class="lft">Escaladas vs. Gestionadas por semana</td><td class="lft"><code>createdate</code>, <code>source_type</code>, <code>categoria_bot_lucia</code></td><td class="lft">Fecha de creación &gt; fecha AND Fuente=Correo AND el valor "Categoría bot Lucía" es conocido</td></tr>
+<tr><td class="lft">CSAT ("CSAT - Lucía -")</td><td class="lft"><code>hubspot_owner_id</code>, Nombre de la encuesta (objeto Respuestas a encuesta)</td><td class="lft">Propietario del ticket = Lucía Pérez AND Nombre de la encuesta = "Encuesta encendida para tickets CS - Sales"</td></tr>
+</tbody>
+</table></div>
+</div>
+</section>
+
+<section class="step" id="doc--chat">
+<div class="sh"><span class="sn">03</span><h2>Chat</h2></div>
+<p class="sq">Dos patrones de filtro: el Patrón A solo para Demanda, el Patrón B para el resto.</p>
+<div class="card">
+<h3>Patrón A — Demanda</h3>
+<pre class="code">Bandeja de entrada IN [lista de bandejas]
+AND Fuente = Live chat
+AND Asignado a bot = Falso
+AND Fecha de creación BETWEEN [inicio] AND [fin]
+AND URL de la fuente contiene [colombia, costaRica, mexico, republicaDominicana, venezuela]
+AND URL de la fuente contiene [alegra-web, alegra-pos, alegra-ne, contador, alegra-invoicing]</pre>
+<h3>Patrón B — el resto de las tarjetas</h3>
+<pre class="code">Bandeja de entrada IN [...]   -- lista larga en tarjetas transversales, puntual por país/producto
+AND Fuente = Live chat
+AND Flujo de chat IN [...]    -- se mueve junto con Bandeja, mismo criterio
+AND Fecha de creación BETWEEN [inicio] AND [fin]</pre>
+<p class="note">Se aplica el Patrón B salvo que la columna "Filtros específicos" de una métrica indique un filtro de <i>ownership</i> distinto.</p>
+</div>
+<div class="card">
+<div class="scrollx"><table class="dt">
+<thead><tr><th class="lft">Métrica</th><th class="lft">Propiedad(es) de HubSpot</th><th class="lft">Filtros específicos</th></tr></thead>
+<tbody>
+<tr><td class="lft">Demanda</td><td class="lft"><code>inboxId</code>, <code>source</code>, <code>createdAt</code>, URL de la fuente</td><td class="lft">Patrón A completo — no usa <code>chatflowId</code></td></tr>
+<tr><td class="lft">Ingresados al bot</td><td class="lft"><code>inboxId</code>, <code>source</code>, <code>chatflowId</code>, <code>createdAt</code>, <code>assignedToBot</code></td><td class="lft">Patrón B + Asignado a bot = Falso</td></tr>
+<tr><td class="lft">Escalados</td><td class="lft"><code>inboxId</code>, <code>source</code>, <code>chatflowId</code>, Propietario del hilo, <code>createdAt</code></td><td class="lft">Patrón B + Propietario NO es ninguno de (Isabel, Lucía Pérez) — sin filtro de "Asignado a bot"</td></tr>
+<tr class="hl"><td class="lft">Gestionados</td><td class="lft"><code>inboxId</code>, <code>source</code>, <code>chatflowId</code>, Propietario del hilo, <code>assignedToBot</code>, <code>createdAt</code></td><td class="lft">Patrón B + Propietario IN (Isabel, Lucía Pérez) + Asignado a bot = Falso</td></tr>
+<tr><td class="lft">% Gestión</td><td class="lft">Igual a Ingresados al bot</td><td class="lft">Patrón B + Asignado a bot = Falso</td></tr>
+<tr><td class="lft">CSAT gestionado por bot</td><td class="lft">Nombre de la encuesta, <code>inboxId</code>, diferencia de días, Propietario, <code>source</code>, <code>assignedToBot</code>, <code>chatflowId</code>, <code>createdAt</code></td><td class="lft">Encuesta IN [4 encuestas "Encuesta directa chat …"] + Patrón B + diferencia de días &lt; 14 + Propietario IN (Isabel, Lucía Pérez) + Asignado a bot = Falso</td></tr>
+<tr><td class="lft">Ingresados a Lucía por versión</td><td class="lft"><code>inboxId</code>, <code>source</code>, <code>chatflowId</code>, <code>assignedToBot</code>, <code>createdAt</code> (agrupado por país: VEN, CRI, MEX, DOM, COL)</td><td class="lft">Patrón B + Asignado a bot = Falso</td></tr>
+<tr><td class="lft">Tiempo promedio de solución</td><td class="lft"><code>inboxId</code>, <code>source</code>, <code>chatflowId</code>, Propietario del hilo, tiempo de cierre (Conversations Analytics), <code>createdAt</code></td><td class="lft">Patrón B + Asignado a bot = Falso + Propietario = Lucía Pérez únicamente (no Isabel)</td></tr>
+</tbody>
+</table></div>
+</div>
+<h3>Motivos de solicitud</h3>
+<div class="card">
+<p class="read">Cada bloque de motivos sale de una propiedad distinta del <b>ticket asociado</b> a la conversación, y se acota a una bandeja y flujo de chat concretos.</p>
+<div class="scrollx"><table class="dt">
+<thead><tr><th class="lft">Bloque</th><th class="lft">Propiedad</th><th class="lft">Filtros específicos</th></tr></thead>
+<tbody>
+<tr><td class="lft">COL AC</td><td class="lft"><code>ce_lever3</code></td><td class="lft">Bandeja=<code>COL-chat_sup</code> + Flujo=<code>Lucía AI COL AC Prod</code> + Fuente=Live chat + Fecha + Asignado a bot=Falso + "Motivo de solicitud - CE" conocido</td></tr>
+<tr><td class="lft">Payments</td><td class="lft"><code>solicitud_para_payment</code></td><td class="lft">Patrón B con lista larga completa de bandejas y flujos (no se acota a un producto) + Asignado a bot=Falso + "Solicitud para Payments" conocido</td></tr>
+<tr><td class="lft">Countries AC</td><td class="lft"><code>funcionalidad_de_ticket</code></td><td class="lft">Bandeja=<code>AC-chat_sup</code> + Flujo=<code>Lucía AI | AC+SF | CRI,MEX,DOM,VEN 100% | Prod</code> + Fuente=Live chat + Fecha + Asignado a bot=Falso + "Motivo de solicitud - Countries" conocido</td></tr>
+<tr><td class="lft">Contador</td><td class="lft"><code>motivo_de_solicitud_contador</code></td><td class="lft">Bandeja=<code>Contador-chat_Sup</code> o <code>AC-chat_sup</code> + Flujo=<code>Lucía AI | CONTADOR | Prod</code> + Fuente=Live chat + Fecha + Asignado a bot=Falso + "Motivo de solicitud Contador" conocido</td></tr>
+<tr><td class="lft">POS</td><td class="lft"><code>motivo_de_consulta_ticket_pos</code></td><td class="lft">Bandeja=<code>POS-chat_sup</code> + Flujo=<code>Lucía AI POS | COL,DOM 100% | Prod</code> + Fuente=Live chat + Fecha + Asignado a bot=Falso + "Motivo de consulta ticket POS" conocido</td></tr>
+<tr><td class="lft">NE</td><td class="lft"><code>propiedades_ne</code> — el panel la muestra como "Motivo de solicitud NE - Tickets"</td><td class="lft">Bandeja=<code>Nómina-chat_Sup</code> + Flujo=<code>Lucía AI NE | COL,DOM 100% | Prod</code> + Fuente=Live chat + Fecha + Asignado a bot=Falso + "Motivo de solicitud NE - Tickets" conocido</td></tr>
+<tr><td class="lft">Embudo de gestión (diagrama)</td><td class="lft">Derivado de Demanda, Ingresados al bot, Gestionados y Escalados</td><td class="lft">Sin filtro propio — es una visualización de las 4 métricas ya mapeadas</td></tr>
+</tbody>
+</table></div>
+</div>
+</section>
+
+<section class="step" id="doc--llamadas">
+<div class="sh"><span class="sn">04</span><h2>Llamadas</h2></div>
+<p class="sq">Único canal con un filtro común real para todas sus métricas.</p>
+<div class="card">
+<pre class="code">bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
+AND hs_createdate BETWEEN [inicio] AND [fin]</pre>
+<p class="note">Fuente de la verdad: ElevenLabs Conversational AI API (<code>agent_id</code> por bot en <code>elevenlabs_config.json</code>). Se cruza con HubSpot CRM, objeto <code>CALL</code>, únicamente para verificación.</p>
+</div>
+<div class="card">
+<div class="scrollx"><table class="dt">
+<thead><tr><th class="lft">Métrica</th><th class="lft">Propiedad(es)</th><th class="lft">Filtros específicos</th></tr></thead>
+<tbody>
+<tr><td class="lft">Demanda</td><td class="lft"><code>hs_createdate</code></td><td class="lft">Ninguno adicional</td></tr>
+<tr class="hl"><td class="lft">Gestionadas</td><td class="lft"><code>estado_llamada</code></td><td class="lft"><code>LOWER(estado_llamada) IN ('soporte correcto', 'seporte correcto')</code></td></tr>
+<tr><td class="lft">Escaladas a humano</td><td class="lft"><code>estado_llamada</code></td><td class="lft"><code>LIKE 'escalamiento%'</code> OR <code>LIKE 'transferencia por%'</code> OR <code>= 'escalation to human support'</code></td></tr>
+<tr><td class="lft">No contestadas</td><td class="lft"><code>estado_llamada</code></td><td class="lft"><code>IN ('no respuesta', 'se cuelga la llamada', 'usuario colgó', 'usuario colgo')</code></td></tr>
+<tr><td class="lft">Duración promedio</td><td class="lft"><code>hs_call_duration</code></td><td class="lft">Ninguno adicional</td></tr>
+<tr><td class="lft">Por versión (COL / DOM / Fuera de horario)</td><td class="lft"><code>bot_calificador</code></td><td class="lft">Agrupado por <code>bot_calificador</code></td></tr>
+<tr><td class="lft">Motivo de escalamiento</td><td class="lft"><code>estado_llamada</code> (texto tras "escalamiento por" / "transferencia por", normalizado)</td><td class="lft">Solo llamadas ya clasificadas como Escaladas</td></tr>
+<tr><td class="lft">% Completadas sin error técnico</td><td class="lft">ElevenLabs: <code>call_successful</code></td><td class="lft"><code>agent_id</code> IN [agentes de Lucía]</td></tr>
+<tr><td class="lft">Duración (cruce ElevenLabs)</td><td class="lft">ElevenLabs: <code>call_duration_secs</code></td><td class="lft"><code>agent_id</code> IN [agentes de Lucía]</td></tr>
+</tbody>
+</table></div>
+</div>
+</section>
+
+<section class="step" id="doc--sql">
+<div class="sh"><span class="sn">05</span><h2>SQL y fórmula por métrica</h2></div>
+<p class="sq">La consulta exacta y la fórmula que produce el número que se ve en el tablero.</p>
+
+<div class="card">
+<div class="sqlbox"><div class="sqlh">CORREO <span>objeto TICKET</span></div></div>
+
+<h3>Demanda</h3>
+<pre class="code">SELECT COUNT(*) AS demanda
+FROM TICKET
+WHERE source_type = 'EMAIL'
+  AND hs_pipeline &lt;&gt; '1860940'
+  AND hs_all_associated_contact_emails &lt;&gt; 'mailer-daemon@amazonses.com'
+  AND createdate BETWEEN :inicio AND :fin;</pre>
+<p class="read"><b>Demanda</b> = COUNT(tickets)</p>
+
+<h3>Gestionados</h3>
+<pre class="code">SELECT COUNT(*) AS gestionados
+FROM TICKET
+WHERE hubspot_owner_id = '89503870'
+  AND source_type = 'EMAIL'
+  AND hs_pipeline &lt;&gt; '1860940'
+  AND hs_all_associated_contact_emails &lt;&gt; 'mailer-daemon@amazonses.com'
+  AND createdate BETWEEN :inicio AND :fin;</pre>
+<p class="read"><b>Gestionados (%)</b> = (gestionados ÷ Demanda) × 100</p>
+
+<h3>Escalados</h3>
+<pre class="code">SELECT COUNT(*) AS escalados
+FROM TICKET
+WHERE escalamiento_lucia_email IS NOT NULL
+  AND hs_pipeline &lt;&gt; '1860940'
+  AND hs_all_associated_contact_emails &lt;&gt; 'mailer-daemon@amazonses.com'
+  AND createdate BETWEEN :inicio AND :fin;</pre>
+<p class="read"><b>Escalados (%)</b> = (escalados ÷ Demanda) × 100</p>
+
+<h3>CSAT (Promotor / Neutro / Detractor)</h3>
+<pre class="code">SELECT clasificacion_encuesta_ces_csat, COUNT(*) AS total
+FROM TICKET
+WHERE source_type = 'EMAIL'
+  AND clasificacion_encuesta_ces_csat IS NOT NULL
+  AND createdate BETWEEN :inicio AND :fin
+GROUP BY clasificacion_encuesta_ces_csat;</pre>
+<p class="read"><b>CSAT (Promotores) %</b> = Promoter ÷ (Promoter + Neutro + Detractor) × 100</p>
+
+<h3>Gestión de Lucía por stage</h3>
+<pre class="code">SELECT hs_pipeline, hs_pipeline_stage, COUNT(*) AS conteo
+FROM TICKET
+WHERE hubspot_owner_id = '89503870'
+  AND source_type = 'EMAIL'
+  AND hs_pipeline &lt;&gt; '1860940'
+  AND createdate BETWEEN :inicio AND :fin
+GROUP BY hs_pipeline, hs_pipeline_stage;</pre>
+<p class="read"><b>% stage</b> = conteo(stage) ÷ Demanda del período × 100</p>
+
+<h3>Escaladas vs. Gestionadas por semana</h3>
+<pre class="code">SELECT DATE_TRUNC('week', createdate) AS semana,
+  COUNT(*) FILTER (WHERE hubspot_owner_id = '89503870') AS gestionadas,
+  COUNT(*) FILTER (WHERE escalamiento_lucia_email IS NOT NULL) AS escaladas
+FROM TICKET
+WHERE source_type = 'EMAIL' AND hs_pipeline &lt;&gt; '1860940'
+  AND createdate BETWEEN :inicio AND :fin
+GROUP BY 1 ORDER BY 1;</pre>
+<p class="read"><b>% gestión (semana)</b> = gestionadas ÷ (gestionadas + escaladas) × 100</p>
+</div>
+
+<div class="card">
+<div class="sqlbox"><div class="sqlh">CHAT <span>Conversations API + tickets asociados</span></div></div>
+
+<h3>Demanda</h3>
+<pre class="code">GET /conversations/v3/conversations/threads
+  filtro: inboxId IN [bandejas chat_sup], source = LIVE_CHAT,
+          source_url CONTAINS [país] AND source_url CONTAINS [producto],
+          createdAt BETWEEN :inicio AND :fin</pre>
+<p class="read"><b>Demanda</b> = COUNT(conversaciones)</p>
+
+<h3>Ingresados al bot</h3>
+<pre class="code">GET /conversations/v3/conversations/threads
+  filtro: source = LIVE_CHAT, chatflowId IN [flujos "Lucía AI ..."],
+          createdAt BETWEEN :inicio AND :fin</pre>
+<p class="read"><b>Ingresados al bot</b> = COUNT(conversaciones con flujo Lucía disparado)</p>
+
+<h3>Escalados</h3>
+<pre class="code">GET /conversations/v3/conversations/threads
+  filtro: igual a Demanda + propiedad de traspaso a agente humano = verdadero</pre>
+<p class="read"><b>Escalados (%)</b> = (escalados ÷ Ingresados al bot) × 100</p>
+
+<h3>Gestionados</h3>
+<pre class="code">GET /conversations/v3/conversations/threads
+  filtro: igual a Demanda + owner IN ('89503870', '76066940') + assignedToBot = false</pre>
+<p class="read"><b>Gestionados (%)</b> = (gestionados ÷ Ingresados al bot) × 100</p>
+
+<h3>CSAT gestionado por bot</h3>
+<pre class="code">GET /crm/v3/objects/feedback_submissions/search
+  filtro: nombre de encuesta IN [...], propietario IN ('89503870', '76066940'),
+          diferencia de días entre encuesta y cierre &lt; 14
+  -- cruzado por conversationId con el resultado de threads</pre>
+<p class="read"><b>CSAT gestionado por bot (%)</b> = respuestas positivas ÷ total respuestas × 100</p>
+
+<h3>Ingresados a Lucía por versión</h3>
+<pre class="code">GET /conversations/v3/conversations/threads
+  filtro: igual a Demanda
+  -- agrupar client-side por inboxId/chatflowId → país (tabla de mapeo fija)</pre>
+<p class="read"><b>Ingresados(país)</b> = COUNT(conversaciones) AGRUPADO POR país</p>
+
+<h3>Motivos de solicitud (los 6 bloques)</h3>
+<p class="read">Todos siguen la misma forma; solo cambia la propiedad. El TICKET se toma del asociado a cada conversación resultante del filtro común de Chat.</p>
+<pre class="code">SELECT &lt;propiedad&gt;, COUNT(*) AS conteo
+FROM TICKET
+WHERE hs_pipeline = '125444762' AND &lt;propiedad&gt; IS NOT NULL
+  AND createdate BETWEEN :inicio AND :fin
+GROUP BY &lt;propiedad&gt;;</pre>
+<div class="defs">
+<div><dt>COL AC</dt><dd><code>ce_lever3</code></dd></div>
+<div><dt>Payments</dt><dd><code>solicitud_para_payment</code></dd></div>
+<div><dt>Countries AC</dt><dd><code>funcionalidad_de_ticket</code></dd></div>
+<div><dt>Contador</dt><dd><code>motivo_de_solicitud_contador</code></dd></div>
+<div><dt>POS</dt><dd><code>motivo_de_consulta_ticket_pos</code></dd></div>
+<div><dt>NE</dt><dd><code>propiedades_ne</code></dd></div>
+</div>
+<p class="read"><b>% motivo</b> = conteo(motivo) ÷ total de motivos capturados en el período × 100</p>
+
+<h3>Tiempo promedio de solución</h3>
+<pre class="code">Conversations Analytics API — métrica de tiempo de cierre
+  filtro: igual al filtro común de Chat</pre>
+<p class="read"><b>Tiempo promedio de solución</b> = AVG(tiempo de cierre) en minutos</p>
+
+<h3>Embudo de gestión (diagrama)</h3>
+<p class="read">Sin query propia. Se construye con los 4 valores ya obtenidos arriba:</p>
+<p class="read"><b>Tasa de contención</b> = Gestionados ÷ Ingresados al bot<br><b>% no ingresaron al flujo</b> = (Demanda − Ingresados al bot) ÷ Demanda</p>
+</div>
+
+<div class="card">
+<div class="sqlbox"><div class="sqlh">LLAMADAS <span>objeto CALL + ElevenLabs</span></div></div>
+
+<h3>Demanda</h3>
+<pre class="code">SELECT COUNT(*) AS demanda
+FROM CALL
+WHERE bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
+  AND hs_createdate BETWEEN :inicio AND :fin;</pre>
+<p class="read"><b>Demanda</b> = COUNT(llamadas)</p>
+
+<h3>Gestionadas</h3>
+<pre class="code">SELECT COUNT(*) AS gestionadas
+FROM CALL
+WHERE bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
+  AND LOWER(estado_llamada) IN ('soporte correcto', 'seporte correcto')
+  AND hs_createdate BETWEEN :inicio AND :fin;</pre>
+<p class="read"><b>Gestionadas (%)</b> = (gestionadas ÷ Demanda) × 100</p>
+
+<h3>Escaladas a humano</h3>
+<pre class="code">SELECT COUNT(*) AS escaladas
+FROM CALL
+WHERE bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
+  AND (LOWER(estado_llamada) LIKE 'escalamiento%'
+       OR LOWER(estado_llamada) LIKE 'transferencia por%'
+       OR LOWER(estado_llamada) = 'escalation to human support')
+  AND hs_createdate BETWEEN :inicio AND :fin;</pre>
+<p class="read"><b>Escaladas (%)</b> = (escaladas ÷ Demanda) × 100</p>
+
+<h3>No contestadas</h3>
+<pre class="code">SELECT COUNT(*) AS no_contestadas
+FROM CALL
+WHERE bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
+  AND LOWER(estado_llamada) IN ('no respuesta', 'se cuelga la llamada', 'usuario colgó', 'usuario colgo')
+  AND hs_createdate BETWEEN :inicio AND :fin;</pre>
+<p class="read"><b>No contestadas (%)</b> = (no_contestadas ÷ Demanda) × 100</p>
+
+<h3>Duración promedio</h3>
+<pre class="code">SELECT AVG(hs_call_duration) / 1000.0 AS duracion_prom_seg
+FROM CALL
+WHERE bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
+  AND hs_createdate BETWEEN :inicio AND :fin;</pre>
+<p class="read"><b>Duración promedio (seg)</b> = AVG(hs_call_duration) ÷ 1000</p>
+
+<h3>Por versión (COL / DOM / Fuera de horario)</h3>
+<pre class="code">SELECT bot_calificador,
+  COUNT(*) AS demanda,
+  SUM(CASE WHEN LOWER(estado_llamada) IN ('soporte correcto', 'seporte correcto') THEN 1 ELSE 0 END) AS gestionadas,
+  AVG(hs_call_duration) / 1000.0 AS duracion_prom_seg
+FROM CALL
+WHERE hs_createdate BETWEEN :inicio AND :fin
+GROUP BY bot_calificador;</pre>
+<p class="read"><b>% gestión (versión)</b> = gestionadas ÷ demanda × 100</p>
+
+<h3>Motivo de escalamiento</h3>
+<pre class="code">SELECT estado_llamada, COUNT(*) AS conteo
+FROM CALL
+WHERE bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
+  AND (LOWER(estado_llamada) LIKE 'escalamiento%' OR LOWER(estado_llamada) LIKE 'transferencia por%')
+  AND hs_createdate BETWEEN :inicio AND :fin
+GROUP BY estado_llamada;
+-- el motivo (Petición del usuario / Desconocimiento / Falta de acceso / Error de cobro)
+-- se extrae del texto tras "por" y se normaliza en el script de fetch</pre>
+<p class="read"><b>% motivo</b> = conteo(motivo) ÷ total de escalamientos con motivo capturado × 100</p>
+
+<h3>% Completadas sin error técnico y duración (ElevenLabs)</h3>
+<pre class="code">GET /v1/convai/conversations
+  ?agent_id=[agente]&amp;call_start_after_unix=:inicio&amp;call_start_before_unix=:fin</pre>
+<p class="read"><b>% completadas sin error técnico</b> = COUNT(call_successful = 'success') ÷ COUNT(*) × 100<br><b>Duración promedio (ElevenLabs)</b> = AVG(call_duration_secs)</p>
+</div>
+</section>
+
+<section class="step" id="doc--notas">
+<div class="sh"><span class="sn">06</span><h2>Notas de construcción</h2></div>
+<p class="sq">Supuestos, exclusiones y lo que queda pendiente de confirmar.</p>
+<div class="card">
+<ul class="read acts">
+<li><b>Correo — sin filtro común.</b> 7 métricas de dashboard, cada una con su propio filtro real de HubSpot. Un octavo widget del panel, "Correos que gestiona Lucía por estado", no está en el dashboard: es la misma información de "Gestión de Lucía por stage" desglosada por semana.</li>
+<li><b>Correo — dependencia del objeto Conversaciones.</b> Demanda y % Gestión dependen del filtro nativo "Bandeja de entrada = Service Mail Inbox", que no tiene equivalente en Tickets.</li>
+<li><b>Correo — exclusiones propias de la automatización.</b> Las cifras nativas de HubSpot en Gestionados y Escalados incluyen la pipeline "Correos que no requieren respuesta" (<code>hs_pipeline = '1860940'</code>, notificaciones automáticas); la automatización la excluye aparte, junto con bounces de <code>mailer-daemon@amazonses.com</code> (comparación exacta).</li>
+<li><b>Chat — cobertura del panel.</b> 14 de los 21 widgets del panel de HubSpot están confirmados y cubren el 100% de lo que hoy está en el dashboard. Los 7 restantes (posiciones 7, 9-14) no corresponden a ninguna métrica del dashboard actual.</li>
+<li><b>Chat — bandejas no homogéneas <span class="prio media">pendiente</span></b> La lista de "Bandeja de entrada" no es idéntica entre todas las tarjetas: Demanda incluye una bandeja adicional ("Fundaciones") y Tiempo promedio de solución trae dos extra ("Fundaciones" y "Claro-chat_sup"). Falta confirmar con la administradora del panel (Estefanía) si son intencionales.</li>
+<li><b>Chat — Embudo de gestión <span class="prio media">pendiente</span></b> Su definición como visualización derivada (sin filtro propio) viene de una revisión anterior a la captura de este panel, no de un panel de filtros propio verificado.</li>
+<li><b>Llamadas — sin cambios.</b> Ya automatizado en producción con las consultas documentadas.</li>
+</ul>
+</div>
+</section>
+
+</div>
+</div></main>
+<div class="tip" id="tip"></div>
+<script>
+// El selector de perfil. Facturacion y ERP nunca se muestran juntos: cambiar de chip oculta un
+// panel y muestra el otro. Los anclas del nav se resuelven contra el panel visible, porque los ids
+// llevan el perfil adelante ('erp--s-fuerza').
+var _icp=(document.querySelector('.chip-icp.on')||{}).dataset
+        ? document.querySelector('.chip-icp.on').dataset.icp : null;
+
+// Cada perfil tiene SU indice, porque tiene sus propias secciones: facturacion 11 y ERP 13, con
+// titulos distintos. _links se recalcula al cambiar de chip; si se tomaran los de los dos navs a
+// la vez, el scroll-spy marcaria entradas del perfil que no se esta viendo.
+function _navActivo(){
+  return document.querySelector('.navlinks[data-icp="'+_icp+'"]');
+}
+var _links=[];
+function _rearma(){
+  var n=_navActivo();
+  _links=n?[].slice.call(n.querySelectorAll('a')):[];
+  _links.forEach(a=>{
+    if(a._lig)return;
+    a._lig=1;
+    a.addEventListener('click',function(){
+      var s=document.getElementById(_icp+'--'+a.dataset.sec);
+      if(s)window.scrollTo({top:s.offsetTop-90,behavior:'smooth'});
+    });
+  });
+}
+function _upd(){
+  var y=window.scrollY+120,i=0;
+  var ss=_links.map(a=>document.getElementById(_icp+'--'+a.dataset.sec));
+  ss.forEach((s,k)=>{if(s&&s.offsetTop<=y)i=k;});
+  _links.forEach((a,k)=>a.classList.toggle('active',k===i));
+}
+_rearma();
+[].slice.call(document.querySelectorAll('.chip-icp')).forEach(b=>{
+  b.addEventListener('click',function(){
+    if(b.dataset.icp===_icp)return;
+    _icp=b.dataset.icp;
+    document.querySelectorAll('.chip-icp').forEach(x=>x.classList.toggle('on',x.dataset.icp===_icp));
+    document.querySelectorAll('.pane').forEach(p=>{p.hidden=(p.dataset.icp!==_icp);});
+    document.querySelectorAll('.navlinks').forEach(n=>{n.hidden=(n.dataset.icp!==_icp);});
+    _rearma();
+    window.scrollTo({top:0});
+    _upd();
+  });
+});
+window.addEventListener('scroll',_upd,{passive:true});_upd();
+</script>
+</body></html>
