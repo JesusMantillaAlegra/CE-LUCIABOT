@@ -428,25 +428,37 @@ function runRender(historyData) {
   }
 }
 
-// Carga de datos: se abre normalmente con doble clic (file://), y Chrome bloquea
-// fetch() de archivos locales por CORS (falla en silencio, sin mensaje claro).
-// Por eso el dato principal se carga como <script src="./lucia_dashboard_history.js">
-// (window.LUCIA_HISTORY), que sí funciona desde file://. Si ese archivo no está
-// (p.ej. si en el futuro esto se sirve desde un servidor real), se intenta con
-// fetch() del JSON como respaldo.
-//
-if (typeof window.LUCIA_HISTORY !== 'undefined') {
-  runRender(window.LUCIA_HISTORY);
-} else {
-  fetch('./lucia_dashboard_history.json')
-    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(runRender)
-    .catch(e => {
-      console.error('Error al cargar datos (ni lucia_dashboard_history.js ni el JSON via fetch funcionaron):', e);
-      document.getElementById('lucia-main').style.display = 'none';
-      document.getElementById('fallback').style.display = 'block';
-    });
-}
+// Carga de datos: MIGRADO 05-sep-2026 a KV (ver lib/store.mjs + api/history.js) --
+// el histórico real ya no vive en un archivo del repo que el cron reescribe con
+// commit+push, sino en Redis. Por eso ahora se intenta PRIMERO GET /api/history
+// (en vivo, siempre al día) y solo si eso falla (servido como file:// donde no hay
+// backend, o el endpoint/KV no responde) se cae a lo de antes: window.LUCIA_HISTORY
+// -- <script src="./lucia_dashboard_history.js">, que sí funciona abierto con doble
+// clic porque Chrome bloquea fetch() de archivos locales por CORS -- y como último
+// respaldo, fetch() directo del JSON. lucia_dashboard_history.json/.js quedan en el
+// repo como semilla histórica (ver api/seed.js) y como respaldo para pruebas locales,
+// pero dejan de ser la fuente de verdad en producción.
+fetch('/api/history')
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(data => {
+    if (!data?.snapshots?.length) throw new Error('KV respondió sin snapshots todavía');
+    runRender(data);
+  })
+  .catch(e => {
+    console.warn('No se pudo cargar /api/history (normal si esto se abrió con file://, o si KV aún no tiene datos) -- usando respaldo local:', e.message);
+    if (typeof window.LUCIA_HISTORY !== 'undefined') {
+      runRender(window.LUCIA_HISTORY);
+    } else {
+      fetch('./lucia_dashboard_history.json')
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(runRender)
+        .catch(e2 => {
+          console.error('Error al cargar datos (ni /api/history, ni lucia_dashboard_history.js, ni el JSON via fetch funcionaron):', e2);
+          document.getElementById('lucia-main').style.display = 'none';
+          document.getElementById('fallback').style.display = 'block';
+        });
+    }
+  });
 
 // ══════════ FILTRO: PERÍODO ══════════
 // Mismo componente visual y misma lógica de cómputo de rango que el dashboard de
