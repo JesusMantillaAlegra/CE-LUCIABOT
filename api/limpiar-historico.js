@@ -14,6 +14,13 @@
 // Por seguridad, por default es DRY RUN: devuelve qué borraría, sin tocar
 // KV. Hay que pasar ?aplicar=1 para que de verdad reemplace el histórico.
 //
+// ?ids=id1,id2 (agregado 05-sep-2026): borra puntualmente esos ids exactos,
+// además de (no en vez de) los vacíos de siempre -- para sacar a mano un
+// snapshot puntual que se coló por error, como el correo-month-2026-10 /
+// llamadas-month-2026-10 que generó la primera corrida de cubos-refrescar
+// por un off-by-one en mesesEnRango (ya corregido en lib/cubos.mjs, pero eso
+// no borra lo que ya había quedado escrito en KV).
+//
 // Requiere el mismo CRON_SECRET que /api/seed y /api/snapshot.
 //
 // Uso:
@@ -21,6 +28,8 @@
 //     Invoke-WebRequest -Method POST -Uri ".../api/limpiar-historico" -Headers @{ Authorization = "Bearer <CRON_SECRET>" }
 //   Aplicar de verdad:
 //     Invoke-WebRequest -Method POST -Uri ".../api/limpiar-historico?aplicar=1" -Headers @{ Authorization = "Bearer <CRON_SECRET>" }
+//   Borrar ids puntuales (además de los vacíos), aplicando de una:
+//     Invoke-WebRequest -Method POST -Uri ".../api/limpiar-historico?aplicar=1&ids=correo-month-2026-10,llamadas-month-2026-10" -Headers @{ Authorization = "Bearer <CRON_SECRET>" }
 
 import { leerHistorico, reemplazarHistorico } from "../lib/store.mjs";
 
@@ -38,9 +47,17 @@ export default async function handler(req, res) {
   }
 
   try {
+    const idsPuntuales = new Set(
+      String(req.query?.ids || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    );
+    const debeBorrarse = (s) => estaCompletamenteVacio(s) || idsPuntuales.has(s.id);
+
     const historico = await leerHistorico();
-    const aBorrar = historico.filter(estaCompletamenteVacio);
-    const aConservar = historico.filter((s) => !estaCompletamenteVacio(s));
+    const aBorrar = historico.filter(debeBorrarse);
+    const aConservar = historico.filter((s) => !debeBorrarse(s));
 
     const resumen = {
       total_actual: historico.length,
