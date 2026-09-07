@@ -21,20 +21,43 @@ alcance Colombia, `source_type = EMAIL`.
 
 ---
 
-## Chat (Conversations) — KPIs principales
+## Chat (Tickets) — KPIs principales
 
-**Filtro base:** bandejas COL-chat_sup, AC-chat_sup, Contador-chat_Sup, Nómina-chat_Sup, POS-chat_sup.
+**ACTUALIZADO 07-sep-2026.** La definición anterior de esta sección (basada en hilos de la
+Conversations API y en propiedades `hs_has_first_assigned_bot_id` / `hs_conversation_session_is_bot`)
+quedó **descartada**: esas propiedades no están confirmadas para la API pública, y la inspección de
+hilos reales de agosto 2026 (ver `diagnosticar_actores_chat2.mjs`) no encontró ningún actor de tipo
+`BOT` en las conversaciones de Lucía — Lucía corre como una **integración externa** que responde a
+través de un "agent seat" fijo en HubSpot (`hubspot_owner_id = 89503870`, mismo owner que en Correo),
+no como un chatflow nativo. La definición vigente usa **tickets** (objeto Ticket, no Conversations),
+igual que Correo y Llamadas.
+
+**Filtro base:** `Pipeline = Chats_Sup (125444762)`.
 
 | Métrica | Fórmula técnica | Fuente / filtros específicos | Qué mide a nivel de negocio |
 |---|---|---|---|
-| **Demanda** | `COUNT(*)` de hilos con `createdAt` en el período, en las 5 bandejas de Lucía | HubSpot Conversations API, objeto Thread (`conversations/v3/conversations/threads`), filtrado por `inboxId`. Sin filtro de flujo, para capturar toda la demanda del canal | Todas las conversaciones que llegaron a las bandejas de Lucía, hayan entrado o no al flujo del bot. |
-| **Ingresados al bot** | `COUNT(*) WHERE hs_has_first_assigned_bot_id = true`, sobre el universo de Demanda | HubSpot Conversations API, objeto Conversation session | De la demanda, cuántas conversaciones entraron al flujo automatizado de Lucía. |
-| **Gestionados** | `COUNT(*) WHERE hs_conversation_session_is_bot = true`, sobre el universo de Ingresados | HubSpot Conversations API, objeto Conversation session | De lo que entró al bot, cuánto se resolvió sin que un humano tomara la conversación. |
-| **Escalados** | Complemento de Gestionados dentro de Ingresados (`Ingresados − Gestionados`) | HubSpot Conversations API, objeto Conversation session (marca de traspaso a agente vía `hs_conversation_session_agent_join_time`) | De lo que entró al bot, cuánto terminó en manos de un agente humano. |
-| **% Gestión / % Escalados** | `% Gestión = Gestionados / Ingresados al bot · 100`<br>`% Escalados = Escalados / Ingresados al bot · 100` | Calculado en el dashboard. Es sobre Ingresados, no sobre Demanda total (a diferencia de Correo) | Tasa de contención del bot en Chat. |
-| **CSAT bot** | `% = positivas / total` sobre respuestas de encuesta asociadas a conversaciones de Lucía | HubSpot, objeto Feedback Submissions vinculado a `Conversation session` | Satisfacción del cliente con la atención de Lucía en Chat. |
-| **Tiempo prom. de solución** | `AVG(hs_conversation_session_duration)` en minutos, sobre el universo de Gestionados | HubSpot Conversations API, objeto Conversation session | Qué tan rápido se resuelve una conversación gestionada por Lucía. |
-| **Ingresados por versión (país)** | Desglose de Ingresados agrupado por país del contacto asociado | HubSpot, cruce Conversation session + Contact | En qué países está entrando la demanda al bot, para ver el avance del rollout. |
+| **Demanda** | `COUNT(*)` de tickets con `createdate` en el período, `hs_pipeline = 125444762` | HubSpot, objeto Ticket (`chatDemandaTicketsCount()`). Cubre ~99% del volumen real de `source_type = CHAT` | Todo lo que llegó a la pipeline de Chat en el período, lo haya tocado Lucía o no. |
+| **Gestionados** | `COUNT(*) WHERE hubspot_owner_id = 89503870`, sobre el universo de Demanda | HubSpot, objeto Ticket. Validado 07-sep-2026: coincide al 100% (1105/1105 en una muestra real de agosto) con la propiedad `categoria_bot_lucia = "gestionadas"` | Cuántos tickets de Chat resolvió Lucía sin que un agente humano tuviera que intervenir. |
+| **Escalados** | `COUNT(*) WHERE inbox_id_objetivo IS NOT NULL`, sobre el universo de Demanda | HubSpot, objeto Ticket, propiedad `inbox_id_objetivo` (label real: "Escalamiento inbox objetivo") | Cuántos tickets de Chat terminaron reasignados a un agente humano. **Señal incompleta** — ver limitación abajo. |
+| **Ingresados al bot** | `Gestionados + Escalados` (aproximación) | Calculado en el dashboard | De la demanda, cuánto efectivamente pasó por Lucía (resuelto o escalado). |
+| **% Gestión / % Escalados** | `% Gestión = Gestionados / Ingresados al bot · 100`<br>`% Escalados = Escalados / Ingresados al bot · 100` | Calculado en el dashboard | Tasa de contención del bot en Chat. |
+| **CSAT bot / Tiempo prom. de solución / Ingresados por versión** | — | **No implementado en vivo.** Se dejan `null`/vacíos a propósito (no inventar sin fuente confirmada) | Pendiente: no hay todavía una propiedad de HubSpot confirmada para estos tres datos en Chat. |
+
+**⚠️ Limitaciones conocidas (07-sep-2026), no resueltas:**
+
+- **Escalados subcuenta.** Confirmado contra los números que antes calculaba HubSpot AI (Breeze) con otra
+  metodología (hilos/bandejas): `inbox_id_objetivo` da resultados muy por debajo de la realidad incluso en
+  agosto (104 vs. ~1.534 esperados). Es la única propiedad de ticket con una señal de escalado no trivial
+  que se ha encontrado hasta ahora, pero claramente no captura todos los casos. Pendiente encontrar una
+  señal mejor (candidato sin explorar: los comentarios internos que deja el bot en el hilo, tipo
+  "RESUMEN DEL BOT — Caso escalado automáticamente", ver `diagnosticar_thread_real.mjs`).
+- **Febrero y marzo 2026 dan Gestionados = 0 / Escalados = 0 en vivo.** No es un error de código: es lo
+  que HubSpot devuelve hoy bajo esta definición. El bot (entonces llamado "Isabel", ver wiki) sí operaba y
+  resolvía casos reales desde antes, pero el tracking por `hubspot_owner_id` / `inbox_id_objetivo` no
+  llega tan atrás — se decidió (Jesús, 07-sep-2026) NO restaurar cifras viejas hardcodeadas y en su lugar
+  quitar esos dos meses del histórico (`api/limpiar-historico`), dejando el selector de período arrancar
+  en Abril 2026 para Chat. Abril y mayo sí muestran Gestionados reales, pero Escalados sigue en 0 —
+  la señal de `inbox_id_objetivo` solo empieza a aparecer de forma consistente desde junio 2026.
 
 ---
 
@@ -55,6 +78,29 @@ ambas plataformas antes de publicar cada corte.
 | **Por versión (país) — COL / DOM** | Desglose de demanda, gestionadas y escaladas por `bot_calificador` de país | HubSpot, objeto Call | Compara el desempeño del IVR entre Colombia y República Dominicana. |
 | **"Fuera de horario"** *(mostrado aparte)* | `COUNT(*)` de llamadas con `bot_calificador = 'lucia ivr fuerahorario'` | HubSpot, objeto Call | Llamadas recibidas fuera del horario laboral — se muestra separado del comparativo de países porque no es un tercer país, se solapa con Colombia. |
 | **Motivo de escalamiento** | `COUNT(*)` agrupado por `motivo_escalamiento` | HubSpot, propiedad de Call | Por qué una llamada terminó en un agente humano en vez de resolverla el bot. |
+
+---
+
+## Actualización automática del tablero
+
+El tablero (`index.html`) NO calcula nada en vivo cuando alguien lo abre — solo lee `GET /api/history`,
+que lee del histórico guardado en KV (Redis). Ese histórico se actualiza solo por dos crons de Vercel
+(definidos en `vercel.json`), ambos corren en horario UTC:
+
+| Cron | Horario (UTC) | Hora Colombia | Qué hace |
+|---|---|---|---|
+| `/api/cubos-refrescar` | `0 11 * * 3` — **miércoles** | 6:00 a.m. | Recalcula en vivo contra HubSpot los cubos mensuales de Correo, Llamadas y Chat: crea los meses que falten y recalcula los "inestables" (el mes en curso y el anterior, mientras no hayan pasado 60 días desde que terminaron) — ver `lib/cubos.mjs`. Los meses ya "estables" (>60 días) no se tocan más. |
+| `/api/cron/actualizar-semanal` | `0 11 * * 3` — **miércoles** | 6:00 a.m. | Job semanal más antiguo (Correo/Llamadas + detalle técnico de ElevenLabs para Llamadas). |
+
+En la práctica, para Correo/Llamadas/Chat: **el mes en curso se refresca solo una vez a la semana**
+(miércoles, 6 a.m. Colombia) — mismo día y hora que el tablero de Soporte. Si alguien mira el tablero
+en otro momento de la semana, va a ver el mismo corte hasta el próximo miércoles — no hay actualización
+en tiempo real. Para forzar un refresco fuera de horario (por ejemplo después de corregir un filtro),
+se llama a mano el endpoint con el `CRON_SECRET`:
+
+```powershell
+Invoke-WebRequest -Uri "https://ce-lucia-dashboard.vercel.app/api/cubos-refrescar" -Method POST -Headers @{Authorization = "Bearer $env:CRON_SECRET"} -UseBasicParsing
+```
 
 ---
 
