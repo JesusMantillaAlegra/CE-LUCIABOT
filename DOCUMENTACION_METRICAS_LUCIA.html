@@ -215,46 +215,49 @@ h3{margin:26px 0 10px}
   <div class="sb-scroll">
     <div class="chips-icp"><button class="chip-icp on" data-icp="doc">Métricas</button></div>
     <div class="sb-lbl">Secciones</div>
-    <nav class="navlinks" data-icp="doc"><a data-sec="resumen"><span class="num">01</span><span class="nl"><b>Resumen</b><span>fuentes y alcance</span></span></a><a data-sec="correo"><span class="num">02</span><span class="nl"><b>Correo</b><span>7 métricas del panel de HubSpot</span></span></a><a data-sec="chat"><span class="num">03</span><span class="nl"><b>Chat</b><span>demanda, contención y motivos</span></span></a><a data-sec="llamadas"><span class="num">04</span><span class="nl"><b>Llamadas</b><span>IVR + cruce ElevenLabs</span></span></a><a data-sec="sql"><span class="num">05</span><span class="nl"><b>SQL y fórmulas</b><span>cómo se calcula cada número</span></span></a><a data-sec="notas"><span class="num">06</span><span class="nl"><b>Notas de construcción</b><span>supuestos y pendientes</span></span></a></nav>
+    <nav class="navlinks" data-icp="doc"><a data-sec="resumen"><span class="num">01</span><span class="nl"><b>Resumen</b><span>fuentes y alcance</span></span></a><a data-sec="correo"><span class="num">02</span><span class="nl"><b>Correo</b><span>API directa, objeto Ticket</span></span></a><a data-sec="chat"><span class="num">03</span><span class="nl"><b>Chat</b><span>tickets, Chats_Sup</span></span></a><a data-sec="llamadas"><span class="num">04</span><span class="nl"><b>Llamadas</b><span>IVR + cruce ElevenLabs</span></span></a><a data-sec="sql"><span class="num">05</span><span class="nl"><b>SQL y fórmulas</b><span>cómo se calcula cada número</span></span></a></nav>
   </div>
 </aside>
 <main class="main"><div class="wrap">
 <div class="pane" data-icp="doc">
 <header class="hd"><div><h1>Métricas del tablero de Lucía</h1><p class="sub">Cómo se calcula cada número y de qué fuente sale — CE-luciaBot</p></div></header>
-<p class="meta">Correo y Chat: HubSpot Reports Dashboard <code>6180490</code> — vistas <code>20862583</code> (Correo) y <code>20257473</code> (Chat). Llamadas: ElevenLabs Conversational AI API, cruzada con HubSpot CRM (objeto <code>CALL</code>) solo para verificación.</p>
+<p class="meta">Correo y Chat: API directa de HubSpot, objeto <code>TICKET</code> (<code>crm/v3/objects/tickets/search</code>). Llamadas: objeto <code>CALL</code> de HubSpot, cruzado con la API de ElevenLabs Conversational AI solo para verificación.</p>
 
 <div class="card crit" style="margin-bottom:18px">
-<p class="read"><b>Sin filtro base único.</b> A diferencia del tablero de Soporte, aquí cada canal tiene su propia lógica de filtrado — e incluso dentro de Correo cada tarjeta tiene su filtro real propio, verificado directamente sobre el panel de HubSpot. Los filtros quedan documentados métrica por métrica.</p>
+<p class="read"><b>Sin filtro base único.</b> Cada canal tiene su propia lógica de filtrado — e incluso dentro de Correo cada tarjeta tiene su filtro real propio, verificado directamente contra HubSpot. Los filtros quedan documentados métrica por métrica.</p>
 </div>
 
 <section class="step" id="doc--resumen">
 <div class="sh"><span class="sn">01</span><h2>Alcance y fuentes</h2></div>
 <p class="sq">Tres canales, tres orígenes de datos distintos.</p>
 <div class="card">
-<p class="read">Este documento es la referencia de cómo se construye cada número del tablero de Lucía (asistente automatizada). Se divide en los tres canales que atiende — <b>Correo</b>, <b>Chat</b> y <b>Llamadas</b> — porque cada uno se alimenta de un objeto y una API diferentes, y por lo tanto tiene definiciones de "gestionado" y "escalado" que no son intercambiables entre sí.</p>
+<p class="read">Referencia de cómo se construye cada número del tablero de Lucía. Se divide en los tres canales que atiende — <b>Correo</b>, <b>Chat</b> y <b>Llamadas</b> — cada uno con su propio objeto de HubSpot y sus propias definiciones de "gestionado" y "escalado". Los tres canales se calculan por <b>API directa de HubSpot</b> (objeto <code>TICKET</code> para Correo y Chat, objeto <code>CALL</code> para Llamadas) y se guardan en cortes mensuales.</p>
 <div class="lado">
-<div class="l"><div class="lt">Correo</div><p class="read">Objeto <code>TICKET</code> de HubSpot. 7 métricas de dashboard, cada una con filtro propio. Depende parcialmente del filtro nativo "Bandeja de entrada" del objeto Conversaciones, que no tiene equivalente en Tickets.</p></div>
-<div class="l"><div class="lt">Chat</div><p class="read">Conversations API (<code>threads</code>) + tickets asociados para los motivos de solicitud. 14 de los 21 widgets del panel están confirmados y cubren el 100% del tablero actual.</p></div>
-<div class="l"><div class="lt">Llamadas</div><p class="read">ElevenLabs Conversational AI API como fuente de la verdad (<code>agent_id</code> por bot en <code>elevenlabs_config.json</code>), cruzada con el objeto <code>CALL</code> de HubSpot para verificación. Ya automatizado en producción.</p></div>
+<div class="l"><div class="lt">Correo</div><p class="read">Objeto <code>TICKET</code>, pipeline <code>COL_Sup</code> (<code>1857341</code>). Demanda, Gestionados, Escalados, % Gestión/Escalados, Tiempo prom. de gestión, mediana de cierre y mediana de 1ª respuesta.</p></div>
+<div class="l nuevo"><div class="lt">Chat</div><p class="read">Objeto <code>TICKET</code>, pipeline <code>Chats_Sup</code> (<code>125444762</code>). Demanda, Gestionados, Escalados, Ingresados al bot.</p></div>
+<div class="l"><div class="lt">Llamadas</div><p class="read">Objeto <code>CALL</code> de HubSpot (<code>bot_calificador</code>), cruzado por el job semanal contra ElevenLabs Conversational AI para verificación. Demanda, Gestionadas, Escaladas, No contestadas, Duración promedio, Por versión, Motivo de escalamiento.</p></div>
 </div>
-<div class="mira"><span class="et">Owner IDs</span>Lucía Pérez = <code>89503870</code> · Isabel = <code>76066940</code>. Se usan en Correo (propietario del ticket) y en Chat (propietario del hilo).</div>
+<div class="mira"><span class="et">Owner ID</span>Lucía Pérez = <code>89503870</code>. Se usa en Correo y en Chat como propietario del ticket.</div>
 </div>
 </section>
 
 <section class="step" id="doc--correo">
 <div class="sh"><span class="sn">02</span><h2>Correo</h2></div>
-<p class="sq">No hay un único filtro que se repita igual en las 7 tarjetas — cada widget tiene su filtro real verificado sobre el panel.</p>
+<p class="sq">API directa de HubSpot, objeto <code>TICKET</code>.</p>
 <div class="card">
 <div class="scrollx"><table class="dt">
 <thead><tr><th class="lft">Métrica</th><th class="lft">Propiedad(es) de HubSpot</th><th class="lft">Filtros específicos</th></tr></thead>
 <tbody>
-<tr><td class="lft">Demanda</td><td class="lft"><code>source_type</code>, <code>createdate</code>, <code>hd_version</code>, <code>hs_pipeline</code>, Bandeja de entrada (Conversaciones)</td><td class="lft">Fuente=Correo AND Fecha de creación &gt; fecha AND HD-Versión=[país] AND Pipeline=[pipeline del país] AND Bandeja de entrada=Service Mail Inbox</td></tr>
-<tr><td class="lft">Gestionados</td><td class="lft"><code>hubspot_owner_id</code>, <code>source_type</code>, <code>createdate</code></td><td class="lft">Propietario del ticket = Lucía Pérez (<code>89503870</code>) AND Fuente=Correo AND Fecha de creación &gt; fecha</td></tr>
-<tr><td class="lft">Escalados</td><td class="lft"><code>escalamiento_lucia_email</code>, <code>createdate</code></td><td class="lft">El valor "Escalamiento Lucia Email" es conocido AND Fecha de creación &gt; fecha</td></tr>
-<tr class="hl"><td class="lft">% Gestión</td><td class="lft"><code>source_type</code>, <code>createdate</code>, <code>hs_pipeline</code>, <code>hd_version</code>, Bandeja de entrada</td><td class="lft">Mismo filtro que Demanda, sin Propietario</td></tr>
-<tr><td class="lft">Gestión de Lucía por stage</td><td class="lft"><code>hubspot_owner_id</code>, <code>source_type</code>, <code>hs_pipeline_stage</code></td><td class="lft">Propietario del ticket = Lucía Pérez AND Fuente = Correo</td></tr>
-<tr><td class="lft">Escaladas vs. Gestionadas por semana</td><td class="lft"><code>createdate</code>, <code>source_type</code>, <code>categoria_bot_lucia</code></td><td class="lft">Fecha de creación &gt; fecha AND Fuente=Correo AND el valor "Categoría bot Lucía" es conocido</td></tr>
-<tr><td class="lft">CSAT ("CSAT - Lucía -")</td><td class="lft"><code>hubspot_owner_id</code>, Nombre de la encuesta (objeto Respuestas a encuesta)</td><td class="lft">Propietario del ticket = Lucía Pérez AND Nombre de la encuesta = "Encuesta encendida para tickets CS - Sales"</td></tr>
+<tr><td class="lft">Demanda</td><td class="lft"><code>source_type</code>, <code>version</code>, <code>createdate</code></td><td class="lft">Fuente=EMAIL AND HD-Versión (<code>version</code>) = <code>colombia</code> (valor interno, minúscula) — sin filtro de pipeline ni bandeja</td></tr>
+<tr><td class="lft">Gestionados</td><td class="lft"><code>hubspot_owner_id</code>, <code>source_type</code>, <code>hs_pipeline</code>, <code>createdate</code></td><td class="lft">Propietario = Lucía Pérez (<code>89503870</code>) AND Fuente=EMAIL AND Pipeline=<code>COL_Sup</code> (<code>1857341</code>)</td></tr>
+<tr><td class="lft">Escalados</td><td class="lft"><code>escalamiento_lucia_email</code>, <code>hs_pipeline</code>, <code>createdate</code></td><td class="lft">"Escalamiento Lucía Email" tiene valor AND Pipeline=<code>COL_Sup</code></td></tr>
+<tr class="hl"><td class="lft">% Gestión / % Escalados</td><td class="lft">—</td><td class="lft">Gestionados ÷ Demanda × 100 · Escalados ÷ Demanda × 100 (calculado en el dashboard)</td></tr>
+<tr><td class="lft">Ingresados / Gestionados / Escalados / No ingresaron (por flujo)</td><td class="lft">Historial de <code>hubspot_owner_id</code> (propiedad con historial, no solo el valor actual)</td><td class="lft">Ingresó = el historial de owner tuvo alguna vez a Lucía. De esos: Gestionados = el owner ACTUAL sigue siendo Lucía; Escalados = el owner actual es otra persona</td></tr>
+<tr><td class="lft">CSAT (Promoter/Passive/Detractor)</td><td class="lft"><code>clasificacion_encuesta_ces_csat</code>, <code>source_type</code>, <code>hs_pipeline</code></td><td class="lft">Fuente=EMAIL AND Pipeline≠"Correos que no requieren respuesta" (<code>1860940</code>) AND el valor de clasificación es conocido — sin filtro de propietario</td></tr>
+<tr><td class="lft">Tiempo prom. de gestión</td><td class="lft"><code>time_to_close</code>, <code>closed_date</code></td><td class="lft">Mismo universo que Gestionados, filtrado por fecha de CIERRE (no de creación)</td></tr>
+<tr><td class="lft">Mediana de cierre (días)</td><td class="lft"><code>time_to_close</code></td><td class="lft">Mismo universo que Gestionados. Mes en curso: solo tickets creados en la 1ª quincena, para no sesgar la mediana a la baja</td></tr>
+<tr><td class="lft">Mediana de 1ª respuesta (min)</td><td class="lft"><code>time_to_first_agent_reply</code></td><td class="lft">Mismo universo que Gestionados</td></tr>
+<tr><td class="lft">Gestión de Lucía por stage</td><td class="lft"><code>hubspot_owner_id</code>, <code>hs_pipeline</code>, <code>hs_pipeline_stage</code></td><td class="lft">Propietario = Lucía Pérez AND Fuente=EMAIL AND Pipeline≠<code>1860940</code>, agrupado por pipeline+stage</td></tr>
 </tbody>
 </table></div>
 </div>
@@ -262,52 +265,28 @@ h3{margin:26px 0 10px}
 
 <section class="step" id="doc--chat">
 <div class="sh"><span class="sn">03</span><h2>Chat</h2></div>
-<p class="sq">Dos patrones de filtro: el Patrón A solo para Demanda, el Patrón B para el resto.</p>
-<div class="card">
-<h3>Patrón A — Demanda</h3>
-<pre class="code">Bandeja de entrada IN [lista de bandejas]
-AND Fuente = Live chat
-AND Asignado a bot = Falso
-AND Fecha de creación BETWEEN [inicio] AND [fin]
-AND URL de la fuente contiene [colombia, costaRica, mexico, republicaDominicana, venezuela]
-AND URL de la fuente contiene [alegra-web, alegra-pos, alegra-ne, contador, alegra-invoicing]</pre>
-<h3>Patrón B — el resto de las tarjetas</h3>
-<pre class="code">Bandeja de entrada IN [...]   -- lista larga en tarjetas transversales, puntual por país/producto
-AND Fuente = Live chat
-AND Flujo de chat IN [...]    -- se mueve junto con Bandeja, mismo criterio
-AND Fecha de creación BETWEEN [inicio] AND [fin]</pre>
-<p class="note">Se aplica el Patrón B salvo que la columna "Filtros específicos" de una métrica indique un filtro de <i>ownership</i> distinto.</p>
-</div>
+<p class="sq">Objeto <code>TICKET</code>, pipeline <code>Chats_Sup</code> (<code>125444762</code>).</p>
+
 <div class="card">
 <div class="scrollx"><table class="dt">
 <thead><tr><th class="lft">Métrica</th><th class="lft">Propiedad(es) de HubSpot</th><th class="lft">Filtros específicos</th></tr></thead>
 <tbody>
-<tr><td class="lft">Demanda</td><td class="lft"><code>inboxId</code>, <code>source</code>, <code>createdAt</code>, URL de la fuente</td><td class="lft">Patrón A completo — no usa <code>chatflowId</code></td></tr>
-<tr><td class="lft">Ingresados al bot</td><td class="lft"><code>inboxId</code>, <code>source</code>, <code>chatflowId</code>, <code>createdAt</code>, <code>assignedToBot</code></td><td class="lft">Patrón B + Asignado a bot = Falso</td></tr>
-<tr><td class="lft">Escalados</td><td class="lft"><code>inboxId</code>, <code>source</code>, <code>chatflowId</code>, Propietario del hilo, <code>createdAt</code></td><td class="lft">Patrón B + Propietario NO es ninguno de (Isabel, Lucía Pérez) — sin filtro de "Asignado a bot"</td></tr>
-<tr class="hl"><td class="lft">Gestionados</td><td class="lft"><code>inboxId</code>, <code>source</code>, <code>chatflowId</code>, Propietario del hilo, <code>assignedToBot</code>, <code>createdAt</code></td><td class="lft">Patrón B + Propietario IN (Isabel, Lucía Pérez) + Asignado a bot = Falso</td></tr>
-<tr><td class="lft">% Gestión</td><td class="lft">Igual a Ingresados al bot</td><td class="lft">Patrón B + Asignado a bot = Falso</td></tr>
-<tr><td class="lft">CSAT gestionado por bot</td><td class="lft">Nombre de la encuesta, <code>inboxId</code>, diferencia de días, Propietario, <code>source</code>, <code>assignedToBot</code>, <code>chatflowId</code>, <code>createdAt</code></td><td class="lft">Encuesta IN [4 encuestas "Encuesta directa chat …"] + Patrón B + diferencia de días &lt; 14 + Propietario IN (Isabel, Lucía Pérez) + Asignado a bot = Falso</td></tr>
-<tr><td class="lft">Ingresados a Lucía por versión</td><td class="lft"><code>inboxId</code>, <code>source</code>, <code>chatflowId</code>, <code>assignedToBot</code>, <code>createdAt</code> (agrupado por país: VEN, CRI, MEX, DOM, COL)</td><td class="lft">Patrón B + Asignado a bot = Falso</td></tr>
-<tr><td class="lft">Tiempo promedio de solución</td><td class="lft"><code>inboxId</code>, <code>source</code>, <code>chatflowId</code>, Propietario del hilo, tiempo de cierre (Conversations Analytics), <code>createdAt</code></td><td class="lft">Patrón B + Asignado a bot = Falso + Propietario = Lucía Pérez únicamente (no Isabel)</td></tr>
+<tr><td class="lft">Demanda</td><td class="lft"><code>hs_pipeline</code>, <code>createdate</code></td><td class="lft">Pipeline = <code>Chats_Sup</code> (<code>125444762</code>)</td></tr>
+<tr class="hl"><td class="lft">Gestionados</td><td class="lft"><code>hubspot_owner_id</code>, <code>hs_pipeline</code>, <code>createdate</code></td><td class="lft">Igual a Demanda + Propietario = Lucía Pérez (<code>89503870</code>)</td></tr>
+<tr><td class="lft">Escalados <span class="chip off">señal parcial</span></td><td class="lft"><code>inbox_id_objetivo</code>, <code>hs_pipeline</code>, <code>createdate</code></td><td class="lft">Igual a Demanda + "Escalamiento inbox objetivo" tiene valor</td></tr>
+<tr><td class="lft">Ingresados al bot</td><td class="lft">—</td><td class="lft">Gestionados + Escalados (aproximación, calculada en el dashboard)</td></tr>
+<tr><td class="lft">% Gestión / % Escalados</td><td class="lft">—</td><td class="lft">Gestionados ÷ Ingresados al bot × 100 · Escalados ÷ Ingresados al bot × 100</td></tr>
 </tbody>
 </table></div>
 </div>
-<h3>Motivos de solicitud</h3>
+
 <div class="card">
-<p class="read">Cada bloque de motivos sale de una propiedad distinta del <b>ticket asociado</b> a la conversación, y se acota a una bandeja y flujo de chat concretos.</p>
-<div class="scrollx"><table class="dt">
-<thead><tr><th class="lft">Bloque</th><th class="lft">Propiedad</th><th class="lft">Filtros específicos</th></tr></thead>
-<tbody>
-<tr><td class="lft">COL AC</td><td class="lft"><code>ce_lever3</code></td><td class="lft">Bandeja=<code>COL-chat_sup</code> + Flujo=<code>Lucía AI COL AC Prod</code> + Fuente=Live chat + Fecha + Asignado a bot=Falso + "Motivo de solicitud - CE" conocido</td></tr>
-<tr><td class="lft">Payments</td><td class="lft"><code>solicitud_para_payment</code></td><td class="lft">Patrón B con lista larga completa de bandejas y flujos (no se acota a un producto) + Asignado a bot=Falso + "Solicitud para Payments" conocido</td></tr>
-<tr><td class="lft">Countries AC</td><td class="lft"><code>funcionalidad_de_ticket</code></td><td class="lft">Bandeja=<code>AC-chat_sup</code> + Flujo=<code>Lucía AI | AC+SF | CRI,MEX,DOM,VEN 100% | Prod</code> + Fuente=Live chat + Fecha + Asignado a bot=Falso + "Motivo de solicitud - Countries" conocido</td></tr>
-<tr><td class="lft">Contador</td><td class="lft"><code>motivo_de_solicitud_contador</code></td><td class="lft">Bandeja=<code>Contador-chat_Sup</code> o <code>AC-chat_sup</code> + Flujo=<code>Lucía AI | CONTADOR | Prod</code> + Fuente=Live chat + Fecha + Asignado a bot=Falso + "Motivo de solicitud Contador" conocido</td></tr>
-<tr><td class="lft">POS</td><td class="lft"><code>motivo_de_consulta_ticket_pos</code></td><td class="lft">Bandeja=<code>POS-chat_sup</code> + Flujo=<code>Lucía AI POS | COL,DOM 100% | Prod</code> + Fuente=Live chat + Fecha + Asignado a bot=Falso + "Motivo de consulta ticket POS" conocido</td></tr>
-<tr><td class="lft">NE</td><td class="lft"><code>propiedades_ne</code> — el panel la muestra como "Motivo de solicitud NE - Tickets"</td><td class="lft">Bandeja=<code>Nómina-chat_Sup</code> + Flujo=<code>Lucía AI NE | COL,DOM 100% | Prod</code> + Fuente=Live chat + Fecha + Asignado a bot=Falso + "Motivo de solicitud NE - Tickets" conocido</td></tr>
-<tr><td class="lft">Embudo de gestión (diagrama)</td><td class="lft">Derivado de Demanda, Ingresados al bot, Gestionados y Escalados</td><td class="lft">Sin filtro propio — es una visualización de las 4 métricas ya mapeadas</td></tr>
-</tbody>
-</table></div>
+<p class="read"><b>Limitaciones conocidas:</b></p>
+<ul class="read acts">
+<li><b>Escalados es una señal parcial.</b> <code>inbox_id_objetivo</code> subcuenta frente al volumen real de escalamientos.</li>
+<li><b>Febrero y marzo 2026 no tienen datos de Chat.</b> El selector de período para Chat arranca en <b>Abril 2026</b>.</li>
+<li><b>Abril y mayo 2026 muestran Gestionados pero Escalados en 0.</b></li>
+</ul>
 </div>
 </section>
 
@@ -348,8 +327,7 @@ AND hs_createdate BETWEEN [inicio] AND [fin]</pre>
 <pre class="code">SELECT COUNT(*) AS demanda
 FROM TICKET
 WHERE source_type = 'EMAIL'
-  AND hs_pipeline &lt;&gt; '1860940'
-  AND hs_all_associated_contact_emails &lt;&gt; 'mailer-daemon@amazonses.com'
+  AND version = 'colombia'          -- valor interno de "HD - Versión", minúscula
   AND createdate BETWEEN :inicio AND :fin;</pre>
 <p class="read"><b>Demanda</b> = COUNT(tickets)</p>
 
@@ -358,8 +336,7 @@ WHERE source_type = 'EMAIL'
 FROM TICKET
 WHERE hubspot_owner_id = '89503870'
   AND source_type = 'EMAIL'
-  AND hs_pipeline &lt;&gt; '1860940'
-  AND hs_all_associated_contact_emails &lt;&gt; 'mailer-daemon@amazonses.com'
+  AND hs_pipeline = '1857341'       -- COL_Sup
   AND createdate BETWEEN :inicio AND :fin;</pre>
 <p class="read"><b>Gestionados (%)</b> = (gestionados ÷ Demanda) × 100</p>
 
@@ -367,19 +344,48 @@ WHERE hubspot_owner_id = '89503870'
 <pre class="code">SELECT COUNT(*) AS escalados
 FROM TICKET
 WHERE escalamiento_lucia_email IS NOT NULL
-  AND hs_pipeline &lt;&gt; '1860940'
-  AND hs_all_associated_contact_emails &lt;&gt; 'mailer-daemon@amazonses.com'
+  AND hs_pipeline = '1857341'       -- COL_Sup
   AND createdate BETWEEN :inicio AND :fin;</pre>
 <p class="read"><b>Escalados (%)</b> = (escalados ÷ Demanda) × 100</p>
 
-<h3>CSAT (Promotor / Neutro / Detractor)</h3>
+<h3>Ingresados / Gestionados / Escalados / No ingresaron (por flujo)</h3>
+<pre class="code">-- 1) IDs de tickets del pipeline COL_Sup en el período (Fuente=EMAIL, pipeline≠ruido)
+-- 2) Para cada ticket, se trae el HISTORIAL de hubspot_owner_id (no solo el valor actual)
+SELECT id, propertiesWithHistory.hubspot_owner_id, properties.hubspot_owner_id AS owner_actual
+FROM TICKET.batch_read WHERE id IN (:ids);
+-- ingresó = el historial tuvo alguna vez el valor '89503870'
+-- gestionado = ingresó AND owner_actual = '89503870'
+-- escalado   = ingresó AND owner_actual &lt;&gt; '89503870'
+-- no_ingresó = NOT ingresó</pre>
+<p class="read"><b>% no ingresaron</b> = no_ingresaron ÷ total de tickets del pipeline × 100</p>
+
+<h3>CSAT (Promoter / Passive / Detractor)</h3>
 <pre class="code">SELECT clasificacion_encuesta_ces_csat, COUNT(*) AS total
 FROM TICKET
 WHERE source_type = 'EMAIL'
+  AND hs_pipeline &lt;&gt; '1860940'      -- excluye "Correos que no requieren respuesta"
   AND clasificacion_encuesta_ces_csat IS NOT NULL
   AND createdate BETWEEN :inicio AND :fin
 GROUP BY clasificacion_encuesta_ces_csat;</pre>
-<p class="read"><b>CSAT (Promotores) %</b> = Promoter ÷ (Promoter + Neutro + Detractor) × 100</p>
+<p class="read"><b>CSAT (Promoter) %</b> = Promoter ÷ (Promoter + Passive + Detractor) × 100</p>
+
+<h3>Tiempo prom. de gestión (min)</h3>
+<pre class="code">SELECT AVG(time_to_close) / 60000.0 AS tiempo_prom_min
+FROM TICKET
+WHERE hubspot_owner_id = '89503870' AND source_type = 'EMAIL'
+  AND hs_pipeline = '1857341' AND time_to_close IS NOT NULL
+  AND closed_date BETWEEN :inicio AND :fin;   -- OJO: filtra por fecha de CIERRE, no de creación</pre>
+
+<h3>Mediana de cierre (días) y mediana de 1ª respuesta (min)</h3>
+<pre class="code">SELECT MEDIAN(time_to_close) / 86400000.0 AS mediana_cierre_dias
+FROM TICKET
+WHERE hubspot_owner_id = '89503870' AND hs_pipeline = '1857341'
+  AND time_to_close IS NOT NULL AND createdate BETWEEN :inicio AND :fin1q;
+-- mes en curso: :fin1q = día 16 del mes (solo 1ª quincena), para no sesgar la mediana a la baja
+SELECT MEDIAN(time_to_first_agent_reply) / 60000.0 AS mediana_1ra_resp_min
+FROM TICKET
+WHERE hubspot_owner_id = '89503870' AND hs_pipeline = '1857341'
+  AND time_to_first_agent_reply IS NOT NULL AND createdate BETWEEN :inicio AND :fin;</pre>
 
 <h3>Gestión de Lucía por stage</h3>
 <pre class="code">SELECT hs_pipeline, hs_pipeline_stage, COUNT(*) AS conteo
@@ -390,81 +396,39 @@ WHERE hubspot_owner_id = '89503870'
   AND createdate BETWEEN :inicio AND :fin
 GROUP BY hs_pipeline, hs_pipeline_stage;</pre>
 <p class="read"><b>% stage</b> = conteo(stage) ÷ Demanda del período × 100</p>
-
-<h3>Escaladas vs. Gestionadas por semana</h3>
-<pre class="code">SELECT DATE_TRUNC('week', createdate) AS semana,
-  COUNT(*) FILTER (WHERE hubspot_owner_id = '89503870') AS gestionadas,
-  COUNT(*) FILTER (WHERE escalamiento_lucia_email IS NOT NULL) AS escaladas
-FROM TICKET
-WHERE source_type = 'EMAIL' AND hs_pipeline &lt;&gt; '1860940'
-  AND createdate BETWEEN :inicio AND :fin
-GROUP BY 1 ORDER BY 1;</pre>
-<p class="read"><b>% gestión (semana)</b> = gestionadas ÷ (gestionadas + escaladas) × 100</p>
 </div>
 
 <div class="card">
-<div class="sqlbox"><div class="sqlh">CHAT <span>Conversations API + tickets asociados</span></div></div>
+<div class="sqlbox"><div class="sqlh">CHAT <span>objeto TICKET, pipeline Chats_Sup</span></div></div>
 
 <h3>Demanda</h3>
-<pre class="code">GET /conversations/v3/conversations/threads
-  filtro: inboxId IN [bandejas chat_sup], source = LIVE_CHAT,
-          source_url CONTAINS [país] AND source_url CONTAINS [producto],
-          createdAt BETWEEN :inicio AND :fin</pre>
-<p class="read"><b>Demanda</b> = COUNT(conversaciones)</p>
-
-<h3>Ingresados al bot</h3>
-<pre class="code">GET /conversations/v3/conversations/threads
-  filtro: source = LIVE_CHAT, chatflowId IN [flujos "Lucía AI ..."],
-          createdAt BETWEEN :inicio AND :fin</pre>
-<p class="read"><b>Ingresados al bot</b> = COUNT(conversaciones con flujo Lucía disparado)</p>
-
-<h3>Escalados</h3>
-<pre class="code">GET /conversations/v3/conversations/threads
-  filtro: igual a Demanda + propiedad de traspaso a agente humano = verdadero</pre>
-<p class="read"><b>Escalados (%)</b> = (escalados ÷ Ingresados al bot) × 100</p>
+<pre class="code">SELECT COUNT(*) AS demanda
+FROM TICKET
+WHERE hs_pipeline = '125444762'    -- Chats_Sup
+  AND createdate BETWEEN :inicio AND :fin;</pre>
+<p class="read"><b>Demanda</b> = COUNT(tickets)</p>
 
 <h3>Gestionados</h3>
-<pre class="code">GET /conversations/v3/conversations/threads
-  filtro: igual a Demanda + owner IN ('89503870', '76066940') + assignedToBot = false</pre>
+<pre class="code">SELECT COUNT(*) AS gestionados
+FROM TICKET
+WHERE hs_pipeline = '125444762'
+  AND hubspot_owner_id = '89503870'   -- mismo owner que Correo
+  AND createdate BETWEEN :inicio AND :fin;</pre>
 <p class="read"><b>Gestionados (%)</b> = (gestionados ÷ Ingresados al bot) × 100</p>
 
-<h3>CSAT gestionado por bot</h3>
-<pre class="code">GET /crm/v3/objects/feedback_submissions/search
-  filtro: nombre de encuesta IN [...], propietario IN ('89503870', '76066940'),
-          diferencia de días entre encuesta y cierre &lt; 14
-  -- cruzado por conversationId con el resultado de threads</pre>
-<p class="read"><b>CSAT gestionado por bot (%)</b> = respuestas positivas ÷ total respuestas × 100</p>
-
-<h3>Ingresados a Lucía por versión</h3>
-<pre class="code">GET /conversations/v3/conversations/threads
-  filtro: igual a Demanda
-  -- agrupar client-side por inboxId/chatflowId → país (tabla de mapeo fija)</pre>
-<p class="read"><b>Ingresados(país)</b> = COUNT(conversaciones) AGRUPADO POR país</p>
-
-<h3>Motivos de solicitud (los 6 bloques)</h3>
-<p class="read">Todos siguen la misma forma; solo cambia la propiedad. El TICKET se toma del asociado a cada conversación resultante del filtro común de Chat.</p>
-<pre class="code">SELECT &lt;propiedad&gt;, COUNT(*) AS conteo
+<h3>Escalados <span class="chip off">señal parcial</span></h3>
+<pre class="code">SELECT COUNT(*) AS escalados
 FROM TICKET
-WHERE hs_pipeline = '125444762' AND &lt;propiedad&gt; IS NOT NULL
-  AND createdate BETWEEN :inicio AND :fin
-GROUP BY &lt;propiedad&gt;;</pre>
-<div class="defs">
-<div><dt>COL AC</dt><dd><code>ce_lever3</code></dd></div>
-<div><dt>Payments</dt><dd><code>solicitud_para_payment</code></dd></div>
-<div><dt>Countries AC</dt><dd><code>funcionalidad_de_ticket</code></dd></div>
-<div><dt>Contador</dt><dd><code>motivo_de_solicitud_contador</code></dd></div>
-<div><dt>POS</dt><dd><code>motivo_de_consulta_ticket_pos</code></dd></div>
-<div><dt>NE</dt><dd><code>propiedades_ne</code></dd></div>
-</div>
-<p class="read"><b>% motivo</b> = conteo(motivo) ÷ total de motivos capturados en el período × 100</p>
+WHERE hs_pipeline = '125444762'
+  AND inbox_id_objetivo IS NOT NULL   -- label real: "Escalamiento inbox objetivo"
+  AND createdate BETWEEN :inicio AND :fin;</pre>
+<p class="read"><b>Escalados (%)</b> = (escalados ÷ Ingresados al bot) × 100</p>
 
-<h3>Tiempo promedio de solución</h3>
-<pre class="code">Conversations Analytics API — métrica de tiempo de cierre
-  filtro: igual al filtro común de Chat</pre>
-<p class="read"><b>Tiempo promedio de solución</b> = AVG(tiempo de cierre) en minutos</p>
+<h3>Ingresados al bot</h3>
+<pre class="code">ingresados_bot = gestionados + escalados</pre>
 
 <h3>Embudo de gestión (diagrama)</h3>
-<p class="read">Sin query propia. Se construye con los 4 valores ya obtenidos arriba:</p>
+<p class="read">Se construye con los valores ya obtenidos arriba:</p>
 <p class="read"><b>Tasa de contención</b> = Gestionados ÷ Ingresados al bot<br><b>% no ingresaron al flujo</b> = (Demanda − Ingresados al bot) ÷ Demanda</p>
 </div>
 
@@ -536,22 +500,6 @@ GROUP BY estado_llamada;
 <pre class="code">GET /v1/convai/conversations
   ?agent_id=[agente]&amp;call_start_after_unix=:inicio&amp;call_start_before_unix=:fin</pre>
 <p class="read"><b>% completadas sin error técnico</b> = COUNT(call_successful = 'success') ÷ COUNT(*) × 100<br><b>Duración promedio (ElevenLabs)</b> = AVG(call_duration_secs)</p>
-</div>
-</section>
-
-<section class="step" id="doc--notas">
-<div class="sh"><span class="sn">06</span><h2>Notas de construcción</h2></div>
-<p class="sq">Supuestos, exclusiones y lo que queda pendiente de confirmar.</p>
-<div class="card">
-<ul class="read acts">
-<li><b>Correo — sin filtro común.</b> 7 métricas de dashboard, cada una con su propio filtro real de HubSpot. Un octavo widget del panel, "Correos que gestiona Lucía por estado", no está en el dashboard: es la misma información de "Gestión de Lucía por stage" desglosada por semana.</li>
-<li><b>Correo — dependencia del objeto Conversaciones.</b> Demanda y % Gestión dependen del filtro nativo "Bandeja de entrada = Service Mail Inbox", que no tiene equivalente en Tickets.</li>
-<li><b>Correo — exclusiones propias de la automatización.</b> Las cifras nativas de HubSpot en Gestionados y Escalados incluyen la pipeline "Correos que no requieren respuesta" (<code>hs_pipeline = '1860940'</code>, notificaciones automáticas); la automatización la excluye aparte, junto con bounces de <code>mailer-daemon@amazonses.com</code> (comparación exacta).</li>
-<li><b>Chat — cobertura del panel.</b> 14 de los 21 widgets del panel de HubSpot están confirmados y cubren el 100% de lo que hoy está en el dashboard. Los 7 restantes (posiciones 7, 9-14) no corresponden a ninguna métrica del dashboard actual.</li>
-<li><b>Chat — bandejas no homogéneas <span class="prio media">pendiente</span></b> La lista de "Bandeja de entrada" no es idéntica entre todas las tarjetas: Demanda incluye una bandeja adicional ("Fundaciones") y Tiempo promedio de solución trae dos extra ("Fundaciones" y "Claro-chat_sup"). Falta confirmar con la administradora del panel (Estefanía) si son intencionales.</li>
-<li><b>Chat — Embudo de gestión <span class="prio media">pendiente</span></b> Su definición como visualización derivada (sin filtro propio) viene de una revisión anterior a la captura de este panel, no de un panel de filtros propio verificado.</li>
-<li><b>Llamadas — sin cambios.</b> Ya automatizado en producción con las consultas documentadas.</li>
-</ul>
 </div>
 </section>
 
