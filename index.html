@@ -696,11 +696,21 @@ function aggregateCorreo(snaps) {
   // total sumado si TODOS los snapshots del rango elegido traen ese dato; si falta en
   // alguno, no se mezcla con el proxy viejo (Gestionados+Escalados) para no combinar dos
   // metodologías distintas en un mismo número -- renderCorreoFlow cae solo al proxy.
-  let ingresadosFlujoSum = 0, huboIngresadosFlujoEnTodos = true, algunSnapConCorreo = false;
+  // gestionados_flujo/escalados_flujo vienen de la MISMA consulta owner-history que
+  // ingresados_flujo (ver lib/cubos.mjs), así que gestionados_flujo + escalados_flujo =
+  // ingresados_flujo siempre -- a diferencia de kpis.gestionados/kpis.escalados de arriba,
+  // que salen de otra consulta (owner actual / propiedad de escalamiento) y por eso NO
+  // suman ingresados_flujo. Se guardan aparte para que las tarjetas "% de los ingresados"
+  // dividan ambas entre ingresados_flujo y sí sumen 100% (bug reportado 08-sep-2026).
+  let ingresadosFlujoSum = 0, gestionadosFlujoSum = 0, escaladosFlujoSum = 0, huboIngresadosFlujoEnTodos = true, algunSnapConCorreo = false;
   snaps.forEach(s => {
     const c = s.correo; if (!c) return;
     algunSnapConCorreo = true;
-    if (typeof c.kpis?.ingresados_flujo === 'number') ingresadosFlujoSum += c.kpis.ingresados_flujo;
+    if (typeof c.kpis?.ingresados_flujo === 'number') {
+      ingresadosFlujoSum += c.kpis.ingresados_flujo;
+      gestionadosFlujoSum += c.kpis.gestionados_flujo || 0;
+      escaladosFlujoSum += c.kpis.escalados_flujo || 0;
+    }
     else huboIngresadosFlujoEnTodos = false;
     kpis.demanda += c.kpis?.demanda || 0;
     kpis.gestionados += c.kpis?.gestionados || 0;
@@ -732,7 +742,11 @@ function aggregateCorreo(snaps) {
   });
   kpis.pct_gestion = kpis.demanda ? (kpis.gestionados / kpis.demanda * 100) : 0;
   kpis.pct_escalados = kpis.demanda ? (kpis.escalados / kpis.demanda * 100) : 0;
-  if (algunSnapConCorreo && huboIngresadosFlujoEnTodos) kpis.ingresados_flujo = ingresadosFlujoSum;
+  if (algunSnapConCorreo && huboIngresadosFlujoEnTodos) {
+    kpis.ingresados_flujo = ingresadosFlujoSum;
+    kpis.gestionados_flujo = gestionadosFlujoSum;
+    kpis.escalados_flujo = escaladosFlujoSum;
+  }
   return {
     kpis,
     por_stage: Array.from(stageMap.entries()).map(([stage, count]) => ({ stage, count })),
@@ -939,8 +953,14 @@ function safeChart(canvasId, config) {
 // owner-history para ese mes todavía) se usa el proxy viejo Gestionados+Escalados.
 function renderCorreoFlow(k) {
   const demanda = k.demanda || 0;
-  const gestionados = k.gestionados || 0;
-  const escalados = k.escalados || 0;
+  // gestionados/escalados que alimentan este embudo tienen que ser los del MISMO owner-
+  // history que ingresados (ingresados_flujo) -- si se usa k.gestionados/k.escalados
+  // (otra consulta: owner actual / propiedad de escalamiento) los dos nodos de la derecha
+  // no suman "ingresados" y el % que muestran no cuadra con las tarjetas de arriba
+  // (bug reportado 08-sep-2026). Con el fallback (mes sin desglose de flujo todavía) sí
+  // suman por construcción, porque ahí "ingresados" se define como su propia suma.
+  const gestionados = typeof k.gestionados_flujo === 'number' ? k.gestionados_flujo : (k.gestionados || 0);
+  const escalados = typeof k.escalados_flujo === 'number' ? k.escalados_flujo : (k.escalados || 0);
   const ingresados = typeof k.ingresados_flujo === 'number' ? k.ingresados_flujo : (gestionados + escalados);
   const noIngresaron = Math.max(0, demanda - ingresados);
   const pctIngresados = demanda ? (ingresados / demanda * 100) : 0;
@@ -1020,13 +1040,21 @@ function renderCorreo(c) {
   // Demanda total) para que coincidan exactamente con el "% de los ingresados" del
   // embudo de abajo, en vez de leer como si fueran % de toda la demanda.
   const ingresadosFlujo = typeof k.ingresados_flujo === 'number' ? k.ingresados_flujo : ((k.gestionados || 0) + (k.escalados || 0));
-  const pctGestionIngresados = ingresadosFlujo ? (k.gestionados || 0) / ingresadosFlujo * 100 : 0;
-  const pctEscaladosIngresados = ingresadosFlujo ? (k.escalados || 0) / ingresadosFlujo * 100 : 0;
+  // gestionados_flujo/escalados_flujo vienen de la MISMA consulta owner-history que
+  // ingresados_flujo (ver lib/cubos.mjs) -- a diferencia de k.gestionados/k.escalados
+  // (owner actual / propiedad de escalamiento, otra consulta), que NO sumaban
+  // ingresados_flujo y hacían que estas dos tarjetas pasaran de 100% juntas (bug
+  // reportado 08-sep-2026). Si el mes no trae el desglose todavía, cae al proxy viejo
+  // (k.gestionados/k.escalados sobre su propia suma), que por construcción sí suma 100%.
+  const gestionadosParaPct = typeof k.gestionados_flujo === 'number' ? k.gestionados_flujo : (k.gestionados || 0);
+  const escaladosParaPct = typeof k.escalados_flujo === 'number' ? k.escalados_flujo : (k.escalados || 0);
+  const pctGestionIngresados = ingresadosFlujo ? gestionadosParaPct / ingresadosFlujo * 100 : 0;
+  const pctEscaladosIngresados = ingresadosFlujo ? escaladosParaPct / ingresadosFlujo * 100 : 0;
   const cardDefs = [
     { key: 'demanda', label: 'Demanda', value: fmt(k.demanda), icon: 'inbox', cls: 'kc-dark', vcls: 'v-dark', staticText: 'tickets recibidos' },
     { key: 'demanda_real', label: 'Demanda real (bot)', value: fmt(ingresadosFlujo), icon: 'git-branch', cls: 'kc-blue', vcls: 'v-blue', staticText: `${k.demanda ? (ingresadosFlujo / k.demanda * 100).toFixed(0) : 0}% de la demanda ingresó al flujo` },
-    { key: 'gestionados', label: 'Gestionados', value: fmtPct(pctGestionIngresados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionados)} de los ingresados` },
-    { key: 'escalados', label: 'Escalados', value: fmtPct(pctEscaladosIngresados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escalados)} de los ingresados` },
+    { key: 'gestionados', label: 'Gestionados', value: fmtPct(pctGestionIngresados), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(gestionadosParaPct)} de los ingresados` },
+    { key: 'escalados', label: 'Escalados', value: fmtPct(pctEscaladosIngresados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(escaladosParaPct)} de los ingresados` },
     // Reemplaza el promedio simple (tiempo_promedio_gestion_min) por la MEDIANA de
     // tiempo de cierre en días -- mismo dato que la card "Tiempo de cierre" de abajo,
     // para no mostrar dos números distintos (promedio vs mediana) para lo mismo.
