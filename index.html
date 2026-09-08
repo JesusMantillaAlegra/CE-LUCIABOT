@@ -1265,9 +1265,9 @@ function renderLlamadasFlow(k) {
 
   const nodes = {
     demanda:       { x: 0,  y: 30, w: 17, h: 58, color: COLORS.dark,  title: 'Demanda Total', value: fmt(demanda), sub: '100% de la demanda' },
-    gestionadas:   { x: 37, y: 2,  w: 63, h: 27, color: COLORS.teal,  title: 'Gestionadas por Lucía', value: fmt(gestionadas), sub: `${pctGestion.toFixed(0)}% de la demanda` },
-    escaladas:     { x: 37, y: 36, w: 63, h: 27, color: COLORS.red,   title: 'Escaladas a Agente', value: fmt(escaladas), sub: `${pctEsc.toFixed(0)}% de la demanda` },
-    noContestadas: { x: 37, y: 70, w: 63, h: 27, color: COLORS.amber, title: 'No Contestadas', value: fmt(noContestadas), sub: `${pctNoCont.toFixed(0)}% de la demanda` },
+    gestionadas:   { x: 37, y: 2,  w: 63, h: 27, color: COLORS.teal,  title: 'Gestionadas por Lucía', value: fmt(gestionadas), sub: `${fmtPct(pctGestion)} de la demanda` },
+    escaladas:     { x: 37, y: 36, w: 63, h: 27, color: COLORS.red,   title: 'Escaladas a Agente', value: fmt(escaladas), sub: `${fmtPct(pctEsc)} de la demanda` },
+    noContestadas: { x: 37, y: 70, w: 63, h: 27, color: COLORS.amber, title: 'No Contestadas', value: fmt(noContestadas), sub: `${fmtPct(pctNoCont)} de la demanda` },
   };
   const edge = (n, side) => ({ x: side === 'right' ? n.x + n.w : n.x, y: n.y + n.h / 2 });
   const curve = (p1, p2) => { const mx = (p1.x + p2.x) / 2; return `M ${p1.x},${p1.y} C ${mx},${p1.y} ${mx},${p2.y} ${p2.x},${p2.y}`; };
@@ -1287,7 +1287,7 @@ function renderLlamadasFlow(k) {
   return `
     <div class="flow-wrap">
       <div class="flow-hero">
-        <span class="flow-hero-num">${pctGestion.toFixed(0)}%</span>
+        <span class="flow-hero-num">${fmtPct(pctGestion)}</span>
         <span class="flow-hero-lbl">Tasa de Gestión del Bot</span>
         <span class="flow-hero-sub">Gestionadas / Demanda</span>
       </div>
