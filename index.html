@@ -702,16 +702,23 @@ function aggregateCorreo(snaps) {
   // que salen de otra consulta (owner actual / propiedad de escalamiento) y por eso NO
   // suman ingresados_flujo. Se guardan aparte para que las tarjetas "% de los ingresados"
   // dividan ambas entre ingresados_flujo y sí sumen 100% (bug reportado 08-sep-2026).
-  let ingresadosFlujoSum = 0, gestionadosFlujoSum = 0, escaladosFlujoSum = 0, huboIngresadosFlujoEnTodos = true, algunSnapConCorreo = false;
+  // huboGestionadosFlujoEnTodos es una bandera APARTE de huboIngresadosFlujoEnTodos a
+  // propósito: mientras el histórico viejo (snapshots generados antes del fix de
+  // 08-sep-2026) tenga ingresados_flujo pero NO gestionados_flujo/escalados_flujo, sumar
+  // "|| 0" los dejaba en 0 en vez de ausentes -- typeof kpis.gestionados_flujo === 'number'
+  // pasaba a ser true en el render con valor 0, y el fallback a k.gestionados/k.escalados
+  // nunca se activaba (bug reportado 08-sep-2026, esta vez introducido por el fix anterior).
+  let ingresadosFlujoSum = 0, gestionadosFlujoSum = 0, escaladosFlujoSum = 0, huboIngresadosFlujoEnTodos = true, huboGestionadosFlujoEnTodos = true, algunSnapConCorreo = false;
   snaps.forEach(s => {
     const c = s.correo; if (!c) return;
     algunSnapConCorreo = true;
     if (typeof c.kpis?.ingresados_flujo === 'number') {
       ingresadosFlujoSum += c.kpis.ingresados_flujo;
-      gestionadosFlujoSum += c.kpis.gestionados_flujo || 0;
-      escaladosFlujoSum += c.kpis.escalados_flujo || 0;
-    }
-    else huboIngresadosFlujoEnTodos = false;
+    } else huboIngresadosFlujoEnTodos = false;
+    if (typeof c.kpis?.gestionados_flujo === 'number' && typeof c.kpis?.escalados_flujo === 'number') {
+      gestionadosFlujoSum += c.kpis.gestionados_flujo;
+      escaladosFlujoSum += c.kpis.escalados_flujo;
+    } else huboGestionadosFlujoEnTodos = false;
     kpis.demanda += c.kpis?.demanda || 0;
     kpis.gestionados += c.kpis?.gestionados || 0;
     kpis.escalados += c.kpis?.escalados || 0;
@@ -742,8 +749,8 @@ function aggregateCorreo(snaps) {
   });
   kpis.pct_gestion = kpis.demanda ? (kpis.gestionados / kpis.demanda * 100) : 0;
   kpis.pct_escalados = kpis.demanda ? (kpis.escalados / kpis.demanda * 100) : 0;
-  if (algunSnapConCorreo && huboIngresadosFlujoEnTodos) {
-    kpis.ingresados_flujo = ingresadosFlujoSum;
+  if (algunSnapConCorreo && huboIngresadosFlujoEnTodos) kpis.ingresados_flujo = ingresadosFlujoSum;
+  if (algunSnapConCorreo && huboGestionadosFlujoEnTodos) {
     kpis.gestionados_flujo = gestionadosFlujoSum;
     kpis.escalados_flujo = escaladosFlujoSum;
   }
@@ -957,11 +964,14 @@ function renderCorreoFlow(k) {
   // history que ingresados (ingresados_flujo) -- si se usa k.gestionados/k.escalados
   // (otra consulta: owner actual / propiedad de escalamiento) los dos nodos de la derecha
   // no suman "ingresados" y el % que muestran no cuadra con las tarjetas de arriba
-  // (bug reportado 08-sep-2026). Con el fallback (mes sin desglose de flujo todavía) sí
-  // suman por construcción, porque ahí "ingresados" se define como su propia suma.
-  const gestionados = typeof k.gestionados_flujo === 'number' ? k.gestionados_flujo : (k.gestionados || 0);
-  const escalados = typeof k.escalados_flujo === 'number' ? k.escalados_flujo : (k.escalados || 0);
-  const ingresados = typeof k.ingresados_flujo === 'number' ? k.ingresados_flujo : (gestionados + escalados);
+  // (bug reportado 08-sep-2026). Los tres campos (ingresados/gestionados/escalados_flujo)
+  // se toman o se dejan JUNTOS -- si falta cualquiera de los tres se cae completo al proxy
+  // viejo (gestionados+escalados sobre su propia suma), nunca se mezcla uno real con otro
+  // del proxy, porque eso fue justo el bug (las cifras no sumaban 100%).
+  const tieneFlujoCompleto = typeof k.ingresados_flujo === 'number' && typeof k.gestionados_flujo === 'number' && typeof k.escalados_flujo === 'number';
+  const gestionados = tieneFlujoCompleto ? k.gestionados_flujo : (k.gestionados || 0);
+  const escalados = tieneFlujoCompleto ? k.escalados_flujo : (k.escalados || 0);
+  const ingresados = tieneFlujoCompleto ? k.ingresados_flujo : (gestionados + escalados);
   const noIngresaron = Math.max(0, demanda - ingresados);
   const pctIngresados = demanda ? (ingresados / demanda * 100) : 0;
   const pctAbandono = demanda ? (noIngresaron / demanda * 100) : 0;
@@ -1039,15 +1049,18 @@ function renderCorreo(c) {
   // los % de Gestionados/Escalados pasan a calcularse sobre ESTE número (no sobre la
   // Demanda total) para que coincidan exactamente con el "% de los ingresados" del
   // embudo de abajo, en vez de leer como si fueran % de toda la demanda.
-  const ingresadosFlujo = typeof k.ingresados_flujo === 'number' ? k.ingresados_flujo : ((k.gestionados || 0) + (k.escalados || 0));
-  // gestionados_flujo/escalados_flujo vienen de la MISMA consulta owner-history que
-  // ingresados_flujo (ver lib/cubos.mjs) -- a diferencia de k.gestionados/k.escalados
-  // (owner actual / propiedad de escalamiento, otra consulta), que NO sumaban
-  // ingresados_flujo y hacían que estas dos tarjetas pasaran de 100% juntas (bug
-  // reportado 08-sep-2026). Si el mes no trae el desglose todavía, cae al proxy viejo
-  // (k.gestionados/k.escalados sobre su propia suma), que por construcción sí suma 100%.
-  const gestionadosParaPct = typeof k.gestionados_flujo === 'number' ? k.gestionados_flujo : (k.gestionados || 0);
-  const escaladosParaPct = typeof k.escalados_flujo === 'number' ? k.escalados_flujo : (k.escalados || 0);
+  // ingresados_flujo/gestionados_flujo/escalados_flujo son UN SOLO paquete: los tres salen
+  // de la misma consulta owner-history (ver lib/cubos.mjs) y por construcción
+  // gestionados_flujo + escalados_flujo = ingresados_flujo siempre. Si falta CUALQUIERA de
+  // los tres (snapshot generado antes del fix de 08-sep-2026, o mes viejo que todavía no se
+  // recalculó), no se puede mezclar uno real con otro del proxy viejo -- eso fue justo el
+  // bug reportado 08-sep-2026 (las tarjetas sumaban más o menos de 100%, o daban 0.00%).
+  // Se cae LOS TRES juntos al proxy viejo (gestionados+escalados sobre su propia suma), que
+  // por construcción también suma 100%, aunque no sea la definición owner-history real.
+  const tieneFlujoCompleto = typeof k.ingresados_flujo === 'number' && typeof k.gestionados_flujo === 'number' && typeof k.escalados_flujo === 'number';
+  const ingresadosFlujo = tieneFlujoCompleto ? k.ingresados_flujo : ((k.gestionados || 0) + (k.escalados || 0));
+  const gestionadosParaPct = tieneFlujoCompleto ? k.gestionados_flujo : (k.gestionados || 0);
+  const escaladosParaPct = tieneFlujoCompleto ? k.escalados_flujo : (k.escalados || 0);
   const pctGestionIngresados = ingresadosFlujo ? gestionadosParaPct / ingresadosFlujo * 100 : 0;
   const pctEscaladosIngresados = ingresadosFlujo ? escaladosParaPct / ingresadosFlujo * 100 : 0;
   const cardDefs = [
