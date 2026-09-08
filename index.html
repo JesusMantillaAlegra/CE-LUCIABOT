@@ -306,6 +306,12 @@ tbody td { padding: 9px 14px; color: var(--slate); }
     <div id="llamadasRangeBar"></div>
     <div class="kpi-strip" id="llamadasKpiStrip"></div>
 
+    <div class="chart-card">
+      <div class="chart-card-title">Embudo de gestión</div>
+      <div class="chart-card-sub">Demanda → Gestionadas / Escaladas / No contestadas</div>
+      <div id="llamadasEmbudoWrap"></div>
+    </div>
+
     <div class="chart-grid-2">
       <div class="chart-card">
         <div class="chart-card-title">Llamadas por versión</div>
@@ -1241,10 +1247,60 @@ function renderChat(c) {
 // Orden y nombre de tarjetas ajustado según reunión Jesus/Lauren del 21-ago-2026:
 // "% Gestión" -> "% Gestión Lucía", movida al lado de "Gestionadas" para que se lea
 // el recorrido completo: entra -> lo gestiona Lucía (y qué % de eso) -> lo que escala.
+// ══════════ LLAMADAS — diagrama de flujo del embudo de gestión ══════════
+// Mismo componente visual que Correo/Chat, pero con un solo nivel de bifurcación:
+// a diferencia de Correo/Chat, Llamadas no tiene un paso intermedio de "ingresados
+// al flujo" -- toda la demanda (llamadas recibidas) se resuelve directo en uno de
+// tres desenlaces (Gestionada / Escalada / No contestada), por eso pct_gestion,
+// pct_escaladas y pct_no_contestadas ya vienen calculados sobre Demanda total
+// (ver aggregateLlamadas). El embudo se dibuja como Demanda -> 3 ramas.
+function renderLlamadasFlow(k) {
+  const demanda = k.demanda || 0;
+  const gestionadas = k.gestionadas || 0;
+  const escaladas = k.escaladas || 0;
+  const noContestadas = k.no_contestadas || 0;
+  const pctGestion = k.pct_gestion || 0;
+  const pctEsc = k.pct_escaladas || 0;
+  const pctNoCont = k.pct_no_contestadas || 0;
+
+  const nodes = {
+    demanda:       { x: 0,  y: 30, w: 17, h: 58, color: COLORS.dark,  title: 'Demanda Total', value: fmt(demanda), sub: '100% de la demanda' },
+    gestionadas:   { x: 37, y: 2,  w: 63, h: 27, color: COLORS.teal,  title: 'Gestionadas por Lucía', value: fmt(gestionadas), sub: `${pctGestion.toFixed(0)}% de la demanda` },
+    escaladas:     { x: 37, y: 36, w: 63, h: 27, color: COLORS.red,   title: 'Escaladas a Agente', value: fmt(escaladas), sub: `${pctEsc.toFixed(0)}% de la demanda` },
+    noContestadas: { x: 37, y: 70, w: 63, h: 27, color: COLORS.amber, title: 'No Contestadas', value: fmt(noContestadas), sub: `${pctNoCont.toFixed(0)}% de la demanda` },
+  };
+  const edge = (n, side) => ({ x: side === 'right' ? n.x + n.w : n.x, y: n.y + n.h / 2 });
+  const curve = (p1, p2) => { const mx = (p1.x + p2.x) / 2; return `M ${p1.x},${p1.y} C ${mx},${p1.y} ${mx},${p2.y} ${p2.x},${p2.y}`; };
+  const links = [
+    { from: edge(nodes.demanda, 'right'), to: edge(nodes.gestionadas, 'left'), color: COLORS.teal },
+    { from: edge(nodes.demanda, 'right'), to: edge(nodes.escaladas, 'left'), color: COLORS.red },
+    { from: edge(nodes.demanda, 'right'), to: edge(nodes.noContestadas, 'left'), color: COLORS.amber },
+  ];
+  const pathsSvg = links.map(l => `<path d="${curve(l.from, l.to)}" stroke="${l.color}" stroke-width="0.6" fill="none" opacity="0.55"/>`).join('');
+  const nodesHtml = Object.values(nodes).map(n => `
+    <div class="flow-node" style="left:${n.x}%;top:${n.y}%;width:${n.w}%;height:${n.h}%;border-color:${n.color};background:${n.color}14">
+      <div class="flow-node-title" style="color:${n.color}">${n.title}</div>
+      <div class="flow-node-value" style="color:${n.color}">${n.value}</div>
+      <div class="flow-node-sub">${n.sub}</div>
+    </div>`).join('');
+
+  return `
+    <div class="flow-wrap">
+      <div class="flow-hero">
+        <span class="flow-hero-num">${pctGestion.toFixed(0)}%</span>
+        <span class="flow-hero-lbl">Tasa de Gestión del Bot</span>
+        <span class="flow-hero-sub">Gestionadas / Demanda</span>
+      </div>
+      <svg class="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">${pathsSvg}</svg>
+      ${nodesHtml}
+    </div>`;
+}
+
 function renderLlamadas(c) {
   const strip = document.getElementById('llamadasKpiStrip');
   if (!c) {
     strip.innerHTML = '<p class="info-note">No hay datos de Llamadas para el periodo seleccionado.</p>';
+    document.getElementById('llamadasEmbudoWrap').innerHTML = '';
     document.getElementById('llamadasVersionWrap').innerHTML = '';
     document.getElementById('llamadasFueraHorarioWrap').innerHTML = '';
     document.getElementById('llamadasMotivoWrap').innerHTML = '';
@@ -1263,6 +1319,9 @@ function renderLlamadas(c) {
   strip.innerHTML = cardDefs.map(cd =>
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
   ).join('');
+
+  // Embudo — mismo diagrama visual que Correo/Chat (pedido de Jesus 08-sep-2026).
+  document.getElementById('llamadasEmbudoWrap').innerHTML = renderLlamadasFlow(k);
 
   // Por versión (país) — SOLO COL / DOM. "Fuera de horario" no es un país (se
   // confirmó por HubSpot que se solapa con Colombia, es un bucket de horario), así
