@@ -2,6 +2,9 @@
   "name": "ce-luciabot-dashboard",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "jose": "^5.9.6"
+  },
   "engines": {
     "node": ">=18"
   }

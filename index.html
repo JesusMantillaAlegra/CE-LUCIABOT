@@ -218,6 +218,7 @@ tbody td { padding: 9px 14px; color: var(--slate); }
   <div style="display:flex;align-items:center;gap:14px">
     <span class="header-time" id="lastUpdated">Actualizado: 27-ago-2026</span>
     <span class="header-user" id="userInfo"></span>
+    <a class="btn-header btn-header-ghost" href="/api/auth/logout" style="text-decoration:none">Salir</a>
   </div>
 </header>
 
@@ -340,20 +341,23 @@ tbody td { padding: 9px 14px; color: var(--slate); }
 
 <script src="./lucia_dashboard_history.js"></script>
 <script>
-(function checkAuth() {
+// ── Auth check: bloquea el dashboard hasta confirmar sesión @alegra.com ──
+(async function checkAuth() {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') {
     document.body.style.visibility = 'visible';
     return;
   }
-  fetch('/api/auth/me', { credentials: 'include' })
-    .then(res => res.ok ? res.json() : Promise.reject())
-    .then(user => {
-      if (!user || !user.email) throw new Error();
-      const el = document.getElementById('userInfo');
-      if (el) el.textContent = user.name || user.email;
-      document.body.style.visibility = 'visible';
-    })
-    .catch(() => { document.body.style.visibility = 'visible'; }); // fallback: no bloquear en preview local
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'include' });
+    if (!res.ok) { window.location.replace('/login.html'); return; }
+    const user = await res.json();
+    if (!user || !user.email) { window.location.replace('/login.html'); return; }
+    const el = document.getElementById('userInfo');
+    if (el) el.textContent = user.name || user.email;
+    document.body.style.visibility = 'visible';
+  } catch (e) {
+    window.location.replace('/login.html');
+  }
 })();
 
 document.getElementById('sidebarCollapse')?.addEventListener('click', (e) => {
