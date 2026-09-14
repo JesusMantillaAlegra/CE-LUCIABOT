@@ -417,6 +417,20 @@ function runRender(historyData) {
     HISTORY = (historyData.snapshots || []).slice().sort((a, b) => a.semana_inicio.localeCompare(b.semana_inicio));
     if (!HISTORY.length) throw new Error('El histórico no tiene snapshots.');
     const last = HISTORY[HISTORY.length - 1];
+    // "Actualizado: ..." del header -- ANTES era texto fijo en el HTML ("27-ago-2026",
+    // nunca se tocaba). Se calcula la fecha `generado` más reciente entre TODOS los
+    // snapshots (no solo el último por semana_inicio -- un mes viejo se puede haber
+    // recalculado más recientemente que uno nuevo si el cron corrió parcial), y con eso
+    // se arma el rótulo. Si por lo que sea ningún snapshot trae `generado`, se deja el
+    // texto que ya estaba en el HTML en vez de mostrar algo vacío o roto.
+    const MESES_CORTO_HEADER = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const generados = HISTORY.map(s => s.generado).filter(Boolean).sort();
+    const ultimoGenerado = generados[generados.length - 1];
+    if (ultimoGenerado) {
+      const [y, m, d] = ultimoGenerado.split('-');
+      const elUpd = document.getElementById('lastUpdated');
+      if (elUpd) elUpd.textContent = `Actualizado: ${d}-${MESES_CORTO_HEADER[Number(m) - 1]}-${y}`;
+    }
     setupFilterBar('correo', 'correo', (primary) => {
       try { renderCorreo(aggregateCorreo(primary)); }
       catch (e) { console.error('Error en renderCorreo:', e); }

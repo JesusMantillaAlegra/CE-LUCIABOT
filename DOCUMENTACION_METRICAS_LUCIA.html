@@ -215,7 +215,7 @@ h3{margin:26px 0 10px}
   <div class="sb-scroll">
     <div class="chips-icp"><button class="chip-icp on" data-icp="doc">Métricas</button></div>
     <div class="sb-lbl">Secciones</div>
-    <nav class="navlinks" data-icp="doc"><a data-sec="resumen"><span class="num">01</span><span class="nl"><b>Resumen</b><span>fuentes y alcance</span></span></a><a data-sec="correo"><span class="num">02</span><span class="nl"><b>Correo</b><span>API directa, objeto Ticket</span></span></a><a data-sec="chat"><span class="num">03</span><span class="nl"><b>Chat</b><span>tickets, Chats_Sup</span></span></a><a data-sec="llamadas"><span class="num">04</span><span class="nl"><b>Llamadas</b><span>IVR + cruce ElevenLabs</span></span></a><a data-sec="sql"><span class="num">05</span><span class="nl"><b>SQL y fórmulas</b><span>cómo se calcula cada número</span></span></a></nav>
+    <nav class="navlinks" data-icp="doc"><a data-sec="resumen"><span class="num">01</span><span class="nl"><b>Resumen</b><span>fuentes y alcance</span></span></a><a data-sec="correo"><span class="num">02</span><span class="nl"><b>Correo</b><span>API directa, objeto Ticket</span></span></a><a data-sec="chat"><span class="num">03</span><span class="nl"><b>Chat</b><span>tickets, Chats_Sup</span></span></a><a data-sec="llamadas"><span class="num">04</span><span class="nl"><b>Llamadas</b><span>IVR + cruce ElevenLabs</span></span></a></nav>
   </div>
 </aside>
 <main class="main"><div class="wrap">
@@ -238,6 +238,7 @@ h3{margin:26px 0 10px}
 <div class="l"><div class="lt">Llamadas</div><p class="read">Objeto <code>CALL</code> de HubSpot (<code>bot_calificador</code>), cruzado por el job semanal contra ElevenLabs Conversational AI para verificación. Demanda, Gestionadas, Escaladas, No contestadas, Duración promedio, Por versión, Motivo de escalamiento.</p></div>
 </div>
 <div class="mira"><span class="et">Owner ID</span>Lucía Pérez = <code>89503870</code>. Se usa en Correo y en Chat como propietario del ticket.</div>
+<div class="mira"><span class="et">Actualización</span>Los datos del tablero se actualizan una vez por semana.</div>
 </div>
 </section>
 
@@ -246,18 +247,18 @@ h3{margin:26px 0 10px}
 <p class="sq">API directa de HubSpot, objeto <code>TICKET</code>.</p>
 <div class="card">
 <div class="scrollx"><table class="dt">
-<thead><tr><th class="lft">Métrica</th><th class="lft">Propiedad(es) de HubSpot</th><th class="lft">Filtros específicos</th></tr></thead>
+<thead><tr><th class="lft">Métrica</th><th class="lft">Fórmula técnica</th><th class="lft">Fuente / filtros específicos</th><th class="lft">Qué mide a nivel de negocio</th></tr></thead>
 <tbody>
-<tr><td class="lft">Demanda</td><td class="lft"><code>source_type</code>, <code>version</code>, <code>createdate</code></td><td class="lft">Fuente=EMAIL AND HD-Versión (<code>version</code>) = <code>colombia</code> (valor interno, minúscula) — sin filtro de pipeline ni bandeja</td></tr>
-<tr><td class="lft">Gestionados</td><td class="lft"><code>hubspot_owner_id</code>, <code>source_type</code>, <code>hs_pipeline</code>, <code>createdate</code></td><td class="lft">Propietario = Lucía Pérez (<code>89503870</code>) AND Fuente=EMAIL AND Pipeline=<code>COL_Sup</code> (<code>1857341</code>)</td></tr>
-<tr><td class="lft">Escalados</td><td class="lft"><code>escalamiento_lucia_email</code>, <code>hs_pipeline</code>, <code>createdate</code></td><td class="lft">"Escalamiento Lucía Email" tiene valor AND Pipeline=<code>COL_Sup</code></td></tr>
-<tr class="hl"><td class="lft">% Gestión / % Escalados</td><td class="lft">—</td><td class="lft">Gestionados ÷ Demanda × 100 · Escalados ÷ Demanda × 100 (calculado en el dashboard)</td></tr>
-<tr><td class="lft">Ingresados / Gestionados / Escalados / No ingresaron (por flujo)</td><td class="lft">Historial de <code>hubspot_owner_id</code> (propiedad con historial, no solo el valor actual)</td><td class="lft">Ingresó = el historial de owner tuvo alguna vez a Lucía. De esos: Gestionados = el owner ACTUAL sigue siendo Lucía; Escalados = el owner actual es otra persona</td></tr>
-<tr><td class="lft">CSAT (Promoter/Passive/Detractor)</td><td class="lft"><code>clasificacion_encuesta_ces_csat</code>, <code>source_type</code>, <code>hs_pipeline</code></td><td class="lft">Fuente=EMAIL AND Pipeline≠"Correos que no requieren respuesta" (<code>1860940</code>) AND el valor de clasificación es conocido — sin filtro de propietario</td></tr>
-<tr><td class="lft">Tiempo prom. de gestión</td><td class="lft"><code>time_to_close</code>, <code>closed_date</code></td><td class="lft">Mismo universo que Gestionados, filtrado por fecha de CIERRE (no de creación)</td></tr>
-<tr><td class="lft">Mediana de cierre (días)</td><td class="lft"><code>time_to_close</code></td><td class="lft">Mismo universo que Gestionados. Mes en curso: solo tickets creados en la 1ª quincena, para no sesgar la mediana a la baja</td></tr>
-<tr><td class="lft">Mediana de 1ª respuesta (min)</td><td class="lft"><code>time_to_first_agent_reply</code></td><td class="lft">Mismo universo que Gestionados</td></tr>
-<tr><td class="lft">Gestión de Lucía por stage</td><td class="lft"><code>hubspot_owner_id</code>, <code>hs_pipeline</code>, <code>hs_pipeline_stage</code></td><td class="lft">Propietario = Lucía Pérez AND Fuente=EMAIL AND Pipeline≠<code>1860940</code>, agrupado por pipeline+stage</td></tr>
+<tr><td class="lft">Demanda</td><td class="lft"><code>COUNT(*)</code> de tickets con <code>createdate</code> en el período</td><td class="lft">HubSpot, objeto Ticket: Fuente=EMAIL AND HD-Versión (<code>version</code>) = <code>colombia</code> (valor interno, minúscula) — sin filtro de pipeline ni bandeja</td><td class="lft">Cuánta demanda de correo llega a soporte Colombia en el período, la haya tocado Lucía o no.</td></tr>
+<tr><td class="lft">Gestionados</td><td class="lft"><code>COUNT(*) WHERE hubspot_owner_id = 89503870</code>, sobre el universo de Demanda</td><td class="lft">HubSpot, objeto Ticket. Propietario = Lucía Pérez AND Pipeline=<code>COL_Sup</code> (<code>1857341</code>)</td><td class="lft">Cuántos tickets resolvió Lucía sin que un agente humano tuviera que intervenir.</td></tr>
+<tr><td class="lft">Escalados</td><td class="lft"><code>COUNT(*) WHERE escalamiento_lucia_email IS NOT NULL</code>, sobre el universo de Demanda</td><td class="lft">HubSpot, objeto Ticket, propiedad "Escalamiento Lucía Email", Pipeline=<code>COL_Sup</code></td><td class="lft">Cuántos tickets terminó resolviendo un humano después de pasar (o no) por Lucía.</td></tr>
+<tr class="hl"><td class="lft">% Gestión / % Escalados</td><td class="lft">% Gestión = Gestionados ÷ Demanda × 100<br>% Escalados = Escalados ÷ Demanda × 100</td><td class="lft">Calculado en el dashboard</td><td class="lft">Tasa de contención del bot en Correo.</td></tr>
+<tr><td class="lft">Ingresados / Gestionados / Escalados / No ingresaron (por flujo)</td><td class="lft">Ingresó = el historial de <code>hubspot_owner_id</code> tuvo alguna vez a Lucía. De esos: Gestionados = el owner actual sigue siendo Lucía; Escalados = el owner actual es otra persona</td><td class="lft">HubSpot, historial de <code>hubspot_owner_id</code> (propiedad con historial, no solo el valor actual)</td><td class="lft">De la demanda total, cuánta pasó alguna vez por Lucía y de esa, cuánta quedó resuelta por el bot frente a la que terminó en un humano.</td></tr>
+<tr><td class="lft">CSAT (Promoter/Passive/Detractor)</td><td class="lft">% = Promoter ÷ (Promoter + Passive + Detractor) × 100</td><td class="lft">HubSpot, propiedad <code>clasificacion_encuesta_ces_csat</code>. Fuente=EMAIL AND Pipeline≠"Correos que no requieren respuesta" (<code>1860940</code>) — sin filtro de propietario</td><td class="lft">Satisfacción del cliente con la atención por correo, medida solo entre quienes respondieron la encuesta.</td></tr>
+<tr><td class="lft">Tiempo prom. de gestión</td><td class="lft"><code>AVG(time_to_close)</code></td><td class="lft">HubSpot, propiedad <code>time_to_close</code>. Mismo universo que Gestionados, filtrado por fecha de CIERRE (<code>closed_date</code>), no de creación</td><td class="lft">Qué tan rápido se cierra un ticket gestionado por Lucía.</td></tr>
+<tr><td class="lft">Mediana de cierre (días)</td><td class="lft"><code>MEDIAN(time_to_close)</code></td><td class="lft">HubSpot. Mismo universo que Gestionados. Mes en curso: solo tickets creados en la 1ª quincena, para no sesgar la mediana a la baja</td><td class="lft">Tiempo típico de cierre, sin que los casos extremos distorsionen el número.</td></tr>
+<tr><td class="lft">Mediana de 1ª respuesta (min)</td><td class="lft"><code>MEDIAN(time_to_first_agent_reply)</code></td><td class="lft">HubSpot. Mismo universo que Gestionados</td><td class="lft">Qué tan rápido le responde Lucía al cliente por primera vez.</td></tr>
+<tr><td class="lft">Gestión de Lucía por stage</td><td class="lft"><code>COUNT(*)</code> agrupado por pipeline + stage</td><td class="lft">HubSpot. Propietario = Lucía Pérez AND Fuente=EMAIL AND Pipeline≠<code>1860940</code></td><td class="lft">En qué etapa del proceso se concentra la gestión de Lucía.</td></tr>
 </tbody>
 </table></div>
 </div>
@@ -269,13 +270,13 @@ h3{margin:26px 0 10px}
 
 <div class="card">
 <div class="scrollx"><table class="dt">
-<thead><tr><th class="lft">Métrica</th><th class="lft">Propiedad(es) de HubSpot</th><th class="lft">Filtros específicos</th></tr></thead>
+<thead><tr><th class="lft">Métrica</th><th class="lft">Fórmula técnica</th><th class="lft">Fuente / filtros específicos</th><th class="lft">Qué mide a nivel de negocio</th></tr></thead>
 <tbody>
-<tr><td class="lft">Demanda</td><td class="lft"><code>hs_pipeline</code>, <code>createdate</code></td><td class="lft">Pipeline = <code>Chats_Sup</code> (<code>125444762</code>)</td></tr>
-<tr class="hl"><td class="lft">Gestionados</td><td class="lft"><code>hubspot_owner_id</code>, <code>hs_pipeline</code>, <code>createdate</code></td><td class="lft">Igual a Demanda + Propietario = Lucía Pérez (<code>89503870</code>)</td></tr>
-<tr><td class="lft">Escalados <span class="chip off">señal parcial</span></td><td class="lft"><code>inbox_id_objetivo</code>, <code>hs_pipeline</code>, <code>createdate</code></td><td class="lft">Igual a Demanda + "Escalamiento inbox objetivo" tiene valor</td></tr>
-<tr><td class="lft">Ingresados al bot</td><td class="lft">—</td><td class="lft">Gestionados + Escalados (aproximación, calculada en el dashboard)</td></tr>
-<tr><td class="lft">% Gestión / % Escalados</td><td class="lft">—</td><td class="lft">Gestionados ÷ Ingresados al bot × 100 · Escalados ÷ Ingresados al bot × 100</td></tr>
+<tr><td class="lft">Demanda</td><td class="lft"><code>COUNT(*)</code> de tickets con <code>createdate</code> en el período</td><td class="lft">HubSpot, objeto Ticket. Pipeline = <code>Chats_Sup</code> (<code>125444762</code>)</td><td class="lft">Todo lo que llegó a la pipeline de Chat en el período, lo haya tocado Lucía o no.</td></tr>
+<tr class="hl"><td class="lft">Gestionados</td><td class="lft"><code>COUNT(*) WHERE hubspot_owner_id = 89503870</code>, sobre el universo de Demanda</td><td class="lft">HubSpot, objeto Ticket. Mismo owner que Correo</td><td class="lft">Cuántos tickets de Chat resolvió Lucía sin que un agente humano tuviera que intervenir.</td></tr>
+<tr><td class="lft">Escalados <span class="chip off">señal parcial</span></td><td class="lft"><code>COUNT(*) WHERE inbox_id_objetivo IS NOT NULL</code>, sobre el universo de Demanda</td><td class="lft">HubSpot, objeto Ticket, propiedad "Escalamiento inbox objetivo"</td><td class="lft">Cuántos tickets de Chat terminaron reasignados a un agente humano.</td></tr>
+<tr><td class="lft">Ingresados al bot</td><td class="lft">Gestionados + Escalados</td><td class="lft">Calculado en el dashboard (aproximación)</td><td class="lft">De la demanda, cuánto efectivamente pasó por Lucía (resuelto o escalado).</td></tr>
+<tr><td class="lft">% Gestión / % Escalados</td><td class="lft">% Gestión = Gestionados ÷ Ingresados al bot × 100<br>% Escalados = Escalados ÷ Ingresados al bot × 100</td><td class="lft">Calculado en el dashboard</td><td class="lft">Tasa de contención del bot en Chat.</td></tr>
 </tbody>
 </table></div>
 </div>
@@ -300,208 +301,22 @@ AND hs_createdate BETWEEN [inicio] AND [fin]</pre>
 </div>
 <div class="card">
 <div class="scrollx"><table class="dt">
-<thead><tr><th class="lft">Métrica</th><th class="lft">Propiedad(es)</th><th class="lft">Filtros específicos</th></tr></thead>
+<thead><tr><th class="lft">Métrica</th><th class="lft">Fórmula técnica</th><th class="lft">Fuente / filtros específicos</th><th class="lft">Qué mide a nivel de negocio</th></tr></thead>
 <tbody>
-<tr><td class="lft">Demanda</td><td class="lft"><code>hs_createdate</code></td><td class="lft">Ninguno adicional</td></tr>
-<tr class="hl"><td class="lft">Gestionadas</td><td class="lft"><code>estado_llamada</code></td><td class="lft"><code>LOWER(estado_llamada) IN ('soporte correcto', 'seporte correcto')</code></td></tr>
-<tr><td class="lft">Escaladas a humano</td><td class="lft"><code>estado_llamada</code></td><td class="lft"><code>LIKE 'escalamiento%'</code> OR <code>LIKE 'transferencia por%'</code> OR <code>= 'escalation to human support'</code></td></tr>
-<tr><td class="lft">No contestadas</td><td class="lft"><code>estado_llamada</code></td><td class="lft"><code>IN ('no respuesta', 'se cuelga la llamada', 'usuario colgó', 'usuario colgo')</code></td></tr>
-<tr><td class="lft">Duración promedio</td><td class="lft"><code>hs_call_duration</code></td><td class="lft">Ninguno adicional</td></tr>
-<tr><td class="lft">Por versión (COL / DOM / Fuera de horario)</td><td class="lft"><code>bot_calificador</code></td><td class="lft">Agrupado por <code>bot_calificador</code></td></tr>
-<tr><td class="lft">Motivo de escalamiento</td><td class="lft"><code>estado_llamada</code> (texto tras "escalamiento por" / "transferencia por", normalizado)</td><td class="lft">Solo llamadas ya clasificadas como Escaladas</td></tr>
-<tr><td class="lft">% Completadas sin error técnico</td><td class="lft">ElevenLabs: <code>call_successful</code></td><td class="lft"><code>agent_id</code> IN [agentes de Lucía]</td></tr>
-<tr><td class="lft">Duración (cruce ElevenLabs)</td><td class="lft">ElevenLabs: <code>call_duration_secs</code></td><td class="lft"><code>agent_id</code> IN [agentes de Lucía]</td></tr>
+<tr><td class="lft">Demanda</td><td class="lft"><code>COUNT(*)</code> de llamadas con <code>hs_createdate</code> en el período</td><td class="lft">HubSpot, objeto Call. Filtro base únicamente</td><td class="lft">Volumen total de llamadas del sistema de Lucía en el período.</td></tr>
+<tr class="hl"><td class="lft">Gestionadas</td><td class="lft"><code>COUNT(*) WHERE LOWER(estado_llamada) IN ('soporte correcto', 'seporte correcto')</code></td><td class="lft">HubSpot, propiedad <code>estado_llamada</code></td><td class="lft">Cuántas llamadas resolvió el IVR solo, sin pasar a un agente humano.</td></tr>
+<tr><td class="lft">Escaladas a humano</td><td class="lft"><code>COUNT(*) WHERE estado_llamada LIKE 'escalamiento%' OR LIKE 'transferencia por%' OR = 'escalation to human support'</code></td><td class="lft">HubSpot, propiedad <code>estado_llamada</code></td><td class="lft">Cuántas llamadas terminó atendiendo un agente humano.</td></tr>
+<tr><td class="lft">No contestadas</td><td class="lft"><code>COUNT(*) WHERE estado_llamada IN ('no respuesta', 'se cuelga la llamada', 'usuario colgó', 'usuario colgo')</code></td><td class="lft">HubSpot, propiedad <code>estado_llamada</code></td><td class="lft">Cuánto volumen se pierde sin respuesta.</td></tr>
+<tr><td class="lft">Duración promedio</td><td class="lft"><code>AVG(hs_call_duration)</code></td><td class="lft">HubSpot, propiedad <code>hs_call_duration</code></td><td class="lft">Cuánto dura en promedio una llamada atendida por el sistema de Lucía.</td></tr>
+<tr><td class="lft">Por versión (COL / DOM / Fuera de horario)</td><td class="lft">Desglose de demanda, gestionadas y escaladas agrupado por <code>bot_calificador</code></td><td class="lft">HubSpot, propiedad <code>bot_calificador</code></td><td class="lft">Compara el desempeño del IVR entre Colombia, República Dominicana y fuera de horario.</td></tr>
+<tr><td class="lft">Motivo de escalamiento</td><td class="lft"><code>COUNT(*)</code> agrupado por motivo (texto tras "escalamiento por" / "transferencia por", normalizado)</td><td class="lft">HubSpot, propiedad <code>estado_llamada</code>. Solo llamadas ya clasificadas como Escaladas</td><td class="lft">Por qué una llamada terminó en un agente humano en vez de resolverla el bot.</td></tr>
+<tr><td class="lft">% Completadas sin error técnico</td><td class="lft"><code>COUNT(call_successful = 'success') ÷ COUNT(*) × 100</code></td><td class="lft">ElevenLabs Conversational AI API, <code>agent_id</code> IN [agentes de Lucía]</td><td class="lft">Calidad técnica de la llamada, verificada del lado del IVR.</td></tr>
+<tr><td class="lft">Duración (cruce ElevenLabs)</td><td class="lft"><code>AVG(call_duration_secs)</code></td><td class="lft">ElevenLabs Conversational AI API, <code>agent_id</code> IN [agentes de Lucía]</td><td class="lft">Verificación cruzada de la duración de la llamada contra HubSpot.</td></tr>
 </tbody>
 </table></div>
 </div>
 </section>
 
-<section class="step" id="doc--sql">
-<div class="sh"><span class="sn">05</span><h2>SQL y fórmula por métrica</h2></div>
-<p class="sq">La consulta exacta y la fórmula que produce el número que se ve en el tablero.</p>
-
-<div class="card">
-<div class="sqlbox"><div class="sqlh">CORREO <span>objeto TICKET</span></div></div>
-
-<h3>Demanda</h3>
-<pre class="code">SELECT COUNT(*) AS demanda
-FROM TICKET
-WHERE source_type = 'EMAIL'
-  AND version = 'colombia'          -- valor interno de "HD - Versión", minúscula
-  AND createdate BETWEEN :inicio AND :fin;</pre>
-<p class="read"><b>Demanda</b> = COUNT(tickets)</p>
-
-<h3>Gestionados</h3>
-<pre class="code">SELECT COUNT(*) AS gestionados
-FROM TICKET
-WHERE hubspot_owner_id = '89503870'
-  AND source_type = 'EMAIL'
-  AND hs_pipeline = '1857341'       -- COL_Sup
-  AND createdate BETWEEN :inicio AND :fin;</pre>
-<p class="read"><b>Gestionados (%)</b> = (gestionados ÷ Demanda) × 100</p>
-
-<h3>Escalados</h3>
-<pre class="code">SELECT COUNT(*) AS escalados
-FROM TICKET
-WHERE escalamiento_lucia_email IS NOT NULL
-  AND hs_pipeline = '1857341'       -- COL_Sup
-  AND createdate BETWEEN :inicio AND :fin;</pre>
-<p class="read"><b>Escalados (%)</b> = (escalados ÷ Demanda) × 100</p>
-
-<h3>Ingresados / Gestionados / Escalados / No ingresaron (por flujo)</h3>
-<pre class="code">-- 1) IDs de tickets del pipeline COL_Sup en el período (Fuente=EMAIL, pipeline≠ruido)
--- 2) Para cada ticket, se trae el HISTORIAL de hubspot_owner_id (no solo el valor actual)
-SELECT id, propertiesWithHistory.hubspot_owner_id, properties.hubspot_owner_id AS owner_actual
-FROM TICKET.batch_read WHERE id IN (:ids);
--- ingresó = el historial tuvo alguna vez el valor '89503870'
--- gestionado = ingresó AND owner_actual = '89503870'
--- escalado   = ingresó AND owner_actual &lt;&gt; '89503870'
--- no_ingresó = NOT ingresó</pre>
-<p class="read"><b>% no ingresaron</b> = no_ingresaron ÷ total de tickets del pipeline × 100</p>
-
-<h3>CSAT (Promoter / Passive / Detractor)</h3>
-<pre class="code">SELECT clasificacion_encuesta_ces_csat, COUNT(*) AS total
-FROM TICKET
-WHERE source_type = 'EMAIL'
-  AND hs_pipeline &lt;&gt; '1860940'      -- excluye "Correos que no requieren respuesta"
-  AND clasificacion_encuesta_ces_csat IS NOT NULL
-  AND createdate BETWEEN :inicio AND :fin
-GROUP BY clasificacion_encuesta_ces_csat;</pre>
-<p class="read"><b>CSAT (Promoter) %</b> = Promoter ÷ (Promoter + Passive + Detractor) × 100</p>
-
-<h3>Tiempo prom. de gestión (min)</h3>
-<pre class="code">SELECT AVG(time_to_close) / 60000.0 AS tiempo_prom_min
-FROM TICKET
-WHERE hubspot_owner_id = '89503870' AND source_type = 'EMAIL'
-  AND hs_pipeline = '1857341' AND time_to_close IS NOT NULL
-  AND closed_date BETWEEN :inicio AND :fin;   -- OJO: filtra por fecha de CIERRE, no de creación</pre>
-
-<h3>Mediana de cierre (días) y mediana de 1ª respuesta (min)</h3>
-<pre class="code">SELECT MEDIAN(time_to_close) / 86400000.0 AS mediana_cierre_dias
-FROM TICKET
-WHERE hubspot_owner_id = '89503870' AND hs_pipeline = '1857341'
-  AND time_to_close IS NOT NULL AND createdate BETWEEN :inicio AND :fin1q;
--- mes en curso: :fin1q = día 16 del mes (solo 1ª quincena), para no sesgar la mediana a la baja
-SELECT MEDIAN(time_to_first_agent_reply) / 60000.0 AS mediana_1ra_resp_min
-FROM TICKET
-WHERE hubspot_owner_id = '89503870' AND hs_pipeline = '1857341'
-  AND time_to_first_agent_reply IS NOT NULL AND createdate BETWEEN :inicio AND :fin;</pre>
-
-<h3>Gestión de Lucía por stage</h3>
-<pre class="code">SELECT hs_pipeline, hs_pipeline_stage, COUNT(*) AS conteo
-FROM TICKET
-WHERE hubspot_owner_id = '89503870'
-  AND source_type = 'EMAIL'
-  AND hs_pipeline &lt;&gt; '1860940'
-  AND createdate BETWEEN :inicio AND :fin
-GROUP BY hs_pipeline, hs_pipeline_stage;</pre>
-<p class="read"><b>% stage</b> = conteo(stage) ÷ Demanda del período × 100</p>
-</div>
-
-<div class="card">
-<div class="sqlbox"><div class="sqlh">CHAT <span>objeto TICKET, pipeline Chats_Sup</span></div></div>
-
-<h3>Demanda</h3>
-<pre class="code">SELECT COUNT(*) AS demanda
-FROM TICKET
-WHERE hs_pipeline = '125444762'    -- Chats_Sup
-  AND createdate BETWEEN :inicio AND :fin;</pre>
-<p class="read"><b>Demanda</b> = COUNT(tickets)</p>
-
-<h3>Gestionados</h3>
-<pre class="code">SELECT COUNT(*) AS gestionados
-FROM TICKET
-WHERE hs_pipeline = '125444762'
-  AND hubspot_owner_id = '89503870'   -- mismo owner que Correo
-  AND createdate BETWEEN :inicio AND :fin;</pre>
-<p class="read"><b>Gestionados (%)</b> = (gestionados ÷ Ingresados al bot) × 100</p>
-
-<h3>Escalados <span class="chip off">señal parcial</span></h3>
-<pre class="code">SELECT COUNT(*) AS escalados
-FROM TICKET
-WHERE hs_pipeline = '125444762'
-  AND inbox_id_objetivo IS NOT NULL   -- label real: "Escalamiento inbox objetivo"
-  AND createdate BETWEEN :inicio AND :fin;</pre>
-<p class="read"><b>Escalados (%)</b> = (escalados ÷ Ingresados al bot) × 100</p>
-
-<h3>Ingresados al bot</h3>
-<pre class="code">ingresados_bot = gestionados + escalados</pre>
-
-<h3>Embudo de gestión (diagrama)</h3>
-<p class="read">Se construye con los valores ya obtenidos arriba:</p>
-<p class="read"><b>Tasa de contención</b> = Gestionados ÷ Ingresados al bot<br><b>% no ingresaron al flujo</b> = (Demanda − Ingresados al bot) ÷ Demanda</p>
-</div>
-
-<div class="card">
-<div class="sqlbox"><div class="sqlh">LLAMADAS <span>objeto CALL + ElevenLabs</span></div></div>
-
-<h3>Demanda</h3>
-<pre class="code">SELECT COUNT(*) AS demanda
-FROM CALL
-WHERE bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
-  AND hs_createdate BETWEEN :inicio AND :fin;</pre>
-<p class="read"><b>Demanda</b> = COUNT(llamadas)</p>
-
-<h3>Gestionadas</h3>
-<pre class="code">SELECT COUNT(*) AS gestionadas
-FROM CALL
-WHERE bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
-  AND LOWER(estado_llamada) IN ('soporte correcto', 'seporte correcto')
-  AND hs_createdate BETWEEN :inicio AND :fin;</pre>
-<p class="read"><b>Gestionadas (%)</b> = (gestionadas ÷ Demanda) × 100</p>
-
-<h3>Escaladas a humano</h3>
-<pre class="code">SELECT COUNT(*) AS escaladas
-FROM CALL
-WHERE bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
-  AND (LOWER(estado_llamada) LIKE 'escalamiento%'
-       OR LOWER(estado_llamada) LIKE 'transferencia por%'
-       OR LOWER(estado_llamada) = 'escalation to human support')
-  AND hs_createdate BETWEEN :inicio AND :fin;</pre>
-<p class="read"><b>Escaladas (%)</b> = (escaladas ÷ Demanda) × 100</p>
-
-<h3>No contestadas</h3>
-<pre class="code">SELECT COUNT(*) AS no_contestadas
-FROM CALL
-WHERE bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
-  AND LOWER(estado_llamada) IN ('no respuesta', 'se cuelga la llamada', 'usuario colgó', 'usuario colgo')
-  AND hs_createdate BETWEEN :inicio AND :fin;</pre>
-<p class="read"><b>No contestadas (%)</b> = (no_contestadas ÷ Demanda) × 100</p>
-
-<h3>Duración promedio</h3>
-<pre class="code">SELECT AVG(hs_call_duration) / 1000.0 AS duracion_prom_seg
-FROM CALL
-WHERE bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
-  AND hs_createdate BETWEEN :inicio AND :fin;</pre>
-<p class="read"><b>Duración promedio (seg)</b> = AVG(hs_call_duration) ÷ 1000</p>
-
-<h3>Por versión (COL / DOM / Fuera de horario)</h3>
-<pre class="code">SELECT bot_calificador,
-  COUNT(*) AS demanda,
-  SUM(CASE WHEN LOWER(estado_llamada) IN ('soporte correcto', 'seporte correcto') THEN 1 ELSE 0 END) AS gestionadas,
-  AVG(hs_call_duration) / 1000.0 AS duracion_prom_seg
-FROM CALL
-WHERE hs_createdate BETWEEN :inicio AND :fin
-GROUP BY bot_calificador;</pre>
-<p class="read"><b>% gestión (versión)</b> = gestionadas ÷ demanda × 100</p>
-
-<h3>Motivo de escalamiento</h3>
-<pre class="code">SELECT estado_llamada, COUNT(*) AS conteo
-FROM CALL
-WHERE bot_calificador IN ('lucia-ivr', 'lucia-ivr-dom', 'lucia ivr fuerahorario')
-  AND (LOWER(estado_llamada) LIKE 'escalamiento%' OR LOWER(estado_llamada) LIKE 'transferencia por%')
-  AND hs_createdate BETWEEN :inicio AND :fin
-GROUP BY estado_llamada;
--- el motivo (Petición del usuario / Desconocimiento / Falta de acceso / Error de cobro)
--- se extrae del texto tras "por" y se normaliza en el script de fetch</pre>
-<p class="read"><b>% motivo</b> = conteo(motivo) ÷ total de escalamientos con motivo capturado × 100</p>
-
-<h3>% Completadas sin error técnico y duración (ElevenLabs)</h3>
-<pre class="code">GET /v1/convai/conversations
-  ?agent_id=[agente]&amp;call_start_after_unix=:inicio&amp;call_start_before_unix=:fin</pre>
-<p class="read"><b>% completadas sin error técnico</b> = COUNT(call_successful = 'success') ÷ COUNT(*) × 100<br><b>Duración promedio (ElevenLabs)</b> = AVG(call_duration_secs)</p>
-</div>
-</section>
 
 </div>
 </div></main>
