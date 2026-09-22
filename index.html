@@ -548,9 +548,17 @@ function setupFilterBar(prefix, dataKey, applyFn) {
         .concat([`<option value="">Todo el período (${anioMin}–${anioMax})</option>`]);
 
   const opcionesMes = meses.map(x => `<option value="${x.value}">${MESES_LARGO[x.mes - 1]} ${x.anio}</option>`);
+  // Nota (22-sep-2026): se quitó la opción "Fecha personalizada" (selector de día exacto).
+  // Los datos son snapshots mensuales (cubos), así que cualquier rango de fechas que caiga
+  // dentro del mismo mes producía siempre el mismo resultado — el selector de día prometía
+  // una precisión que el dato de fondo no tiene. Reporte de Juan Montero en CSDATA-391:
+  // "el DB está filtrando bien? veo que aun colocando fechas personalizadas no cambia la
+  // información" — confirmado en vivo: cambiar el día sin cambiar de mes no altera ningún
+  // KPI. "Entre dos meses…" cubre el mismo caso de uso (rango custom) con la granularidad
+  // real de los datos, así que se deja como única opción de rango libre.
   const opciones = opcionesAnio
     .concat(opcionesMes)
-    .concat([`<option value="rango">Entre dos meses…</option>`, `<option value="custom">Fecha personalizada</option>`]);
+    .concat([`<option value="rango">Entre dos meses…</option>`]);
 
   container.innerHTML = `
     <div class="filter-bar-row">
@@ -565,27 +573,17 @@ function setupFilterBar(prefix, dataKey, applyFn) {
       <span class="filter-label">Hasta</span>
       <select class="filter-date-input" id="${prefix}MesHasta">${opcionesMes.join('')}</select>
     </div>
-    <div class="filter-bar-row" id="${prefix}FilaCustom" style="display:none">
-      <span class="filter-label">Desde</span>
-      <input type="date" class="filter-date-input" id="${prefix}DateDesde" min="${minDate}" max="${maxDate}" value="${minDate}">
-      <span class="filter-label">Hasta</span>
-      <input type="date" class="filter-date-input" id="${prefix}DateHasta" min="${minDate}" max="${maxDate}" value="${maxDate}">
-    </div>
     <div class="filter-note">Los indicadores se recalculan solos al cambiar el período, sumando los snapshots que caen en ese rango.</div>`;
 
   const sel = document.getElementById(prefix + 'PeriodoSel');
   const filaRango = document.getElementById(prefix + 'FilaRango');
-  const filaCustom = document.getElementById(prefix + 'FilaCustom');
   const mesDesdeInp = document.getElementById(prefix + 'MesDesde');
   const mesHastaInp = document.getElementById(prefix + 'MesHasta');
-  const dateDesdeInp = document.getElementById(prefix + 'DateDesde');
-  const dateHastaInp = document.getElementById(prefix + 'DateHasta');
   const badge = document.getElementById(prefix + 'MonthBadge');
   const estado = document.getElementById(prefix + 'FiltroEstado');
 
   function ocultarFilasExtra() {
     filaRango.style.display = 'none';
-    filaCustom.style.display = 'none';
   }
 
   function aplicar(desde, hasta, esMesActual) {
@@ -621,20 +619,7 @@ function setupFilterBar(prefix, dataKey, applyFn) {
     aplicar(desde, r.hasta, r.esMesActual);
   }
 
-  function onCambioCustom() {
-    const desde = dateDesdeInp.value || minDate;
-    const hasta = dateHastaInp.value || maxDate;
-    if (desde > hasta) { if (estado) estado.textContent = 'La fecha inicial es posterior a la final'; return; }
-    aplicar(desde, hasta, false);
-  }
-
   sel.addEventListener('change', () => {
-    if (sel.value === 'custom') {
-      ocultarFilasExtra();
-      filaCustom.style.display = '';
-      onCambioCustom();
-      return;
-    }
     if (sel.value === 'rango') {
       ocultarFilasExtra();
       filaRango.style.display = '';
@@ -656,8 +641,6 @@ function setupFilterBar(prefix, dataKey, applyFn) {
   });
   mesDesdeInp.addEventListener('change', onCambioRango);
   mesHastaInp.addEventListener('change', onCambioRango);
-  dateDesdeInp.addEventListener('change', onCambioCustom);
-  dateHastaInp.addEventListener('change', onCambioCustom);
 
   // Por defecto: Año completo del ÚLTIMO año con datos (pedido de Jesus 29-ago-2026,
   // reemplaza el default anterior de "solo el último mes"). Si el rango de fechas es de
@@ -856,6 +839,7 @@ function aggregateLlamadas(snaps, version) {
   const versionMap = new Map();
   const motivoMap = new Map();
   let durWeighted = 0, durWeight = 0;
+  let csatWeighted = 0, csatWeight = 0;
   let elLlamadas = 0, elDurWeighted = 0, elPctWeighted = 0, elCoberturaIncompleta = null, elNota = null;
   let motivoDisponible = true;
 
@@ -877,6 +861,11 @@ function aggregateLlamadas(snaps, version) {
       kpis.sin_clasificar += kk.sin_clasificar || 0;
       const wTot = kk.demanda || 0;
       if (typeof kk.duracion_prom_seg === 'number') { durWeighted += kk.duracion_prom_seg * wTot; durWeight += wTot; }
+      // CSAT -- NUEVO 22-sep-2026. Promedio ponderado por cantidad real de encuestas de
+      // cada snapshot (csat_total), no un promedio simple de promedios mensuales -- así un
+      // mes con 3 encuestas no pesa igual que uno con 80. Solo a nivel de canal (no hay
+      // desglose de CSAT por versión/país todavía), igual que motivo_escalamiento arriba.
+      if (typeof kk.csat_promedio === 'number' && kk.csat_total) { csatWeighted += kk.csat_promedio * kk.csat_total; csatWeight += kk.csat_total; }
     }
 
     const versionesSemana = version ? (l.por_version || []).filter(v => v.version === version) : (l.por_version || []);
@@ -934,6 +923,8 @@ function aggregateLlamadas(snaps, version) {
   kpis.pct_escaladas = kpis.demanda ? (kpis.escaladas / kpis.demanda * 100) : 0;
   kpis.pct_no_contestadas = kpis.demanda ? (kpis.no_contestadas / kpis.demanda * 100) : 0;
   kpis.duracion_prom_seg = durWeight ? (durWeighted / durWeight) : null;
+  kpis.csat_promedio = csatWeight ? +(csatWeighted / csatWeight).toFixed(2) : null;
+  kpis.csat_total = csatWeight;
 
   const por_version = Array.from(versionMap.values()).map(v => ({ ...v, pct_gestion: (v.completo && v.demanda) ? (v.gestionadas / v.demanda * 100) : null }));
   const motivo_escalamiento = Array.from(motivoMap.entries()).map(([motivo, count]) => ({ motivo, count })).sort((a, b) => b.count - a.count);
@@ -1374,6 +1365,11 @@ function renderLlamadas(c) {
     { key: 'escaladas', label: 'Escaladas a humano', value: fmtPct(k.pct_escaladas), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escaladas)} llamadas escaladas a un agente` },
     { key: 'no_contestadas', label: 'No contestadas', value: fmtPct(k.pct_no_contestadas), icon: 'phone-missed', cls: 'kc-amber', vcls: 'v-amber', staticText: `${fmt(k.no_contestadas)} llamadas` },
     { key: 'duracion_prom_seg', label: 'Duración prom.', value: durMin(k.duracion_prom_seg), icon: 'clock', cls: 'kc-blue', vcls: 'v-blue', staticText: 'por llamada' },
+    // CSAT -- NUEVO 22-sep-2026 (pedido Juan Montero, CSDATA-391). Viene del evento de
+    // comportamiento "Encuesta de satisfacción CS" de HubSpot, escala 1-10 (no es un %
+    // promoter/passive/detractor como el CSAT de Correo/Chat, por eso se muestra distinto:
+    // "X.X / 10" en vez de "XX.XX%"). Se muestra "—" si no hay encuestas en el período.
+    { key: 'csat_promedio', label: 'CSAT', value: (typeof k.csat_promedio === 'number' ? k.csat_promedio.toFixed(1) + ' / 10' : '—'), icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', staticText: k.csat_total ? `${fmt(k.csat_total)} encuestas respondidas` : 'sin encuestas en el período' },
   ];
   strip.innerHTML = cardDefs.map(cd =>
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
