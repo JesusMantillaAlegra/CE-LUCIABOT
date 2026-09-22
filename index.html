@@ -787,7 +787,15 @@ function aggregateChat(snaps, version) {
   const kpis = { demanda: 0, ingresados_bot: 0, escalados: 0, gestionados: 0 };
   const versionMap = new Map();
   const motivosMap = new Map(); // vertical -> Map(motivo -> count)
-  let csatWeighted = 0, csatWeight = 0, tiempoWeighted = 0, tiempoWeight = 0;
+  let tiempoWeighted = 0, tiempoWeight = 0;
+  // CSAT -- NUEVO 22-sep-2026 (pedido Juan Montero, CSDATA-391): antes se promediaba
+  // k.csat_bot ponderado por `gestionados` (una aproximación, porque no había conteo real
+  // de encuestas). Ahora que construirSnapshotChat() trae csat_bot_detalle real
+  // ({positivas, total}) para los meses con valor congelado de Breeze (jun/jul/ago 2026,
+  // ver la nota grande junto a CHAT_CSAT_HISTORICO_BREEZE en lib/cubos.mjs), se suman
+  // encuestas reales -- mismo patrón que Correo/Llamadas -- en vez de promediar un
+  // porcentaje ya redondeado.
+  let csatPositivos = 0, csatTotal = 0;
   snaps.forEach(s => {
     const c = s.chat; if (!c) return;
     const k = c.kpis || {};
@@ -802,12 +810,16 @@ function aggregateChat(snaps, version) {
       items.forEach(it => m.set(it.motivo, (m.get(it.motivo) || 0) + it.count));
     });
     const w = k.gestionados || 0;
-    if (typeof k.csat_bot === 'number') { csatWeighted += k.csat_bot * w; csatWeight += w; }
+    if (c.csat_bot_detalle && typeof c.csat_bot_detalle.total === 'number' && c.csat_bot_detalle.total) {
+      csatPositivos += c.csat_bot_detalle.positivas || 0;
+      csatTotal += c.csat_bot_detalle.total;
+    }
     if (typeof c.tiempo_promedio_solucion_min === 'number') { tiempoWeighted += c.tiempo_promedio_solucion_min * w; tiempoWeight += w; }
   });
   kpis.pct_gestion = kpis.ingresados_bot ? (kpis.gestionados / kpis.ingresados_bot * 100) : 0;
   kpis.pct_escalados = kpis.ingresados_bot ? (kpis.escalados / kpis.ingresados_bot * 100) : 0;
-  kpis.csat_bot = csatWeight ? (csatWeighted / csatWeight) : null;
+  kpis.csat_bot = csatTotal ? +((100 * csatPositivos) / csatTotal).toFixed(1) : null;
+  kpis.csat_total = csatTotal;
   const motivos_solicitud = {};
   motivosMap.forEach((m, vert) => {
     motivos_solicitud[vert] = Array.from(m.entries()).map(([motivo, count]) => ({ motivo, count })).sort((a, b) => b.count - a.count).slice(0, 8);
@@ -1249,7 +1261,13 @@ function renderChat(c) {
     { key: 'ingresados_bot', label: 'Ingresados al bot', value: fmt(k.ingresados_bot), icon: 'log-in', cls: 'kc-blue', vcls: 'v-blue', staticText: `${k.demanda ? (k.ingresados_bot/k.demanda*100).toFixed(1) : '—'}% de la demanda` },
     { key: 'gestionados', label: 'Gestionados', value: fmtPct(k.pct_gestion), icon: 'check-circle-2', cls: 'kc-green', vcls: 'v-green', staticText: `${fmt(k.gestionados)} conversaciones gestionadas por Lucía` },
     { key: 'escalados', label: 'Escalados', value: fmtPct(k.pct_escalados), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escalados)} conversaciones escaladas a un agente` },
-    { key: 'csat_bot', label: 'CSAT bot', value: fmtPct(k.csat_bot), icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', staticText: 'satisfacción gestión Lucía' },
+    // CSAT bot -- NUEVO 22-sep-2026 (pedido Juan Montero, CSDATA-391). Solo tiene valor en
+    // jun/jul/ago 2026: son cifras CONGELADAS que ya había sacado Jesús a mano vía HubSpot
+    // AI (Breeze) el 28-ago-2026 (no se recalculan en vivo -- se investigaron 2 fuentes de
+    // HubSpot en vivo el 22-sep-2026 y ninguna sirvió como reemplazo, ver la nota grande
+    // junto a CHAT_CSAT_HISTORICO_BREEZE en lib/cubos.mjs). Cubre SOLO Contador/POS/Nómina,
+    // no es CSAT total de Chat. Se muestra "—" en los demás meses en vez de inventar un 0.
+    { key: 'csat_bot', label: 'CSAT bot', value: fmtPct(k.csat_bot), icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', staticText: k.csat_total ? `${fmt(k.csat_total)} encuestas (solo Contador/POS/Nómina)` : 'sin dato congelado para este período' },
   ];
   strip.innerHTML = cardDefs.map(cd =>
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
