@@ -839,7 +839,7 @@ function aggregateLlamadas(snaps, version) {
   const versionMap = new Map();
   const motivoMap = new Map();
   let durWeighted = 0, durWeight = 0;
-  let csatWeighted = 0, csatWeight = 0;
+  let csatPositivos = 0, csatTotal = 0;
   let elLlamadas = 0, elDurWeighted = 0, elPctWeighted = 0, elCoberturaIncompleta = null, elNota = null;
   let motivoDisponible = true;
 
@@ -861,11 +861,12 @@ function aggregateLlamadas(snaps, version) {
       kpis.sin_clasificar += kk.sin_clasificar || 0;
       const wTot = kk.demanda || 0;
       if (typeof kk.duracion_prom_seg === 'number') { durWeighted += kk.duracion_prom_seg * wTot; durWeight += wTot; }
-      // CSAT -- NUEVO 22-sep-2026. Promedio ponderado por cantidad real de encuestas de
-      // cada snapshot (csat_total), no un promedio simple de promedios mensuales -- así un
-      // mes con 3 encuestas no pesa igual que uno con 80. Solo a nivel de canal (no hay
-      // desglose de CSAT por versión/país todavía), igual que motivo_escalamiento arriba.
-      if (typeof kk.csat_promedio === 'number' && kk.csat_total) { csatWeighted += kk.csat_promedio * kk.csat_total; csatWeight += kk.csat_total; }
+      // CSAT -- NUEVO 22-sep-2026, corregido a % positivo (escala real 1-5, top-2-box)
+      // el mismo día tras ver la distribución real de datos. Se suman conteos crudos
+      // (positivos/total) de cada snapshot y se saca el % al final -- no se promedian
+      // porcentajes mensuales entre sí, mismo criterio que el resto del archivo. Solo a
+      // nivel de canal (no hay desglose de CSAT por versión/país todavía).
+      if (typeof kk.csat_total === 'number' && kk.csat_total) { csatPositivos += kk.csat_positivos || 0; csatTotal += kk.csat_total; }
     }
 
     const versionesSemana = version ? (l.por_version || []).filter(v => v.version === version) : (l.por_version || []);
@@ -923,8 +924,8 @@ function aggregateLlamadas(snaps, version) {
   kpis.pct_escaladas = kpis.demanda ? (kpis.escaladas / kpis.demanda * 100) : 0;
   kpis.pct_no_contestadas = kpis.demanda ? (kpis.no_contestadas / kpis.demanda * 100) : 0;
   kpis.duracion_prom_seg = durWeight ? (durWeighted / durWeight) : null;
-  kpis.csat_promedio = csatWeight ? +(csatWeighted / csatWeight).toFixed(2) : null;
-  kpis.csat_total = csatWeight;
+  kpis.csat_pct = csatTotal ? +((100 * csatPositivos) / csatTotal).toFixed(1) : null;
+  kpis.csat_total = csatTotal;
 
   const por_version = Array.from(versionMap.values()).map(v => ({ ...v, pct_gestion: (v.completo && v.demanda) ? (v.gestionadas / v.demanda * 100) : null }));
   const motivo_escalamiento = Array.from(motivoMap.entries()).map(([motivo, count]) => ({ motivo, count })).sort((a, b) => b.count - a.count);
@@ -1365,11 +1366,13 @@ function renderLlamadas(c) {
     { key: 'escaladas', label: 'Escaladas a humano', value: fmtPct(k.pct_escaladas), icon: 'phone-forwarded', cls: 'kc-red', vcls: 'v-red', staticText: `${fmt(k.escaladas)} llamadas escaladas a un agente` },
     { key: 'no_contestadas', label: 'No contestadas', value: fmtPct(k.pct_no_contestadas), icon: 'phone-missed', cls: 'kc-amber', vcls: 'v-amber', staticText: `${fmt(k.no_contestadas)} llamadas` },
     { key: 'duracion_prom_seg', label: 'Duración prom.', value: durMin(k.duracion_prom_seg), icon: 'clock', cls: 'kc-blue', vcls: 'v-blue', staticText: 'por llamada' },
-    // CSAT -- NUEVO 22-sep-2026 (pedido Juan Montero, CSDATA-391). Viene del evento de
-    // comportamiento "Encuesta de satisfacción CS" de HubSpot, escala 1-10 (no es un %
-    // promoter/passive/detractor como el CSAT de Correo/Chat, por eso se muestra distinto:
-    // "X.X / 10" en vez de "XX.XX%"). Se muestra "—" si no hay encuestas en el período.
-    { key: 'csat_promedio', label: 'CSAT', value: (typeof k.csat_promedio === 'number' ? k.csat_promedio.toFixed(1) + ' / 10' : '—'), icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', staticText: k.csat_total ? `${fmt(k.csat_total)} encuestas respondidas` : 'sin encuestas en el período' },
+    // CSAT -- NUEVO 22-sep-2026 (pedido Juan Montero, CSDATA-391), corregido el mismo día
+    // tras revisar la distribución real de datos (diagnosticar_csat_llamadas_distribucion.mjs):
+    // la escala real del evento "Encuesta de satisfacción CS" es 1-5 (no 1-10), y se
+    // muestra como % top-2-box (4-5 = satisfecho) -- mismo estilo que Correo/Chat, no un
+    // promedio crudo. Ver la nota grande junto a llamadasCsat() en lib/hubspot.js para el
+    // detalle completo de por qué. Se muestra "—" si no hay encuestas en el período.
+    { key: 'csat_pct', label: 'CSAT', value: fmtPct(k.csat_pct), icon: 'smile', cls: 'kc-amber', vcls: 'v-amber', staticText: k.csat_total ? `${fmt(k.csat_total)} encuestas respondidas` : 'sin encuestas en el período' },
   ];
   strip.innerHTML = cardDefs.map(cd =>
     `<div class="kpi-card ${cd.cls}"><div class="kpi-icon-lucide" data-lucide="${cd.icon}"></div><div class="kpi-label">${cd.label}</div><div class="kpi-value ${cd.vcls}">${cd.value}</div><div class="kpi-delta neu">${cd.staticText}</div></div>`
